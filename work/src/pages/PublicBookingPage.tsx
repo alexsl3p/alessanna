@@ -505,6 +505,8 @@ export function PublicBookingPage() {
       service_id: svc.id,
       client_name: normalizedClientName || "Клиент (ресепшен)",
       client_phone: clientPhone.trim() || null,
+      source: isReceptionMode ? "reception" : "public_site",
+      created_by_staff_id: null,
       start_time: pickedStart.toISOString(),
       end_time: end.toISOString(),
       status: "confirmed",
