@@ -361,11 +361,23 @@ export function AdminSupportPage() {
     void loadList();
     void loadStats();
     const id = window.setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
       void loadList();
       void loadStats();
     }, POLL_LIST_MS);
     return () => window.clearInterval(id);
   }, [loadList, loadStats]);
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      void loadList();
+      void loadStats();
+      if (selectedId) void loadThread(selectedId, { silent: true });
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [loadList, loadStats, loadThread, selectedId]);
 
   /* Список активных сотрудников — нужен админу для «передать другому».
      Менеджеру/мастеру не подгружаем. RLS на staff открыт, выбираем минимум. */
@@ -407,7 +419,10 @@ export function AdminSupportPage() {
     }
     void loadThread(selectedId);
     const id = window.setInterval(
-      () => void loadThread(selectedId, { silent: true }),
+      () => {
+        if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+        void loadThread(selectedId, { silent: true });
+      },
       POLL_THREAD_MS
     );
     return () => window.clearInterval(id);

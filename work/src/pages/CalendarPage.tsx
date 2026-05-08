@@ -297,6 +297,42 @@ export function CalendarPage() {
     setModal({ start, staffId: targetStaffId });
   }
 
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.defaultPrevented) return;
+      const target = e.target as HTMLElement | null;
+      const tag = (target?.tagName || "").toLowerCase();
+      if (target?.isContentEditable || tag === "input" || tag === "textarea" || tag === "select") return;
+      if ((e.metaKey || e.ctrlKey || e.altKey) && e.key.toLowerCase() !== "n") return;
+
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        setCursor((prev) =>
+          view === "day" ? addDays(prev, -1) : view === "week" ? addDays(prev, -7) : addMonths(prev, -1)
+        );
+        return;
+      }
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        setCursor((prev) =>
+          view === "day" ? addDays(prev, 1) : view === "week" ? addDays(prev, 7) : addMonths(prev, 1)
+        );
+        return;
+      }
+      if (e.key.toLowerCase() === "t") {
+        e.preventDefault();
+        jumpCursor("today");
+        return;
+      }
+      if (e.key.toLowerCase() === "n") {
+        e.preventDefault();
+        openQuickBooking();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [view, jumpCursor, canUseCalendar, staffId, activeStaffForCalendar, cursor, filteredAppointments, schedules, durationMin]);
+
   return (
     <div className="space-y-6">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
