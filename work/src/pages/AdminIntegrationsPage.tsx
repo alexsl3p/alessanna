@@ -1120,6 +1120,94 @@ export function AdminIntegrationsPage() {
         )}
       </section>
 
+      <section className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-5">
+        <header>
+          <h2 className="text-lg font-semibold text-white">Подключение с другого устройства</h2>
+          <p className="mt-1 text-xs text-zinc-500">
+            Если настраиваешь Google на другом телефоне/планшете: сначала один раз добавь secrets в
+            Supabase, потом в этом же экране нажми кнопку импорта.
+          </p>
+        </header>
+        <div className="mt-3 space-y-2 text-xs text-zinc-300">
+          <p>
+            Быстрые ссылки:{" "}
+            <a
+              href="https://console.cloud.google.com/"
+              target="_blank"
+              rel="noreferrer"
+              className="text-sky-300 underline decoration-dotted underline-offset-2 hover:text-sky-200"
+            >
+              Google Cloud
+            </a>
+            {" · "}
+            <a
+              href="https://console.cloud.google.com/apis/credentials/consent"
+              target="_blank"
+              rel="noreferrer"
+              className="text-sky-300 underline decoration-dotted underline-offset-2 hover:text-sky-200"
+            >
+              OAuth Consent
+            </a>
+            {" · "}
+            <a
+              href="https://console.cloud.google.com/apis/credentials"
+              target="_blank"
+              rel="noreferrer"
+              className="text-sky-300 underline decoration-dotted underline-offset-2 hover:text-sky-200"
+            >
+              Credentials
+            </a>
+            {" · "}
+            <a
+              href="https://developers.google.com/oauthplayground"
+              target="_blank"
+              rel="noreferrer"
+              className="text-sky-300 underline decoration-dotted underline-offset-2 hover:text-sky-200"
+            >
+              OAuth Playground
+            </a>
+          </p>
+          <p>
+            Подключай под аккаунтом салона <code className="text-emerald-300">salsalenta@gmail.com</code>.
+            Scope для импорта:{" "}
+            <code className="text-emerald-300">https://www.googleapis.com/auth/calendar.readonly</code>.
+          </p>
+          <p>
+            1) Открой{" "}
+            <a
+              href={`https://supabase.com/dashboard/project/${getSupabaseProjectRef()}/settings/functions`}
+              target="_blank"
+              rel="noreferrer"
+              className="text-sky-300 underline decoration-dotted underline-offset-2 hover:text-sky-200"
+            >
+              Supabase → Edge Functions → Secrets
+            </a>
+          </p>
+          <p>2) Добавь значения c такими ключами (строго по именам):</p>
+          <ul className="list-disc space-y-1 pl-5 text-zinc-400">
+            <li>
+              <code className="text-emerald-300">GOOGLE_CLIENT_ID</code>
+            </li>
+            <li>
+              <code className="text-emerald-300">GOOGLE_CLIENT_SECRET</code>
+            </li>
+            <li>
+              <code className="text-emerald-300">GOOGLE_REFRESH_TOKEN</code>
+            </li>
+            <li>
+              <code className="text-emerald-300">GOOGLE_CALENDAR_ID</code> ={" "}
+              <code className="text-emerald-300">primary</code> (или id нужного календаря)
+            </li>
+          </ul>
+          <p>
+            3) Вернись на эту страницу и нажми <strong>1 кнопка: подключить и импортировать</strong>.
+          </p>
+          <p className="text-zinc-500">
+            Импорт идёт только в CRM (Google-события не удаляются и не изменяются).
+          </p>
+        </div>
+      </section>
+
       {/* ─────── Google Calendar — Staff ─────── */}
       <section className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-5">
         <header>
