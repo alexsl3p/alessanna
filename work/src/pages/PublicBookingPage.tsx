@@ -146,6 +146,24 @@ export function PublicBookingPage() {
     return applyPublicStaffVisibility(base, links, serviceId);
   }, [staff, links, serviceId]);
 
+  const servicesForSelectedMaster = useMemo(() => {
+    const active = services.filter((s) => s.active);
+    if (!isReceptionMode || !staffId || staffId === ANY_MASTER_ID) return active;
+    const linksForStaff = links.filter((l) => l.staff_id === staffId);
+    if (!linksForStaff.length) return active;
+    const allowed = new Set(linksForStaff.map((l) => String(l.service_id)));
+    return active.filter((s) => allowed.has(String(s.id)));
+  }, [isReceptionMode, links, services, staffId]);
+
+  useEffect(() => {
+    if (!servicesForSelectedMaster.length) return;
+    const hasCurrent = servicesForSelectedMaster.some((s) => String(s.id) === String(serviceId ?? ""));
+    if (!hasCurrent) {
+      setServiceId(servicesForSelectedMaster[0].id);
+      setPickedStart(null);
+    }
+  }, [serviceId, servicesForSelectedMaster]);
+
   const loadDayData = useCallback(async () => {
     if (!isSupabaseConfigured() || serviceId == null) return;
     const eligibleIds = eligibleStaff.map((s) => s.id);
@@ -260,9 +278,9 @@ export function PublicBookingPage() {
   const durationMin = svc ? svc.duration_min + svc.buffer_after_min : 60;
 
   const slotsByStaff = useMemo(() => {
-    if (!svc) return new Map<string, Slot[]>();
     const out = new Map<string, Slot[]>();
-    for (const member of eligibleStaff) {
+    const staffPool = isReceptionMode ? staff.filter((s) => s.active) : eligibleStaff;
+    for (const member of staffPool) {
       const memberSchedule = schedules
         .filter((s) => s.staff_id === member.id)
         .map((s) => ({
@@ -283,7 +301,7 @@ export function PublicBookingPage() {
       out.set(member.id, slots);
     }
     return out;
-  }, [appointments, day, durationMin, eligibleStaff, schedules, svc, timeOff, nowTick]);
+  }, [appointments, day, durationMin, eligibleStaff, isReceptionMode, schedules, staff, timeOff, nowTick]);
 
   const slotCoverage = useMemo(() => {
     const coverage = new Map<string, number>();
@@ -369,8 +387,9 @@ export function PublicBookingPage() {
   ]);
 
   const masterDayLoad = useMemo(() => {
+    const staffPool = isReceptionMode ? staff.filter((s) => s.active) : eligibleStaff;
     const weekday = day.getDay();
-    return eligibleStaff
+    return staffPool
       .map((m) => {
         const daySchedule = schedules
           .filter((s) => s.staff_id === m.id && s.day_of_week === weekday)
@@ -405,7 +424,7 @@ export function PublicBookingPage() {
         if (a.status === "off" && b.status === "busy") return 1;
         return 0;
       });
-  }, [appointments, day, eligibleStaff, schedules, slotsByStaff, timeOff]);
+  }, [appointments, day, eligibleStaff, isReceptionMode, schedules, slotsByStaff, staff, timeOff]);
 
   const receptionUpcoming = useMemo(() => {
     const allowedStaffIds = new Set(staff.map((s) => s.id));
@@ -615,7 +634,7 @@ export function PublicBookingPage() {
             </section>
           </div>
 
-          {serviceId != null && (
+          {(isReceptionMode || serviceId != null) && (
             <div className="grid gap-4 md:grid-cols-[1.45fr_1fr] md:gap-5">
               <section className="rounded-xl border border-zinc-800 bg-black/30 p-4 md:p-5">
                 <h2 className="text-sm font-semibold text-white">Свободные мастера</h2>
@@ -655,7 +674,11 @@ export function PublicBookingPage() {
                       </button>
                     ))
                   ) : (
-                    <p className="text-xs text-zinc-600">Нет мастеров для выбранной услуги.</p>
+                    <p className="text-xs text-zinc-600">
+                      {isReceptionMode
+                        ? "Нет доступных мастеров на выбранный день."
+                        : "Нет мастеров для выбранной услуги."}
+                    </p>
                   )}
                 </div>
               </section>
@@ -676,7 +699,7 @@ export function PublicBookingPage() {
                   className="mt-1 w-full rounded-lg border border-zinc-700 bg-black px-3 py-2 text-white md:py-2.5"
                 >
                   <option value="">{t("modal.pickService")}</option>
-                  {services.filter((s) => s.active).map((s) => (
+                  {servicesForSelectedMaster.map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.name}
                     </option>
