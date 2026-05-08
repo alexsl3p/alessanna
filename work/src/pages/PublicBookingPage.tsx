@@ -109,22 +109,24 @@ export function PublicBookingPage() {
         }));
       setServices(normalized);
       const firstActive = normalized.find((s) => s.active);
-      if (firstActive) {
+      if (firstActive && !isReceptionMode) {
         setServiceId((prev) => prev ?? firstActive.id);
       }
     }
     if (st.data) {
+      const normalizedStaff = (st.data as Record<string, unknown>[])
+        .filter((row) => !isStaffRowAdmin(row))
+        .map((r) => normalizeStaffMember(r as StaffMember));
       setStaff(
-        (st.data as Record<string, unknown>[])
-          .filter((row) => !isStaffRowAdmin(row))
-          .map((r) => normalizeStaffMember(r as StaffMember))
-          .filter((m) => isStaffShownOnPublicMarketing(m))
+        isReceptionMode
+          ? normalizedStaff.filter((m) => m.active)
+          : normalizedStaff.filter((m) => isStaffShownOnPublicMarketing(m))
       );
     }
     if (lk.data) setLinks(lk.data as StaffServiceRow[]);
     if (sc.data) setSchedules(sc.data as StaffScheduleRow[]);
     setLoading(false);
-  }, []);
+  }, [isReceptionMode]);
 
   useEffect(() => {
     void loadBase();
@@ -156,17 +158,18 @@ export function PublicBookingPage() {
   }, [isReceptionMode, links, services, staffId]);
 
   useEffect(() => {
+    if (isReceptionMode) return;
     if (!servicesForSelectedMaster.length) return;
     const hasCurrent = servicesForSelectedMaster.some((s) => String(s.id) === String(serviceId ?? ""));
     if (!hasCurrent) {
       setServiceId(servicesForSelectedMaster[0].id);
       setPickedStart(null);
     }
-  }, [serviceId, servicesForSelectedMaster]);
+  }, [isReceptionMode, serviceId, servicesForSelectedMaster]);
 
   const loadDayData = useCallback(async () => {
-    if (!isSupabaseConfigured() || serviceId == null) return;
-    const eligibleIds = eligibleStaff.map((s) => s.id);
+    if (!isSupabaseConfigured()) return;
+    const eligibleIds = (isReceptionMode ? staff.filter((s) => s.active) : eligibleStaff).map((s) => s.id);
     if (!eligibleIds.length) {
       setAppointments([]);
       setTimeOff([]);
@@ -201,7 +204,7 @@ export function PublicBookingPage() {
         }))
       );
     }
-  }, [day, eligibleStaff, serviceId]);
+  }, [day, eligibleStaff, isReceptionMode, staff]);
 
   useEffect(() => {
     void loadDayData();
@@ -225,12 +228,12 @@ export function PublicBookingPage() {
   }, [loadUpcomingData]);
 
   const loadMonthCalendarData = useCallback(async () => {
-    if (!isSupabaseConfigured() || serviceId == null) {
+    if (!isSupabaseConfigured()) {
       setMonthAppointments([]);
       setMonthTimeOff([]);
       return;
     }
-    const eligibleIds = eligibleStaff.map((s) => s.id);
+    const eligibleIds = (isReceptionMode ? staff.filter((s) => s.active) : eligibleStaff).map((s) => s.id);
     if (!eligibleIds.length) {
       setMonthAppointments([]);
       setMonthTimeOff([]);
@@ -263,7 +266,7 @@ export function PublicBookingPage() {
         }))
       );
     }
-  }, [eligibleStaff, serviceId, viewMonth]);
+  }, [eligibleStaff, isReceptionMode, staff, viewMonth]);
 
   useEffect(() => {
     void loadMonthCalendarData();
@@ -649,6 +652,7 @@ export function PublicBookingPage() {
                         type="button"
                         onClick={() => {
                           setStaffId(m.id);
+                          if (isReceptionMode) setServiceId(null);
                           setPickedStart(null);
                         }}
                         className="rounded-lg border border-zinc-800 bg-zinc-950/70 px-3 py-2 text-left text-xs text-zinc-300 transition hover:border-sky-700/70 hover:text-white md:px-4 md:py-2.5 md:text-sm"
@@ -685,7 +689,7 @@ export function PublicBookingPage() {
             </div>
           )}
 
-          {serviceId != null && (
+          {(isReceptionMode || serviceId != null) && (
             <>
               <label className="block text-sm">
                 <span className="text-zinc-400">{t("modal.service")}</span>
@@ -693,7 +697,7 @@ export function PublicBookingPage() {
                   value={serviceId ?? ""}
                   onChange={(e) => {
                     setServiceId(e.target.value ? String(e.target.value) : null);
-                    setStaffId(ANY_MASTER_ID);
+                    if (!isReceptionMode) setStaffId(ANY_MASTER_ID);
                     setPickedStart(null);
                   }}
                   className="mt-1 w-full rounded-lg border border-zinc-700 bg-black px-3 py-2 text-white md:py-2.5"
@@ -744,6 +748,7 @@ export function PublicBookingPage() {
                   value={staffId ?? ANY_MASTER_ID}
                   onChange={(e) => {
                     setStaffId(e.target.value || ANY_MASTER_ID);
+                    if (isReceptionMode) setServiceId(null);
                     setPickedStart(null);
                   }}
                   className="mt-1 w-full rounded-lg border border-zinc-700 bg-black px-3 py-2 text-white md:py-2.5"
