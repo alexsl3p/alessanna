@@ -248,7 +248,11 @@
     if (!groupsEls.length) return;
 
     var teenusedRoot = document.getElementById("teenused");
-    var priceOpen = !!(teenusedRoot && teenusedRoot.classList.contains("price-list-open"));
+    var showAllMastersMode = !!(
+      teenusedRoot &&
+      (teenusedRoot.classList.contains("price-list-open") ||
+        teenusedRoot.classList.contains("services-list-open"))
+    );
 
     var activeBtn = document.querySelector("#teenused .tab-btn.is-active");
     var targetPanel = null;
@@ -260,7 +264,7 @@
       targetPanel ? targetPanel.getAttribute("data-pick-category") : "",
     );
 
-    if (priceOpen || !wantedKey) {
+    if (showAllMastersMode || !wantedKey) {
       groupsEls.forEach(function (el) {
         el.hidden = false;
       });
