@@ -26,6 +26,11 @@ import {
   normalizeStaffMember,
   staffEligibleForService,
 } from "../lib/roles";
+import {
+  publicBookableStaffMembers,
+  publicServiceIdsForStaff,
+  splitStaffIntoHairAndNails,
+} from "../lib/publicMasterPanel";
 import type { AppointmentRow, StaffMember, StaffScheduleRow, StaffServiceRow } from "../types/database";
 import {
   DEFAULT_RECEPTION_ROWS,
@@ -42,6 +47,7 @@ import {
   PublicBookingCalendarSection,
   PublicBookingMastersSection,
   PublicBookingUpcomingSection,
+  type MasterDayRow,
 } from "../components/PublicBookingLayoutSections";
 
 type PublicService = {
@@ -50,9 +56,19 @@ type PublicService = {
   duration_min: number;
   buffer_after_min: number;
   active: boolean;
+  categoryName: string | null;
 };
 
 const ANY_MASTER_ID = "any";
+
+function sortMasterDayRows(a: MasterDayRow, b: MasterDayRow): number {
+  if (a.status === b.status) return b.freeSlots - a.freeSlots;
+  if (a.status === "free") return -1;
+  if (b.status === "free") return 1;
+  if (a.status === "busy" && b.status === "off") return -1;
+  if (a.status === "off" && b.status === "busy") return 1;
+  return 0;
+}
 
 export function PublicBookingPage() {
   const { t, i18n } = useTranslation();
@@ -110,13 +126,19 @@ export function PublicBookingPage() {
      * для TS ниже всегда `as typeof sv`. На рантайме всё равно нормализуем. */
     let sv = await supabase
       .from("service_listings")
-      .select("id,name,duration,buffer_after_min,is_active")
+      .select("id,name,duration,buffer_after_min,is_active,category_id,service_categories(name)")
       .order("name");
     if (sv.error) {
       sv = (await supabase
         .from("service_listings")
-        .select("id,name,duration,is_active")
+        .select("id,name,duration,buffer_after_min,is_active")
         .order("name")) as typeof sv;
+      if (sv.error) {
+        sv = (await supabase
+          .from("service_listings")
+          .select("id,name,duration,is_active")
+          .order("name")) as typeof sv;
+      }
       if (sv.error) {
         sv = (await supabase
           .from("service_listings")
@@ -131,13 +153,25 @@ export function PublicBookingPage() {
       }
     }
     if (sv.data) {
-      const normalized = (sv.data as Array<{ id: string; name: string; duration?: number; buffer_after_min?: number; is_active?: boolean }>).map((s) => ({
+      type SvRow = {
+        id: string;
+        name: string;
+        duration?: number;
+        buffer_after_min?: number;
+        is_active?: boolean;
+        service_categories?: { name?: string | null } | null;
+      };
+      const normalized = (sv.data as SvRow[]).map((s) => {
+        const catName = String(s.service_categories?.name || "").trim();
+        return {
           id: String(s.id),
           name: String(s.name || "").trim(),
           duration_min: Number(s.duration || 0),
-          buffer_after_min: Number(s.buffer_after_min || 10),
+          buffer_after_min: Number(s.buffer_after_min ?? 10),
           active: s.is_active !== false,
-        }));
+          categoryName: catName || null,
+        };
+      });
       setServices(normalized);
       const firstActive = normalized.find((s) => s.active);
       if (firstActive) {
@@ -183,9 +217,19 @@ export function PublicBookingPage() {
     return applyPublicStaffVisibility(base, links, serviceId);
   }, [staff, links, serviceId]);
 
+  const mastersPanelStaff = useMemo(
+    () => publicBookableStaffMembers(staff, links, services),
+    [staff, links, services],
+  );
+
+  const mastersSplit = useMemo(
+    () => splitStaffIntoHairAndNails(mastersPanelStaff, links, services),
+    [mastersPanelStaff, links, services],
+  );
+
   const loadDayData = useCallback(async () => {
     if (!isSupabaseConfigured() || serviceId == null) return;
-    const eligibleIds = eligibleStaff.map((s) => s.id);
+    const eligibleIds = mastersPanelStaff.map((s) => s.id);
     if (!eligibleIds.length) {
       setAppointments([]);
       setTimeOff([]);
@@ -220,7 +264,7 @@ export function PublicBookingPage() {
         }))
       );
     }
-  }, [day, eligibleStaff, serviceId]);
+  }, [day, mastersPanelStaff, serviceId]);
 
   useEffect(() => {
     void loadDayData();
@@ -410,44 +454,61 @@ export function PublicBookingPage() {
     nowTick,
   ]);
 
-  const masterDayLoad = useMemo(() => {
+  const mastersByColumn = useMemo(() => {
     const weekday = day.getDay();
-    return eligibleStaff
-      .map((m) => {
-        const daySchedule = schedules
-          .filter((s) => s.staff_id === m.id && s.day_of_week === weekday)
-          .sort((a, b) => String(a.start_time).localeCompare(String(b.start_time)));
-        const workTime =
-          daySchedule.length > 0
-            ? `${String(daySchedule[0].start_time || "").slice(0, 5)}–${String(
-                daySchedule[daySchedule.length - 1].end_time || ""
-              ).slice(0, 5)}`
-            : "выходной";
-        const freeSlots = (slotsByStaff.get(m.id) || []).length;
-        const busyItems = appointments.filter((a) => a.staff_id === m.id).length;
-        const timeOffItems = timeOff.filter((t) => t.staff_id === m.id).length;
-        let status: "free" | "busy" | "off" = "busy";
-        if (!daySchedule.length) status = "off";
-        else if (freeSlots > 0) status = "free";
-        return {
-          id: m.id,
-          name: m.name,
-          workTime,
-          freeSlots,
-          busyItems,
-          timeOffItems,
-          status,
-        };
-      })
-      .sort((a, b) => {
-        if (a.status === b.status) return b.freeSlots - a.freeSlots;
-        if (a.status === "free") return -1;
-        if (b.status === "free") return 1;
-        if (a.status === "busy" && b.status === "off") return -1;
-        if (a.status === "off" && b.status === "busy") return 1;
-        return 0;
-      });
-  }, [appointments, day, eligibleStaff, schedules, slotsByStaff, timeOff]);
+    const mapRow = (m: StaffMember): MasterDayRow => {
+      const daySchedule = schedules
+        .filter((s) => s.staff_id === m.id && s.day_of_week === weekday)
+        .sort((a, b) => String(a.start_time).localeCompare(String(b.start_time)));
+      const workTime =
+        daySchedule.length > 0
+          ? `${String(daySchedule[0].start_time || "").slice(0, 5)}–${String(
+              daySchedule[daySchedule.length - 1].end_time || ""
+            ).slice(0, 5)}`
+          : "выходной";
+      const freeSlots = (slotsByStaff.get(m.id) || []).length;
+      const busyItems = appointments.filter((a) => a.staff_id === m.id).length;
+      const timeOffItems = timeOff.filter((t) => t.staff_id === m.id).length;
+      let status: "free" | "busy" | "off" = "busy";
+      if (!daySchedule.length) status = "off";
+      else if (freeSlots > 0) status = "free";
+      return {
+        id: m.id,
+        name: m.name,
+        workTime,
+        freeSlots,
+        busyItems,
+        timeOffItems,
+        status,
+      };
+    };
+    return {
+      hair: mastersSplit.hair.map(mapRow).sort(sortMasterDayRows),
+      nails: mastersSplit.nails.map(mapRow).sort(sortMasterDayRows),
+    };
+  }, [appointments, day, mastersSplit, schedules, slotsByStaff, timeOff]);
+
+  const highlightServiceIds = useMemo(() => {
+    if (!staffId || staffId === ANY_MASTER_ID) return new Set<string>();
+    const member = staff.find((s) => s.id === staffId);
+    if (!member) return new Set<string>();
+    return publicServiceIdsForStaff(member, links, services);
+  }, [staffId, staff, links, services]);
+
+  const pickMaster = useCallback(
+    (masterId: string) => {
+      setStaffId(masterId);
+      setPickedStart(null);
+      const member = staff.find((s) => s.id === masterId);
+      if (!member) return;
+      const ids = publicServiceIdsForStaff(member, links, services);
+      if (serviceId != null && !ids.has(serviceId)) {
+        const first = services.find((s) => s.active && ids.has(s.id));
+        if (first) setServiceId(first.id);
+      }
+    },
+    [staff, links, services, serviceId],
+  );
 
   const receptionUpcoming = useMemo(() => {
     const allowedStaffIds = new Set(staff.map((s) => s.id));
@@ -628,9 +689,11 @@ export function PublicBookingPage() {
     masters:
       serviceId != null ? (
         <PublicBookingMastersSection
-          masterDayLoad={masterDayLoad}
-          setStaffId={setStaffId}
-          setPickedStart={setPickedStart}
+          t={t}
+          hairMasters={mastersByColumn.hair}
+          nailMasters={mastersByColumn.nails}
+          selectedStaffId={staffId !== ANY_MASTER_ID ? staffId : null}
+          onPickMaster={pickMaster}
         />
       ) : null,
     booking:
@@ -656,6 +719,7 @@ export function PublicBookingPage() {
           booking={booking}
           confirmBook={confirmBook}
           eligibleStaff={eligibleStaff}
+          highlightServiceIds={highlightServiceIds}
         />
       ) : null,
   };

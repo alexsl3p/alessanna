@@ -216,57 +216,112 @@ export function PublicBookingUpcomingSection({ receptionUpcoming, staff, service
 }
 
 type MastersProps = {
-  masterDayLoad: MasterDayRow[];
-  setStaffId: Dispatch<SetStateAction<string | null>>;
-  setPickedStart: Dispatch<SetStateAction<Date | null>>;
+  t: TFunction;
+  hairMasters: MasterDayRow[];
+  nailMasters: MasterDayRow[];
+  selectedStaffId: string | null;
+  onPickMaster: (staffId: string) => void;
 };
 
-export function PublicBookingMastersSection({ masterDayLoad, setStaffId, setPickedStart }: MastersProps) {
+function MasterDayCard({
+  m,
+  selected,
+  onPick,
+}: {
+  m: MasterDayRow;
+  selected: boolean;
+  onPick: () => void;
+}) {
   return (
-    <div className="grid gap-4 md:grid-cols-[1.45fr_1fr] md:gap-5">
-      <section className="rounded-xl border border-zinc-800 bg-black/30 p-4 md:p-5">
-        <h2 className="text-sm font-semibold text-white">Свободные мастера</h2>
-        <p className="mt-1 text-xs text-zinc-500">
-          Нажмите на мастера, чтобы сразу смотреть его доступные слоты.
-        </p>
-        <div className="mt-3 space-y-2">
-          {masterDayLoad.length > 0 ? (
-            masterDayLoad.map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => {
-                  setStaffId(m.id);
-                  setPickedStart(null);
-                }}
-                className="rounded-lg border border-zinc-800 bg-zinc-950/70 px-3 py-2 text-left text-xs text-zinc-300 transition hover:border-sky-700/70 hover:text-white md:px-4 md:py-2.5 md:text-sm"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-medium text-zinc-100">{m.name}</span>
-                  <span
-                    className={
-                      "rounded-full border px-2 py-0.5 text-[10px] " +
-                      (m.status === "free"
-                        ? "border-emerald-700/60 bg-emerald-950/40 text-emerald-200"
-                        : m.status === "off"
-                          ? "border-zinc-700 bg-zinc-900 text-zinc-400"
-                          : "border-amber-700/60 bg-amber-950/40 text-amber-200")
-                    }
-                  >
-                    {m.status === "free" ? "Есть окна" : m.status === "off" ? "Выходной" : "Занят"}
-                  </span>
-                </div>
-                <div className="mt-1 text-zinc-500">
-                  {m.workTime} · свободных: {m.freeSlots}
-                </div>
-              </button>
-            ))
-          ) : (
-            <p className="text-xs text-zinc-600">Нет мастеров для выбранной услуги.</p>
-          )}
+    <button
+      type="button"
+      onClick={onPick}
+      className={
+        `w-full rounded-lg border px-3 py-2 text-left text-xs text-zinc-300 transition md:px-4 md:py-2.5 md:text-sm ` +
+        (selected
+          ? "border-sky-500/80 bg-sky-950/35 text-white ring-1 ring-sky-500/40"
+          : "border-zinc-800 bg-zinc-950/70 hover:border-sky-700/70 hover:text-white")
+      }
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-medium text-zinc-100">{m.name}</span>
+        <span
+          className={
+            "shrink-0 rounded-full border px-2 py-0.5 text-[10px] " +
+            (m.status === "free"
+              ? "border-emerald-700/60 bg-emerald-950/40 text-emerald-200"
+              : m.status === "off"
+                ? "border-zinc-700 bg-zinc-900 text-zinc-400"
+                : "border-amber-700/60 bg-amber-950/40 text-amber-200")
+          }
+        >
+          {m.status === "free" ? "Есть окна" : m.status === "off" ? "Выходной" : "Занят"}
+        </span>
+      </div>
+      <div className="mt-1 text-zinc-500">
+        {m.workTime} · свободных: {m.freeSlots}
+      </div>
+    </button>
+  );
+}
+
+export function PublicBookingMastersSection({
+  t,
+  hairMasters,
+  nailMasters,
+  selectedStaffId,
+  onPickMaster,
+}: MastersProps) {
+  const emptyBoth = hairMasters.length === 0 && nailMasters.length === 0;
+  return (
+    <section className="rounded-xl border border-zinc-800 bg-black/30 p-4 md:p-5">
+      <h2 className="text-sm font-semibold text-white">{t("publicBook.mastersTitle")}</h2>
+      <p className="mt-1 text-xs text-zinc-500">{t("publicBook.mastersHint")}</p>
+      {emptyBoth ? (
+        <p className="mt-3 text-xs text-zinc-600">{t("publicBook.mastersEmpty")}</p>
+      ) : (
+        <div className="mt-4 grid gap-4 md:grid-cols-2 md:gap-5">
+          <div>
+            <h3 className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+              {t("publicBook.mastersHair")}
+            </h3>
+            <div className="mt-2 space-y-2">
+              {hairMasters.length > 0 ? (
+                hairMasters.map((m) => (
+                  <MasterDayCard
+                    key={m.id}
+                    m={m}
+                    selected={selectedStaffId === m.id}
+                    onPick={() => onPickMaster(m.id)}
+                  />
+                ))
+              ) : (
+                <p className="text-xs text-zinc-600">{t("publicBook.mastersColumnEmpty")}</p>
+              )}
+            </div>
+          </div>
+          <div>
+            <h3 className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+              {t("publicBook.mastersNails")}
+            </h3>
+            <div className="mt-2 space-y-2">
+              {nailMasters.length > 0 ? (
+                nailMasters.map((m) => (
+                  <MasterDayCard
+                    key={m.id}
+                    m={m}
+                    selected={selectedStaffId === m.id}
+                    onPick={() => onPickMaster(m.id)}
+                  />
+                ))
+              ) : (
+                <p className="text-xs text-zinc-600">{t("publicBook.mastersColumnEmpty")}</p>
+              )}
+            </div>
+          </div>
         </div>
-      </section>
-    </div>
+      )}
+    </section>
   );
 }
 
@@ -291,6 +346,7 @@ type BookingProps = {
   booking: boolean;
   confirmBook: () => void;
   eligibleStaff: StaffMember[];
+  highlightServiceIds: Set<string>;
 };
 
 export function PublicBookingBookingSection({
@@ -314,7 +370,10 @@ export function PublicBookingBookingSection({
   booking,
   confirmBook,
   eligibleStaff,
+  highlightServiceIds,
 }: BookingProps) {
+  const showMasterServiceHint =
+    staffId !== ANY_MASTER_ID && staffId != null && highlightServiceIds.size > 0;
   return (
     <div className="space-y-4">
       <label className="block text-sm">
@@ -329,12 +388,18 @@ export function PublicBookingBookingSection({
           className="mt-1 w-full rounded-lg border border-zinc-700 bg-black px-3 py-2 text-white md:py-2.5"
         >
           <option value="">{t("modal.pickService")}</option>
-          {services.filter((s) => s.active).map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
+          {services.filter((s) => s.active).map((s) => {
+            const mark = highlightServiceIds.has(s.id);
+            return (
+              <option key={s.id} value={s.id}>
+                {mark ? `★ ${s.name}` : s.name}
+              </option>
+            );
+          })}
         </select>
+        {showMasterServiceHint && (
+          <p className="mt-1 text-xs text-emerald-400/85">{t("publicBook.masterServicesMarked")}</p>
+        )}
       </label>
 
       <div>
