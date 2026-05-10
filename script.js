@@ -164,6 +164,42 @@
     );
   }
 
+  /** Секция #broneeri помечена после загрузки флага из CRM */
+  function isOnlineBookingPanelOff() {
+    var sec = document.getElementById("broneeri");
+    return !!(sec && sec.classList.contains("booking-panel--off"));
+  }
+
+  /** Текст для кнопки «Услуги» в hero, когда онлайн-запись выключена */
+  function servicesHeroPhoneOnlyToastMessage() {
+    var lang = (document.documentElement.getAttribute("lang") || "ru").toLowerCase().slice(0, 2);
+    if (lang === "et") {
+      return (
+        "Teenuste valik ja broneering on hetkel võimalikud salongis kohapeal või telefoni teel — nii saame teid täpsemalt nõustada.\n\n" +
+        "Helistage: " +
+        SALON_BOOKING_PHONE_DISPLAY +
+        "\n\n" +
+        "Ootame teid Härma keskuses."
+      );
+    }
+    if (lang === "en") {
+      return (
+        "Choosing a service and booking are available in the salon or by phone for now — we’ll guide you with care.\n\n" +
+        "Call: " +
+        SALON_BOOKING_PHONE_DISPLAY +
+        "\n\n" +
+        "We’re at Härma Keskus, Pärnu."
+      );
+    }
+    return (
+      "Подобрать услугу и записаться сейчас можно у нас в салоне или по телефону — так мы точнее учтём ваши пожелания и расписание.\n\n" +
+      "Позвоните: " +
+      SALON_BOOKING_PHONE_DISPLAY +
+      "\n\n" +
+      "Или загляните в Härma keskus (Tallinna mnt 70) — с радостью расскажем об услугах и найдём удобное время."
+    );
+  }
+
   document.body.addEventListener(
     "click",
     function (ev) {
@@ -367,7 +403,12 @@
   });
 
   document.querySelectorAll("[data-services-tabs-toggle]").forEach(function (btn) {
-    btn.addEventListener("click", function () {
+    btn.addEventListener("click", function (e) {
+      if (isOnlineBookingPanelOff()) {
+        e.preventDefault();
+        showToast(servicesHeroPhoneOnlyToastMessage(), "ok");
+        return;
+      }
       var teenused = document.getElementById("teenused");
       if (!teenused) return;
       teenused.classList.add("services-list-open");
