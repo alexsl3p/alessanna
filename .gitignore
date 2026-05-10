@@ -36,3 +36,8 @@ deployed-*.html
 
 # Supabase CLI temp (создаётся `supabase` CLI локально)
 supabase/.temp/
+
+# Локальные payload’ы для MCP/CLI деплоя edge functions (не коммитить)
+_mcp_*.json
+_deploy_mcp_args.json
+_fn_payload.json
