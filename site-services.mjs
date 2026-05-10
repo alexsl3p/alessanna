@@ -349,13 +349,10 @@ function renderFormSelects(groups, svcMasters) {
       const itemOpt = document.createElement("option");
       itemOpt.value = sid;
       const priceTxt = fmtPrice(it.price);
-      /* Длительность услуги — внутренняя информация салона. Клиенту в
-       * выпадающем списке услуг показываем только название и цену; точное
-       * время визита он увидит после выбора даты («Свободное время»).
-       * Сама длительность по-прежнему лежит в data-service-duration —
-       * её используют расчёты слотов и admin preview. */
-      itemOpt.textContent =
-        String(it.name || "Teenus") + " — " + priceTxt;
+      /* В списке услуг формы — только название (без цены): ориентир из прайса
+       * не равен финальному счёту. Цена остаётся в data-service-price для
+       * слотов и служебной логики. */
+      itemOpt.textContent = String(it.name || "Teenus");
       itemOpt.setAttribute("data-category-id", gr.id);
       itemOpt.setAttribute("data-service-id", sid);
       itemOpt.setAttribute("data-service-name", String(it.name || ""));

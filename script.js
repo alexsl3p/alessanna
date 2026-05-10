@@ -48,7 +48,8 @@
       window.alert(message);
       return;
     }
-    var DEFAULT_TTL_MS = kind === "err" ? 8000 : 5500;
+    var DEFAULT_TTL_MS =
+      kind === "err" ? 8000 : String(message).indexOf("\n\n") >= 0 ? 12000 : 5500;
     var t = document.createElement("div");
     t.className = "toast " + (kind === "err" ? "toast--err" : "toast--ok");
     t.setAttribute("role", kind === "err" ? "alert" : "status");
@@ -1470,7 +1471,7 @@
 
             var text = document.createElement("span");
             text.className = "pick-chip-text";
-            text.textContent = item.label + " — " + item.price;
+            text.textContent = item.label;
             head.appendChild(text);
 
             /* Бейдж длительности на чипе «Ваш выбор» убран совсем —
@@ -3045,6 +3046,25 @@
       };
     }
 
+    /** После успешной записи: кратко о том, что цена в прайсе — ориентир. */
+    function bookingSuccessMessageWithPriceNote() {
+      var base = isRu
+        ? "Запись подтверждена. Ждём вас в салоне."
+        : isEn
+          ? "Booking confirmed. See you at the salon."
+          : isFi
+            ? "Varaus vahvistettu. Nähdään salongilla."
+            : "Broneering kinnitatud. Täname!";
+      var note = isRu
+        ? "Сумма в прайсе — ориентир: итог может отличаться в зависимости от объёма работ, времени, расхода материалов и уточнений на месте. Точную стоимость согласуем с вами при подтверждении записи или после консультации с мастером."
+        : isEn
+          ? "The listed price is a guide: your final total may reflect the work done, time, materials, and details we agree on site. We will confirm the exact amount when we confirm your appointment or after your stylist consults you."
+          : isFi
+            ? "Hintaluettelon hinta on suuntaa-antava; lopullinen hinta voi riippua työn laajuudesta, ajasta ja materiaaleista. Tarkan summan sovimme varauksen yhteydessä tai konsultaation jälkeen."
+            : "Hinnakirja summa on orientiir: lõplik hind võib sõltuda töö mahust, ajast, materjalikulust ja täpsustustest kohapeal. Täpse hinna lepime kokku broneeringu kinnitamisel või pärast konsultatsiooni meistriga.";
+      return base + "\n\n" + note;
+    }
+
     /** Цепочка услуг (picked[] в dock) + Supabase RPC. Возвращает Promise, который резолвится
      *  в { handled: true, ok: true/false }. Если конфиг Supabase недоступен и запасной
      *  путь тоже провалился — резолвится в { handled: false } и caller идёт в mailto. */
@@ -3062,12 +3082,12 @@
         /* Прайс ещё не загружен, или пользователь не выбрал категорию: мягкий блок, без mailto. */
         showToast(
           isRu
-            ? "Выберите услугу в прайсе выше, чтобы мы знали цену и длительность."
+            ? "Выберите услугу в прайсе выше — так мы поймём длительность и сможем подобрать время."
             : isEn
-              ? "Please pick a service from the price list so we know price and duration."
+              ? "Please pick a service from the price list so we know the duration and can offer times."
               : isFi
-                ? "Valitse palvelu hinnastosta, jotta tiedämme hinnan ja keston."
-                : "Palun valige teenus hinnakirjast (hind ja kestus).",
+                ? "Valitse palvelu hinnastosta, jotta tiedämme keston ja voimme tarjota aikoja."
+                : "Valige teenus hinnakirjast — siis saame kestuse järgi aegu pakkuda.",
           "err"
         );
         return Promise.resolve({ handled: true, ok: false });
@@ -3107,14 +3127,7 @@
         .then(function (res) {
           var j = res.json || {};
           if (j && j.ok === true) {
-            var okMsg = isRu
-              ? "Запись подтверждена. Ждём вас в салоне."
-              : isEn
-                ? "Booking confirmed. See you at the salon."
-                : isFi
-                  ? "Varaus vahvistettu. Nähdään salongilla."
-                  : "Broneering kinnitatud. Täname!";
-            showToast(okMsg, "ok");
+            showToast(bookingSuccessMessageWithPriceNote(), "ok");
             bookingForm.reset();
             if (chainApi && chainApi.clear) chainApi.clear();
             invalidateMonthCache();
@@ -3196,14 +3209,7 @@
           })
           .then(function (x) {
             if (x.ok) {
-              var okMsg = isRu
-                ? "Запись подтверждена. Ждём вас в салоне."
-                : isEn
-                  ? "Booking confirmed. See you at the salon."
-                  : isFi
-                    ? "Varaus vahvistettu. Nähdään salongilla."
-                    : "Broneering kinnitatud. Täname!";
-              showToast(okMsg, "ok");
+              showToast(bookingSuccessMessageWithPriceNote(), "ok");
               bookingForm.reset();
               invalidateMonthCache();
               clearSelection();

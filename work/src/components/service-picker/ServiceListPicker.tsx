@@ -34,6 +34,8 @@ type Props = {
    * Компактные ряды с миниатюрой слева (эмодзи или thumbUrl) — быстрая запись / планшет.
    */
   tileThumbnails?: boolean;
+  /** Не показывать цену в карточке (публичная онлайн-запись). */
+  hidePrices?: boolean;
 };
 
 function lsRecent(key: string): string[] {
@@ -140,6 +142,7 @@ export function ServiceListPicker({
   listMaxClassName = "max-h-[min(58vh,560px)]",
   compact = false,
   tileThumbnails = false,
+  hidePrices = false,
 }: Props) {
   const [query, setQuery] = useState("");
   const [tick, setTick] = useState(0);
@@ -219,9 +222,58 @@ export function ServiceListPicker({
   const renderCard = (s: ServicePickRow) => {
     const sel = s.id === selectedId;
     const mark = markedIds?.has(s.id);
-    const priceStr =
-      s.priceEur != null ? `€${Number.isInteger(s.priceEur) ? s.priceEur : s.priceEur.toFixed(2)}` : priceUnknownLabel;
+    const priceStr = hidePrices
+      ? ""
+      : s.priceEur != null
+        ? `€${Number.isInteger(s.priceEur) ? s.priceEur : s.priceEur.toFixed(2)}`
+        : priceUnknownLabel;
     const emoji = (s.thumbEmoji?.trim() || "📋").slice(0, 4);
+
+    const metaStandard =
+      hidePrices && s.durationMin <= 0 ? null : (
+        <p className={`mt-0.5 text-zinc-400 ${compact ? "text-xs" : "text-sm"}`}>
+          {hidePrices ? (
+            s.durationMin > 0 ? (
+              <>
+                {s.durationMin} {minLabel}
+              </>
+            ) : null
+          ) : (
+            <>
+              {s.durationMin > 0 ? (
+                <>
+                  {s.durationMin} {minLabel}
+                  <span className="text-zinc-600"> · </span>
+                </>
+              ) : null}
+              {priceStr}
+            </>
+          )}
+        </p>
+      );
+
+    const metaTile =
+      hidePrices && s.durationMin <= 0 ? null : (
+        <p className="mt-0.5 text-xs leading-snug text-zinc-400">
+          {hidePrices ? (
+            s.durationMin > 0 ? (
+              <>
+                {s.durationMin} {minLabel}
+              </>
+            ) : null
+          ) : (
+            <>
+              {s.durationMin > 0 ? (
+                <>
+                  {s.durationMin} {minLabel}
+                  <span className="text-zinc-600"> · </span>
+                </>
+              ) : null}
+              {priceStr}
+            </>
+          )}
+        </p>
+      );
 
     if (tileThumbnails) {
       const check = (
@@ -243,15 +295,7 @@ export function ServiceListPicker({
               {mark ? <span className="mr-1 text-amber-300" aria-hidden>★</span> : null}
               {s.name}
             </p>
-            <p className="mt-0.5 text-xs leading-snug text-zinc-400">
-              {s.durationMin > 0 ? (
-                <>
-                  {s.durationMin} {minLabel}
-                  <span className="text-zinc-600"> · </span>
-                </>
-              ) : null}
-              {priceStr}
-            </p>
+            {metaTile}
           </div>
           <div className="flex shrink-0 items-center">
             <span className={chevronWrapCls} aria-hidden>
@@ -297,15 +341,7 @@ export function ServiceListPicker({
                 {mark ? <span className="mr-1 text-amber-300" aria-hidden>★</span> : null}
                 {s.name}
               </p>
-              <p className={`mt-0.5 text-zinc-400 ${compact ? "text-xs" : "text-sm"}`}>
-                {s.durationMin > 0 ? (
-                  <>
-                    {s.durationMin} {minLabel}
-                    <span className="text-zinc-600"> · </span>
-                  </>
-                ) : null}
-                {priceStr}
-              </p>
+              {metaStandard}
             </div>
           </div>
         </div>

@@ -1273,7 +1273,22 @@ export function PublicBookingPage() {
         <div className="mt-6 space-y-6 md:mt-8">
           {mainContent}
 
-          {msg && <p className="text-sm text-emerald-400/90">{msg}</p>}
+          {msg && (
+            <div
+              className={`rounded-xl border px-4 py-3 text-sm ${
+                msg === t("publicBook.success")
+                  ? "border-emerald-500/35 bg-emerald-950/25 text-emerald-100"
+                  : "border-amber-500/35 bg-amber-950/20 text-amber-100"
+              }`}
+            >
+              <p className={msg === t("publicBook.success") ? "font-medium text-emerald-200" : ""}>{msg}</p>
+              {msg === t("publicBook.success") && !isReceptionMode ? (
+                <p className="mt-2 border-t border-emerald-500/20 pt-2 text-xs leading-relaxed text-emerald-100/85">
+                  {t("publicBook.successPriceDisclaimer")}
+                </p>
+              ) : null}
+            </div>
+          )}
         </div>
       </div>
     </div>

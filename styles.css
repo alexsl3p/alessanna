@@ -3009,6 +3009,7 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
 
 .toast__msg {
   flex: 1 1 auto;
+  white-space: pre-line;
 }
 
 .toast__close {

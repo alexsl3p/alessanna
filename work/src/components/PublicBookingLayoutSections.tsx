@@ -931,6 +931,7 @@ export function PublicBookingBookingSection({
             priceUnknownLabel={t("quickBook.priceOnConfirm")}
             minLabel={t("quickBook.min")}
             listMaxClassName="max-h-[min(52vh,480px)]"
+            hidePrices={!isReceptionMode}
           />
         </div>
         {listIsFiltered && (
