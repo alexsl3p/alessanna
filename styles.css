@@ -2952,7 +2952,8 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
  * ────────────────────────────────────────────────────────────────────── */
 .toast-root {
   position: fixed;
-  z-index: 120;
+  /* Выше .site-header (120) и .nav (101), чтобы подсказка была видна после клика «Записаться» */
+  z-index: 10060;
   top: calc(env(safe-area-inset-top, 0) + 1rem);
   right: 1rem;
   display: flex;

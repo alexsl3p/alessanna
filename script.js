@@ -168,7 +168,13 @@
     "click",
     function (ev) {
       var a = ev.target.closest('a[href="#broneeri"]');
-      if (!a || a.getAttribute("data-booking-phone-only") !== "true") return;
+      if (!a) return;
+      var sec = document.getElementById("broneeri");
+      /* И data-attr, и класс секции — если атрибут не успел проставиться или кэш старый */
+      var phoneOnly =
+        a.getAttribute("data-booking-phone-only") === "true" ||
+        (sec && sec.classList.contains("booking-panel--off"));
+      if (!phoneOnly) return;
       ev.preventDefault();
       ev.stopPropagation();
       showToast(bookingPhoneOnlyToastMessage(), "ok");
@@ -508,7 +514,7 @@
         if (cartRows && cartRows[0] && cartRows[0].value != null) {
           cart = parseSalonSiteBoolSetting(cartRows[0].value, true);
         }
-        var panel = panelJson !== false;
+        var panel = normalizeBookingPanelRpcResult(panelJson);
         salonPublicBookingPanelEnabled = panel;
         applyBookingPanelDomVisibility(panel);
         return { cart: cart, bookingPanel: panel };
