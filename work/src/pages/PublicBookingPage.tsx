@@ -864,20 +864,27 @@ export function PublicBookingPage() {
       setMsg(error.message);
       return;
     }
-    const syncRes = await supabase.functions.invoke("google-calendar-sync", { body: { mode: "drain" } });
-    const syncData = (syncRes.data ?? {}) as { processed?: number; failed?: number; total?: number };
-    const processed = Number(syncData.processed ?? 0);
-    const total = Number(syncData.total ?? 0);
-    if (syncRes.error) {
+    try {
+      const syncRes = await supabase.functions.invoke("google-calendar-sync", { body: { mode: "drain" } });
+      const syncData = (syncRes.data ?? {}) as { processed?: number; failed?: number; total?: number };
+      const processed = Number(syncData.processed ?? 0);
+      const total = Number(syncData.total ?? 0);
+      if (syncRes.error) {
+        setMsg(
+          "Запись сохранена, но sync с Google Calendar не запущен. Проверьте Integrations -> Two-way sync engine.",
+        );
+      } else if (total > 0 && processed === 0) {
+        setMsg(
+          "Запись сохранена, но в Google пока не отправлена (scope отключен или очередь с ошибкой). Проверьте Integrations и статус sync в CRM.",
+        );
+      } else {
+        setMsg(t("publicBook.success"));
+      }
+    } catch {
+      // Never fail website booking if function invocation/network is unavailable.
       setMsg(
-        "Запись сохранена, но sync с Google Calendar не запущен. Проверьте Integrations -> Two-way sync engine.",
+        "Запись сохранена. Sync с Google Calendar будет выполнен автоматически при восстановлении соединения.",
       );
-    } else if (total > 0 && processed === 0) {
-      setMsg(
-        "Запись сохранена, но в Google пока не отправлена (scope отключен или очередь с ошибкой). Проверьте Integrations и статус sync в CRM.",
-      );
-    } else {
-      setMsg(t("publicBook.success"));
     }
     setPickedStart(null);
     setClientName("");
