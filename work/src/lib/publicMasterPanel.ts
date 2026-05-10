@@ -1,5 +1,5 @@
 import { hasStaffRole, normalizeRoles } from "./roles";
-import type { StaffMember, StaffServiceRow } from "../types/database";
+import type { ServiceRow, StaffMember, StaffServiceRow } from "../types/database";
 
 /** Услуги каталога для публичной записи (минимум полей + категория). */
 export type PublicServiceCatalogEntry = {
@@ -157,4 +157,74 @@ export function splitStaffIntoHairAndNails(
     }
   }
   return { hair, nails };
+}
+
+/** Строка каталога CRM → формат для `classifyServiceHall` / сплита колонок. */
+export function serviceRowToPublicCatalogEntry(
+  row: Pick<ServiceRow, "id" | "active" | "category" | "name_et"> | undefined,
+): PublicServiceCatalogEntry | undefined {
+  if (!row) return undefined;
+  return {
+    id: String(row.id),
+    active: row.active,
+    categoryName: row.category != null ? String(row.category) : null,
+    name: row.name_et,
+  };
+}
+
+/**
+ * Как `splitStaffIntoHairAndNails`, но услуги мастера берутся по **всем** строкам
+ * `staff_services` (включая только CRM), а не по публичным привязкам — для календаря и модалки.
+ */
+export function splitStaffIntoHairAndNailsForCrm(
+  members: StaffMember[],
+  links: StaffServiceRow[],
+  services: PublicServiceCatalogEntry[],
+): { hair: StaffMember[]; nails: StaffMember[] } {
+  const byId = new Map(services.map((s) => [String(s.id), s]));
+  const hair: StaffMember[] = [];
+  const nails: StaffMember[] = [];
+  const seenH = new Set<string>();
+  const seenN = new Set<string>();
+
+  for (const m of members) {
+    const svcIds = crmServiceIdsForStaff(m, links, services);
+    let inHair = false;
+    let inNails = false;
+    for (const sid of svcIds) {
+      const kind = classifyServiceHall(byId.get(sid));
+      if (kind === "nail") inNails = true;
+      if (kind === "hair") inHair = true;
+    }
+    if (!inHair && !inNails) inHair = true;
+    if (inHair && !seenH.has(m.id)) {
+      hair.push(m);
+      seenH.add(m.id);
+    }
+    if (inNails && !seenN.has(m.id)) {
+      nails.push(m);
+      seenN.add(m.id);
+    }
+  }
+  return { hair, nails };
+}
+
+/** Пересечь уже отфильтрованных по навыкам мастеров с колонкой зала и сохранить порядок панели. */
+export function restrictAndOrderStaffByServiceHall(
+  members: StaffMember[],
+  serviceEntry: PublicServiceCatalogEntry | undefined,
+  mastersSplit: { hair: StaffMember[]; nails: StaffMember[] },
+  fullPanel: StaffMember[],
+): StaffMember[] {
+  const hall = classifyServiceHall(serviceEntry);
+  const hairIds = new Set(mastersSplit.hair.map((m) => m.id));
+  const nailIds = new Set(mastersSplit.nails.map((m) => m.id));
+  const panelIds =
+    hall === "hair" ? hairIds : hall === "nail" ? nailIds : new Set(fullPanel.map((m) => m.id));
+  const orderList =
+    hall === "hair" ? mastersSplit.hair : hall === "nail" ? mastersSplit.nails : fullPanel;
+  const order = new Map(orderList.map((m, i) => [m.id, i]));
+  return members
+    .filter((m) => panelIds.has(m.id))
+    .sort((a, b) => (order.get(a.id) ?? 9999) - (order.get(b.id) ?? 9999));
 }

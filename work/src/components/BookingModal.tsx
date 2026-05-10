@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { supabase } from "../lib/supabase";
 import type { StaffMember, StaffServiceRow, ServiceRow } from "../types/database";
 import { staffEligibleForService, servicesEligibleForStaff } from "../lib/roles";
+import { restrictAndOrderStaffByServiceHall, serviceRowToPublicCatalogEntry } from "../lib/publicMasterPanel";
 import { eurFromCents } from "../lib/format";
 import { overlapsExistingAppointments } from "../lib/slots";
 
@@ -18,6 +19,9 @@ type Props = {
   links?: StaffServiceRow[];
   lockStaff?: boolean;
   variant?: "default" | "pro";
+  /** Колонки «волосы» / «ногти» (как на ресепшене). Если заданы вместе с fullPanel — список мастеров режется по залу выбранной услуги. */
+  mastersHallSplit?: { hair: StaffMember[]; nails: StaffMember[] };
+  mastersHallFullPanel?: StaffMember[];
 };
 
 export function BookingModal({
@@ -31,6 +35,8 @@ export function BookingModal({
   links = [],
   lockStaff = false,
   variant = "default",
+  mastersHallSplit,
+  mastersHallFullPanel,
 }: Props) {
   const { t, i18n } = useTranslation();
   const [clientName, setClientName] = useState("");
@@ -55,10 +61,17 @@ export function BookingModal({
     return services.filter((s) => s.active);
   }, [services, links, lockStaff, initialStaffId, initialStaffRow]);
 
-  const eligibleStaff = useMemo(
-    () => staffEligibleForService(staffList, links, serviceId || null),
-    [staffList, links, serviceId]
-  );
+  const eligibleStaff = useMemo(() => {
+    const base = staffEligibleForService(staffList, links, serviceId || null);
+    if (!mastersHallSplit || !mastersHallFullPanel) return base;
+    const svc = services.find((s) => s.id === serviceId);
+    return restrictAndOrderStaffByServiceHall(
+      base,
+      serviceRowToPublicCatalogEntry(svc),
+      mastersHallSplit,
+      mastersHallFullPanel,
+    );
+  }, [staffList, links, serviceId, services, mastersHallSplit, mastersHallFullPanel]);
 
   useEffect(() => {
     if (!open) return;

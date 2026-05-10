@@ -7,8 +7,8 @@ import {
   staffEligibleForService,
 } from "../lib/roles";
 import {
-  classifyServiceHall,
   publicBookableStaffMembers,
+  restrictAndOrderStaffByServiceHall,
   splitStaffIntoHairAndNails,
 } from "../lib/publicMasterPanel";
 import {
@@ -205,22 +205,8 @@ export function useQuickBookingResources() {
     (serviceId: string | null) => {
       if (serviceId == null) return [];
       const svcEntry = services.find((s) => s.id === serviceId);
-      const hall = classifyServiceHall(svcEntry);
-      const hairIds = new Set(mastersSplitResolved.hair.map((m) => m.id));
-      const nailIds = new Set(mastersSplitResolved.nails.map((m) => m.id));
-      const panelIds =
-        hall === "hair" ? hairIds : hall === "nail" ? nailIds : new Set(mastersPanelStaff.map((m) => m.id));
-
       const base = staffEligibleForService(staffDirectory, links, serviceId);
-      const filtered = base.filter((m) => panelIds.has(m.id));
-      const orderList =
-        hall === "hair"
-          ? mastersSplitResolved.hair
-          : hall === "nail"
-            ? mastersSplitResolved.nails
-            : mastersPanelStaff;
-      const order = new Map(orderList.map((m, i) => [m.id, i]));
-      return filtered.sort((a, b) => (order.get(a.id) ?? 9999) - (order.get(b.id) ?? 9999));
+      return restrictAndOrderStaffByServiceHall(base, svcEntry, mastersSplitResolved, mastersPanelStaff);
     },
     [staffDirectory, links, mastersPanelStaff, mastersSplitResolved, services],
   );

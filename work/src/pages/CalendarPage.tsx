@@ -36,6 +36,17 @@ import type {
 import { isStaffRowAdmin, staffEligibleForService, hasStaffRole, normalizeStaffMember } from "../lib/roles";
 import { effectiveCanWorkCalendar } from "../lib/effectiveRole";
 import { loadServicesCatalog } from "../lib/loadServicesCatalog";
+import {
+  restrictAndOrderStaffByServiceHall,
+  serviceRowToPublicCatalogEntry,
+  splitStaffIntoHairAndNailsForCrm,
+} from "../lib/publicMasterPanel";
+import {
+  DEFAULT_RECEPTION_MASTERS_PANEL,
+  loadReceptionLayoutStore,
+  type ReceptionMastersPanelConfig,
+} from "../lib/receptionLayout";
+import { fetchReceptionLayoutFromServer } from "../lib/receptionLayoutRemote";
 import { BookingModal } from "../components/BookingModal";
 import { CalendarSidePanels } from "../components/CalendarSidePanels";
 import { ProCalendar } from "../components/calendar/ProCalendar";
@@ -64,13 +75,16 @@ export function CalendarPage() {
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState<{ start: Date; staffId: string } | null>(null);
   const [durationMin, setDurationMin] = useState(60);
+  const [receptionMastersConfig, setReceptionMastersConfig] = useState<ReceptionMastersPanelConfig>(() => ({
+    ...DEFAULT_RECEPTION_MASTERS_PANEL,
+  }));
 
   const load = useCallback(async () => {
     let apQuery = supabase.from("appointments").select("*").neq("status", "cancelled");
     if (isWorkerOnlyEffective && staffMember) {
       apQuery = apQuery.eq("staff_id", staffMember.id);
     }
-    const [st, sch, to, ap, svCatalog, ss] = await Promise.all([
+    const [st, sch, to, ap, svCatalog, ss, remoteLayout] = await Promise.all([
       supabase.from("staff").select("*").order("name"),
       supabase.from("staff_schedule").select("*"),
       supabase.from("staff_time_off").select("*"),
@@ -82,6 +96,7 @@ export function CalendarPage() {
        * показывала пустой dropdown «Услуга». */
       loadServicesCatalog({ activeOnly: true }),
       supabase.from("staff_services").select("*"),
+      fetchReceptionLayoutFromServer(),
     ]);
     if (st.data) {
       /* Тех-поддержка (роль admin) не принимает клиентов — не занимает колонку в календаре. */
@@ -96,6 +111,11 @@ export function CalendarPage() {
     if (ap.data) setAppointments(ap.data as AppointmentRow[]);
     if (ss.data) setStaffServiceLinks(ss.data as StaffServiceRow[]);
     setServices(svCatalog);
+    if (remoteLayout) {
+      setReceptionMastersConfig(remoteLayout.masters);
+    } else {
+      setReceptionMastersConfig(loadReceptionLayoutStore().masters);
+    }
     setLoading(false);
   }, [isWorkerOnlyEffective, staffMember]);
 
@@ -116,10 +136,52 @@ export function CalendarPage() {
     if (s) setDurationMin(s.duration_min);
   }, [calendarServiceId, services]);
 
-  const staffForCalendar = useMemo(
-    () => staffEligibleForService(staff, staffServiceLinks, calendarServiceId),
-    [staff, staffServiceLinks, calendarServiceId]
+  const servicesCatalog = useMemo(
+    () => services.map((s) => serviceRowToPublicCatalogEntry(s)!),
+    [services],
   );
+
+  const mastersPanelStaffForHall = useMemo(() => {
+    if (receptionMastersConfig.assignment === "manual") {
+      const byId = new Map(staff.map((m) => [m.id, m]));
+      const ids = [
+        ...new Set([...receptionMastersConfig.hairStaffIds, ...receptionMastersConfig.nailsStaffIds]),
+      ];
+      return ids.map((id) => byId.get(id)).filter((m): m is StaffMember => m != null);
+    }
+    return staff;
+  }, [receptionMastersConfig, staff]);
+
+  const mastersSplitResolved = useMemo(() => {
+    if (receptionMastersConfig.assignment === "manual") {
+      const byId = new Map(staff.map((m) => [m.id, m]));
+      const pick = (ids: string[]) =>
+        ids.map((id) => byId.get(id)).filter((m): m is StaffMember => m != null);
+      return {
+        hair: pick(receptionMastersConfig.hairStaffIds),
+        nails: pick(receptionMastersConfig.nailsStaffIds),
+      };
+    }
+    return splitStaffIntoHairAndNailsForCrm(staff, staffServiceLinks, servicesCatalog);
+  }, [receptionMastersConfig, staff, staffServiceLinks, servicesCatalog]);
+
+  const staffForCalendar = useMemo(() => {
+    const base = staffEligibleForService(staff, staffServiceLinks, calendarServiceId);
+    const svc = services.find((x) => x.id === calendarServiceId);
+    return restrictAndOrderStaffByServiceHall(
+      base,
+      serviceRowToPublicCatalogEntry(svc),
+      mastersSplitResolved,
+      mastersPanelStaffForHall,
+    );
+  }, [
+    staff,
+    staffServiceLinks,
+    calendarServiceId,
+    services,
+    mastersSplitResolved,
+    mastersPanelStaffForHall,
+  ]);
 
   const activeStaffForCalendar = useMemo(
     () => staffForCalendar.filter((e) => e.active),
@@ -547,6 +609,8 @@ export function CalendarPage() {
           services={services}
           links={staffServiceLinks}
           lockStaff={!canManage}
+          mastersHallSplit={mastersSplitResolved}
+          mastersHallFullPanel={mastersPanelStaffForHall}
         />
       )}
     </div>
