@@ -380,10 +380,50 @@ export function Layout() {
     });
   }
 
+  function themeSwitcherGrid() {
+    return (
+      <>
+        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
+          {t("nav.themeLabel", { defaultValue: "Тема" })}
+        </p>
+        <div className="grid grid-cols-3 gap-1">
+          {THEMES.map((opt) => {
+            const active = theme === opt.id;
+            const sw = themeSwatch(opt.id);
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => setTheme(opt.id)}
+                aria-pressed={active}
+                title={t(`nav.${opt.labelKey}`, { defaultValue: opt.id })}
+                className={`flex flex-col items-center gap-1 rounded-lg border px-1.5 py-1.5 text-[10px] font-medium uppercase tracking-wide transition ${
+                  active
+                    ? "border-gold/60 bg-surface text-gold shadow-gold"
+                    : "border-line/10 bg-canvas/40 text-muted hover:border-gold/30 hover:text-fg"
+                }`}
+              >
+                <span
+                  aria-hidden="true"
+                  className="flex h-3 w-7 overflow-hidden rounded-full border border-line/10"
+                >
+                  <span style={{ background: sw[0] }} className="flex-1" />
+                  <span style={{ background: sw[1] }} className="flex-1" />
+                  <span style={{ background: sw[2] }} className="flex-1" />
+                </span>
+                <span className="truncate">{t(`nav.${opt.labelKey}`, { defaultValue: opt.id })}</span>
+              </button>
+            );
+          })}
+        </div>
+      </>
+    );
+  }
+
   return (
     <div className="flex min-h-screen bg-canvas text-fg">
       <aside
-        className={`sticky top-0 flex h-screen flex-col border-r border-line/10 bg-panel transition-[width] duration-200 ease-out ${sidebarWidth}`}
+        className={`sticky top-0 flex h-[100dvh] max-h-[100dvh] min-h-0 flex-col overflow-hidden border-r border-line/10 bg-panel transition-[width] duration-200 ease-out ${sidebarWidth}`}
         aria-label="CRM navigation"
       >
         {/* ───── Brand / language ───── */}
@@ -476,8 +516,9 @@ export function Layout() {
           </button>
         </div>
 
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overscroll-y-contain">
         {/* ───── Main nav ───── */}
-        <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-2">
+        <nav className="flex flex-col gap-1 p-2">
           {visibleGroups.map((group, gi) => {
             const heading = group.key ? t(`nav.group.${group.key}`) : null;
             const open = isGroupOpenV2(group);
@@ -579,48 +620,12 @@ export function Layout() {
           })}
         </nav>
 
-        {/* ───── Theme switcher ───── */}
+        {/* ───── Theme + preview + public: desktop always visible; mobile in <details> ───── */}
         {!collapsed && (
-          <div className="border-t border-line/10 px-3 py-2.5">
-            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
-              {t("nav.themeLabel", { defaultValue: "Тема" })}
-            </p>
-            <div className="grid grid-cols-3 gap-1">
-              {THEMES.map((opt) => {
-                const active = theme === opt.id;
-                const sw = themeSwatch(opt.id);
-                return (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => setTheme(opt.id)}
-                    aria-pressed={active}
-                    title={t(`nav.${opt.labelKey}`, { defaultValue: opt.id })}
-                    className={`flex flex-col items-center gap-1 rounded-lg border px-1.5 py-1.5 text-[10px] font-medium uppercase tracking-wide transition ${
-                      active
-                        ? "border-gold/60 bg-surface text-gold shadow-gold"
-                        : "border-line/10 bg-canvas/40 text-muted hover:border-gold/30 hover:text-fg"
-                    }`}
-                  >
-                    <span
-                      aria-hidden="true"
-                      className="flex h-3 w-7 overflow-hidden rounded-full border border-line/10"
-                    >
-                      <span style={{ background: sw[0] }} className="flex-1" />
-                      <span style={{ background: sw[1] }} className="flex-1" />
-                      <span style={{ background: sw[2] }} className="flex-1" />
-                    </span>
-                    <span className="truncate">
-                      {t(`nav.${opt.labelKey}`, { defaultValue: opt.id })}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          <div className="hidden border-t border-line/10 px-3 py-2.5 md:block">{themeSwitcherGrid()}</div>
         )}
         {collapsed && (
-          <div className="flex justify-center border-t border-line/10 py-2">
+          <div className="hidden justify-center border-t border-line/10 py-2 md:flex">
             <button
               type="button"
               onClick={() => {
@@ -647,9 +652,92 @@ export function Layout() {
           </div>
         )}
 
-        {/* ───── Preview role select ───── */}
+        {!collapsed && (
+          <details className="group border-t border-line/10 md:hidden">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 text-sm font-medium text-muted transition hover:bg-surface/60 hover:text-fg [&::-webkit-details-marker]:hidden">
+              <span>{t("nav.sidebarMore")}</span>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-4 w-4 shrink-0 opacity-70 transition group-open:rotate-180"
+                aria-hidden="true"
+              >
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </summary>
+            <div className="space-y-3 border-t border-line/5 px-3 pb-3 pt-2">
+              <div>{themeSwitcherGrid()}</div>
+              {isAdmin && (
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">
+                    {t("preview.label")}
+                  </p>
+                  <select
+                    value={previewRole ?? ""}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setPreviewRole(v === "" ? null : (v as Role));
+                    }}
+                    className="mt-1 w-full rounded-md border border-line/15 bg-canvas/60 px-2 py-1.5 text-xs text-fg transition focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold/40"
+                  >
+                    <option value="">{t("preview.real")}</option>
+                    {previewOptions.map((r) => (
+                      <option key={r} value={r}>
+                        {t(`role.${r}`)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {isWorkerOnlyEffective && (
+                <p className="text-[11px] leading-snug text-muted">{t("nav.workerHint")}</p>
+              )}
+              {canManage && (
+                <a
+                  href={publicSiteUrl()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={t("nav.publicSiteTitle")}
+                  className="flex items-center gap-2 rounded-lg py-2 pl-0 pr-1 text-sm text-muted transition-colors hover:bg-surface hover:text-gold"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={1.75}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="h-4 w-4 shrink-0"
+                    aria-hidden="true"
+                  >
+                    <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12Z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                  <span className="min-w-0 flex-1 truncate">{t("nav.publicSite")}</span>
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={1.75}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="h-3 w-3 shrink-0 opacity-60"
+                    aria-hidden="true"
+                  >
+                    <path d="M7 17 17 7M7 7h10v10" />
+                  </svg>
+                </a>
+              )}
+            </div>
+          </details>
+        )}
+
         {isAdmin && !collapsed && (
-          <div className="border-t border-line/10 px-3 py-2.5">
+          <div className="hidden border-t border-line/10 px-3 py-2.5 md:block">
             <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">
               {t("preview.label")}
             </p>
@@ -671,14 +759,13 @@ export function Layout() {
           </div>
         )}
         {isWorkerOnlyEffective && !collapsed && (
-          <p className="border-t border-line/10 px-4 py-3 text-[11px] leading-snug text-muted">
+          <p className="hidden border-t border-line/10 px-4 py-3 text-[11px] leading-snug text-muted md:block">
             {t("nav.workerHint")}
           </p>
         )}
 
-        {/* ───── Open public site as admin ───── */}
         {canManage && (
-          <div className="border-t border-line/10 p-2">
+          <div className="hidden border-t border-line/10 p-2 md:block">
             <a
               href={publicSiteUrl()}
               target="_blank"
@@ -721,6 +808,61 @@ export function Layout() {
             </a>
           </div>
         )}
+
+        {collapsed && (
+          <div className="flex justify-center border-t border-line/10 py-2 md:hidden">
+            <button
+              type="button"
+              onClick={() => {
+                const idx = THEMES.findIndex((x) => x.id === theme);
+                setTheme(THEMES[(idx + 1) % THEMES.length].id);
+              }}
+              aria-label={t("nav.themeLabel", { defaultValue: "Тема" })}
+              title={t(`nav.theme.${theme}`, { defaultValue: theme })}
+              className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-line/10 bg-canvas/40 text-gold transition hover:border-gold/40"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.75}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-4 w-4"
+                aria-hidden="true"
+              >
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z" />
+              </svg>
+            </button>
+          </div>
+        )}
+        {collapsed && canManage && (
+          <div className="border-t border-line/10 p-2 md:hidden">
+            <a
+              href={publicSiteUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={t("nav.publicSiteTitle")}
+              className="flex items-center justify-center gap-2 rounded-lg py-2 text-sm text-muted transition-colors hover:bg-surface hover:text-gold"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.75}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-4 w-4 shrink-0"
+                aria-hidden="true"
+              >
+                <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12Z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            </a>
+          </div>
+        )}
+
+        </div>
 
         {/* ───── Footer: collapse toggle + logout ───── */}
         <div className="flex items-center justify-between gap-1 border-t border-line/10 p-2">
