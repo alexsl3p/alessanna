@@ -14,7 +14,7 @@ import {
   startOfYear,
 } from "date-fns";
 import { useTranslation } from "react-i18next";
-import { Link, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import {
@@ -40,7 +40,6 @@ import {
 } from "../lib/roles";
 import { eachDayInDataRange, getCalendarDataRange, type PublicCalendarScope } from "../lib/publicCalendarRange";
 import {
-  crmServiceIdsForStaff,
   publicBookableStaffMembers,
   publicServiceIdsForStaff,
   restrictAndOrderStaffByServiceHall,
@@ -52,7 +51,6 @@ import {
   DEFAULT_RECEPTION_MASTERS_PANEL,
   DEFAULT_RECEPTION_ROWS,
   DEFAULT_RECEPTION_UPCOMING_PANEL,
-  type ReceptionLayoutFilePayload,
   type ReceptionMastersPanelConfig,
   type ReceptionRows,
   type ReceptionSectionId,
@@ -64,11 +62,8 @@ import {
   CALENDAR_WEEK_EXCEPT_SUNDAY_STAFF_SETTING_KEY,
   parseStaffIdJsonList,
 } from "../lib/calendarWorkingStaff";
-import { fetchReceptionLayoutFromServer, saveReceptionLayoutToServer } from "../lib/receptionLayoutRemote";
+import { fetchReceptionLayoutFromServer } from "../lib/receptionLayoutRemote";
 import { renderReceptionRows } from "../lib/receptionSectionOrderRender";
-import { ReceptionLayoutEditor } from "../components/ReceptionLayoutEditor";
-import { ReceptionMastersPanelEditor } from "../components/ReceptionMastersPanelEditor";
-import { ReceptionUpcomingPanelEditor } from "../components/ReceptionUpcomingPanelEditor";
 import {
   PublicBookingBookingSection,
   PublicBookingCalendarSection,
@@ -98,10 +93,10 @@ function sortMasterDayRows(a: MasterDayRow, b: MasterDayRow): number {
   return 0;
 }
 
+/** Публичная онлайн-запись (`/book`). Ресепшен — `/reception` (календарь CRM). */
 export function PublicBookingPage() {
   const { t, i18n } = useTranslation();
-  const location = useLocation();
-  const { isAdmin, staffMember } = useAuth();
+  const { staffMember } = useAuth();
   const [services, setServices] = useState<PublicService[]>([]);
   /** Все активные сотрудники (не админы) из CRM — для ресепшена и ручного состава панели. */
   const [staffDirectory, setStaffDirectory] = useState<StaffMember[]>([]);
@@ -144,7 +139,6 @@ export function PublicBookingPage() {
   const [nowTick, setNowTick] = useState(() => Date.now());
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState(false);
-  const isReceptionMode = location.pathname === "/reception";
   const [receptionRows, setReceptionRows] = useState<ReceptionRows>(() =>
     DEFAULT_RECEPTION_ROWS.map((r) => [...r]),
   );
@@ -154,22 +148,9 @@ export function PublicBookingPage() {
   const [receptionUpcomingConfig, setReceptionUpcomingConfig] = useState<ReceptionUpcomingPanelConfig>(() => ({
     ...DEFAULT_RECEPTION_UPCOMING_PANEL,
   }));
-  const [receptionLayoutEditing, setReceptionLayoutEditing] = useState(false);
-  const [receptionRemoteSaveError, setReceptionRemoteSaveError] = useState<string | null>(null);
   /** Мастера пн–сб без строк в staff_schedule — uuid из salon_settings. */
   const [implicitWeekExceptSundayStaffIds, setImplicitWeekExceptSundayStaffIds] = useState<string[]>([]);
 
-  const pushReceptionPayload = useCallback((payload: ReceptionLayoutFilePayload) => {
-    setReceptionRemoteSaveError(null);
-    persistReceptionLayoutStore(payload);
-    void saveReceptionLayoutToServer(payload).then(({ error: saveErr }) => {
-      setReceptionRemoteSaveError(saveErr);
-    });
-  }, []);
-
-  useEffect(() => {
-    if (!isAdmin) setReceptionLayoutEditing(false);
-  }, [isAdmin]);
 
   const loadBase = useCallback(async () => {
     if (!isSupabaseConfigured()) {
@@ -300,15 +281,12 @@ export function PublicBookingPage() {
       const ids = [
         ...new Set([...receptionMastersConfig.hairStaffIds, ...receptionMastersConfig.nailsStaffIds]),
       ];
-      let list = ids.map((id) => byId.get(id)).filter((m): m is StaffMember => m != null);
-      if (!isReceptionMode) {
-        list = list.filter((m) => isStaffShownOnPublicMarketing(m));
-      }
-      return list;
+      return ids
+        .map((id) => byId.get(id))
+        .filter((m): m is StaffMember => m != null && isStaffShownOnPublicMarketing(m));
     }
     return publicBookableStaffMembers(staff, links, services);
   }, [
-    isReceptionMode,
     receptionMastersConfig.assignment,
     receptionMastersConfig.hairStaffIds,
     receptionMastersConfig.nailsStaffIds,
@@ -321,28 +299,28 @@ export function PublicBookingPage() {
   const mastersSplitResolved = useMemo(() => {
     if (receptionMastersConfig.assignment === "manual") {
       const byId = new Map(staffDirectory.map((m) => [m.id, m]));
-      const allow = (m: StaffMember) => isReceptionMode || isStaffShownOnPublicMarketing(m);
       const pick = (ids: string[]) =>
-        ids.map((id) => byId.get(id)).filter((m): m is StaffMember => m != null && allow(m));
+        ids
+          .map((id) => byId.get(id))
+          .filter((m): m is StaffMember => m != null && isStaffShownOnPublicMarketing(m));
       return {
         hair: pick(receptionMastersConfig.hairStaffIds),
         nails: pick(receptionMastersConfig.nailsStaffIds),
       };
     }
     return splitStaffIntoHairAndNails(mastersPanelStaff, links, services);
-  }, [receptionMastersConfig, staffDirectory, isReceptionMode, mastersPanelStaff, links, services]);
+  }, [receptionMastersConfig, staffDirectory, mastersPanelStaff, links, services]);
 
   const eligibleStaff = useMemo(() => {
     if (serviceId == null) return [];
     const base = staffEligibleForService(staffDirectory, links, serviceId);
-    const afterPublic = isReceptionMode ? base : applyPublicStaffVisibility(base, links, serviceId);
+    const afterPublic = applyPublicStaffVisibility(base, links, serviceId);
     const svcEntry = services.find((s) => s.id === serviceId);
     return restrictAndOrderStaffByServiceHall(afterPublic, svcEntry, mastersSplitResolved, mastersPanelStaff);
   }, [
     staffDirectory,
     links,
     serviceId,
-    isReceptionMode,
     mastersPanelStaff,
     mastersSplitResolved,
     services,
@@ -351,13 +329,11 @@ export function PublicBookingPage() {
   const panelServiceIds = useMemo(() => {
     const out = new Set<string>();
     for (const m of mastersPanelStaff) {
-      const ids = isReceptionMode
-        ? crmServiceIdsForStaff(m, links, services)
-        : publicServiceIdsForStaff(m, links, services);
+      const ids = publicServiceIdsForStaff(m, links, services);
       for (const id of ids) out.add(id);
     }
     return out;
-  }, [mastersPanelStaff, links, services, isReceptionMode]);
+  }, [mastersPanelStaff, links, services]);
 
   const masterPanelColorAssignments = useMemo(
     () => buildStaffColorAssignments(mastersPanelStaff.map((m) => m.id)),
@@ -806,10 +782,8 @@ export function PublicBookingPage() {
     if (!staffId || staffId === ANY_MASTER_ID) return new Set<string>();
     const member = staffDirectory.find((s) => s.id === staffId);
     if (!member) return new Set<string>();
-    return isReceptionMode
-      ? crmServiceIdsForStaff(member, links, services)
-      : publicServiceIdsForStaff(member, links, services);
-  }, [staffId, staffDirectory, links, services, isReceptionMode]);
+    return publicServiceIdsForStaff(member, links, services);
+  }, [staffId, staffDirectory, links, services]);
 
   const pickMaster = useCallback(
     (masterId: string) => {
@@ -817,15 +791,13 @@ export function PublicBookingPage() {
       setPickedStart(null);
       const member = staffDirectory.find((s) => s.id === masterId);
       if (!member) return;
-      const ids = isReceptionMode
-        ? crmServiceIdsForStaff(member, links, services)
-        : publicServiceIdsForStaff(member, links, services);
+      const ids = publicServiceIdsForStaff(member, links, services);
       if (serviceId != null && !ids.has(serviceId)) {
         const first = services.find((s) => s.active && ids.has(s.id));
         if (first) setServiceId(first.id);
       }
     },
-    [staffDirectory, links, services, serviceId, isReceptionMode],
+    [staffDirectory, links, services, serviceId],
   );
 
   const receptionUpcoming = useMemo(() => {
@@ -837,7 +809,7 @@ export function PublicBookingPage() {
 
   async function confirmBook() {
     const normalizedClientName = clientName.trim();
-    if (!svc || !pickedStart || (!isReceptionMode && !normalizedClientName)) {
+    if (!svc || !pickedStart || !normalizedClientName) {
       setMsg(t("publicBook.fillAll"));
       return;
     }
@@ -995,15 +967,6 @@ export function PublicBookingPage() {
     });
   }
 
-  function persistReceptionLayoutFromReception(next: ReceptionRows) {
-    setReceptionRows(next);
-    pushReceptionPayload({
-      rows: next,
-      masters: receptionMastersConfig,
-      upcoming: receptionUpcomingConfig,
-    });
-  }
-
   if (!isSupabaseConfigured()) {
     return (
       <div className="min-h-screen bg-zinc-950 p-8 text-zinc-300">
@@ -1084,7 +1047,7 @@ export function PublicBookingPage() {
         <PublicBookingBookingSection
           t={t}
           i18n={i18n}
-          isReceptionMode={isReceptionMode}
+          isReceptionMode={false}
           serviceId={serviceId}
           setServiceId={setServiceId}
           setStaffId={setStaffId}
@@ -1119,163 +1082,48 @@ export function PublicBookingPage() {
     <div className="min-h-screen bg-zinc-950 px-4 py-8 text-zinc-200 md:px-6 md:py-10">
       <div className="mx-auto w-full max-w-6xl">
         <h1 className="text-2xl font-semibold text-white md:text-3xl">{t("publicBook.title")}</h1>
-        <p className="mt-1 text-sm text-zinc-500">
-          {isReceptionMode
-            ? "Режим ресепшен: быстрая запись клиента без входа в CRM."
-            : t("publicBook.subtitle")}
-        </p>
+        <p className="mt-1 text-sm text-zinc-500">{t("publicBook.subtitle")}</p>
         <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4 sm:gap-y-1">
           <Link to="/login" className="inline-block text-sm text-sky-400">
             {t("publicBook.staffLogin")}
           </Link>
-          {isReceptionMode && !staffMember && (
-            <>
-              <Link
-                to="/help"
-                className="inline-block text-sm font-medium text-violet-300 hover:text-violet-200"
-              >
-                {t("publicBook.receptionSupportLoginCta")}
-              </Link>
-              <Link
-                to="/quick-booking"
-                className="inline-block text-sm font-medium text-emerald-300 hover:text-emerald-200"
-              >
-                ⚡ {t("quickBook.openTabletFlow")}
-              </Link>
-            </>
-          )}
+          <Link
+            to="/reception"
+            className="inline-block text-sm font-medium text-emerald-300 hover:text-emerald-200"
+          >
+            {t("publicBook.receptionCalendarLink")}
+          </Link>
+          <Link
+            to="/help"
+            className="inline-block text-sm font-medium text-violet-300 hover:text-violet-200"
+          >
+            {t("publicBook.receptionSupportLoginCta")}
+          </Link>
         </div>
 
-        {isReceptionMode && staffMember && (
+        {staffMember ? (
           <div className="mt-4 flex flex-wrap items-center gap-2 rounded-lg border border-zinc-700/80 bg-zinc-900/60 px-3 py-2.5 text-sm">
-            <Link
-              to="/"
-              className="font-medium text-sky-400 transition hover:text-sky-300"
-            >
+            <Link to="/" className="font-medium text-sky-400 transition hover:text-sky-300">
               ← {t("nav.backToCrm")}
             </Link>
             <span className="hidden text-zinc-600 sm:inline" aria-hidden="true">
               ·
             </span>
-            <span className="min-w-0 flex-1 text-xs text-zinc-500">{t("nav.receptionHint")}</span>
             <Link
-              to="/help"
-              className="inline-flex min-h-[44px] shrink-0 items-center justify-center rounded-xl border border-violet-500/45 bg-violet-950/40 px-4 text-sm font-semibold text-violet-100 shadow-[0_6px_22px_rgba(139,92,246,0.12)] transition hover:border-violet-400/55 hover:bg-violet-950/55"
+              to="/reception"
+              className="font-medium text-emerald-300 transition hover:text-emerald-200"
             >
-              {t("publicBook.receptionSupport")}
+              {t("publicBook.receptionCalendarLink")}
             </Link>
-            {!isAdmin && (
-              <Link
-                to="/quick-booking"
-                className="inline-flex min-h-[44px] shrink-0 items-center justify-center rounded-xl border border-emerald-500/40 bg-emerald-950/50 px-4 text-sm font-semibold text-emerald-50 shadow-[0_8px_28px_rgba(16,185,129,0.15)] transition hover:border-emerald-400/60 hover:bg-emerald-950/65"
-              >
-                ⚡ {t("quickBook.openTabletFlow")}
-              </Link>
-            )}
           </div>
-        )}
+        ) : null}
 
-        {isReceptionMode && isAdmin && (
-          <div className="mt-4 rounded-xl border border-amber-500/25 bg-amber-950/15 p-3 md:p-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setReceptionLayoutEditing((v) => !v)}
-                className="rounded-lg border border-amber-500/40 bg-amber-950/30 px-3 py-1.5 text-sm text-amber-100 hover:bg-amber-950/45"
-              >
-                {receptionLayoutEditing ? t("reception.layout.done") : t("reception.layout.edit")}
-              </button>
-              {staffMember && (
-                <>
-                  <Link
-                    to="/help"
-                    className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-violet-500/45 bg-violet-950/40 px-4 text-sm font-semibold text-violet-100 transition hover:border-violet-400/55 hover:bg-violet-950/55"
-                  >
-                    {t("publicBook.receptionSupport")}
-                  </Link>
-                  <Link
-                    to="/quick-booking"
-                    className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-emerald-500/45 bg-emerald-950/45 px-4 text-sm font-semibold text-emerald-50 shadow-[0_8px_28px_rgba(16,185,129,0.18)] transition hover:border-emerald-400/65 hover:bg-emerald-950/60"
-                  >
-                    ⚡ {t("quickBook.openTabletFlow")}
-                  </Link>
-                </>
-              )}
-              {receptionLayoutEditing && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const nextRows = DEFAULT_RECEPTION_ROWS.map((r) => [...r]);
-                    const nextMasters = { ...DEFAULT_RECEPTION_MASTERS_PANEL };
-                    const nextUpcoming = { ...DEFAULT_RECEPTION_UPCOMING_PANEL };
-                    setReceptionRows(nextRows);
-                    setReceptionMastersConfig(nextMasters);
-                    setReceptionUpcomingConfig(nextUpcoming);
-                    if (isAdmin) {
-                      pushReceptionPayload({
-                        rows: nextRows,
-                        masters: nextMasters,
-                        upcoming: nextUpcoming,
-                      });
-                    }
-                  }}
-                  className="rounded-lg border border-zinc-600 px-3 py-1.5 text-sm text-zinc-300 hover:bg-zinc-800"
-                >
-                  {t("reception.layout.reset")}
-                </button>
-              )}
-            </div>
-            {receptionLayoutEditing && (
-              <p className="mt-2 text-xs text-zinc-500">{t("reception.layout.hint")}</p>
-            )}
-            {receptionRemoteSaveError && (
-              <p className="mt-2 text-xs text-rose-400">
-                {t("siteSettings.receptionLayoutSaveError", { message: receptionRemoteSaveError })}
-              </p>
-            )}
-            {receptionLayoutEditing && (
-              <div className="mt-3 space-y-4">
-                <ReceptionLayoutEditor
-                  variant="compact"
-                  rows={receptionRows}
-                  onChange={(next) => {
-                    if (isReceptionMode && isAdmin) persistReceptionLayoutFromReception(next);
-                    else setReceptionRows(next);
-                  }}
-                />
-                <ReceptionMastersPanelEditor
-                  staff={staffDirectory}
-                  config={receptionMastersConfig}
-                  disabled={!isReceptionMode || !isAdmin}
-                  onChange={(next) => {
-                    setReceptionMastersConfig(next);
-                    if (isReceptionMode && isAdmin) {
-                      pushReceptionPayload({
-                        rows: receptionRows,
-                        masters: next,
-                        upcoming: receptionUpcomingConfig,
-                      });
-                    }
-                  }}
-                />
-                <ReceptionUpcomingPanelEditor
-                  config={receptionUpcomingConfig}
-                  disabled={!isReceptionMode || !isAdmin}
-                  onChange={(next) => {
-                    setReceptionUpcomingConfig(next);
-                    if (isReceptionMode && isAdmin) {
-                      pushReceptionPayload({
-                        rows: receptionRows,
-                        masters: receptionMastersConfig,
-                        upcoming: next,
-                      });
-                    }
-                  }}
-                />
-              </div>
-            )}
-          </div>
-        )}
+        <p className="mt-3 text-xs text-zinc-600">
+          {t("publicBook.layoutEditHint")}{" "}
+          <Link to="/admin/site-settings" className="text-sky-400 hover:text-sky-300">
+            {t("nav.adminSiteSettings")}
+          </Link>
+        </p>
 
         <div className="mt-6 space-y-6 md:mt-8">
           {mainContent}
@@ -1289,7 +1137,7 @@ export function PublicBookingPage() {
               }`}
             >
               <p className={msg === t("publicBook.success") ? "font-medium text-emerald-200" : ""}>{msg}</p>
-              {msg === t("publicBook.success") && !isReceptionMode ? (
+              {msg === t("publicBook.success") ? (
                 <p className="mt-2 border-t border-emerald-500/20 pt-2 text-xs leading-relaxed text-emerald-100/85">
                   {t("publicBook.successPriceDisclaimer")}
                 </p>

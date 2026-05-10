@@ -15,6 +15,7 @@ import {
   setMinutes,
 } from "date-fns";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useCalendarDataRealtime } from "../hooks/useSalonRealtime";
 import { useAuth } from "../context/AuthContext";
@@ -61,10 +62,18 @@ import { generateAvailableSlots } from "../lib/slots";
 
 type View = "day" | "week" | "month";
 
-export function CalendarPage() {
+export type CalendarWorkspace = "crm" | "reception";
+
+export type CalendarPageProps = {
+  /** `reception` — отдельный полноэкранный режим планшета (/reception), без оболочки CRM. */
+  workspace?: CalendarWorkspace;
+};
+
+export function CalendarPage({ workspace = "crm" }: CalendarPageProps) {
   const { t } = useTranslation();
   const { staffMember } = useAuth();
   const { canManage, isWorkerOnlyEffective } = useEffectiveRole();
+  const isReceptionWorkspace = workspace === "reception";
   const [view, setView] = useState<View>("week");
   const [cursor, setCursor] = useState(() => new Date());
   const [staffId, setStaffId] = useState<string | null>(null);
@@ -227,7 +236,8 @@ export function CalendarPage() {
     }
   }, [activeStaffForCalendar, staffMember, staffId, isWorkerOnlyEffective]);
 
-  const canUseCalendar = staffMember ? effectiveCanWorkCalendar(staffMember.roles) : false;
+  const canUseCalendar =
+    isReceptionWorkspace || (staffMember ? effectiveCanWorkCalendar(staffMember.roles) : false);
 
   const filteredAppointments = useMemo(() => {
     if (isWorkerOnlyEffective && staffMember) {
@@ -347,12 +357,16 @@ export function CalendarPage() {
     setModal({ start, staffId: targetStaffId });
   }
 
-  return (
+  const main = (
     <div className="space-y-6">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-white">{t("calendar.title")}</h1>
-          <p className="text-sm text-zinc-500">{t("calendar.subtitle")}</p>
+          <h1 className="text-2xl font-semibold text-white">
+            {isReceptionWorkspace ? t("reception.workspaceTitle") : t("calendar.title")}
+          </h1>
+          <p className="text-sm text-zinc-500">
+            {isReceptionWorkspace ? t("reception.workspaceSubtitle") : t("calendar.subtitle")}
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex rounded-lg border border-zinc-800 p-0.5">
@@ -417,7 +431,7 @@ export function CalendarPage() {
       </header>
 
       <div className="flex flex-wrap items-center gap-3">
-        {staffMember && !isWorkerOnlyEffective && services.length > 0 && (
+        {((staffMember && !isWorkerOnlyEffective) || isReceptionWorkspace) && services.length > 0 && (
           <label className="flex items-center gap-2 text-sm text-zinc-400">
             {t("calendar.bookingService")}
             <select
@@ -437,7 +451,8 @@ export function CalendarPage() {
             </select>
           </label>
         )}
-        {staffMember && !isWorkerOnlyEffective && (view === "week" || view === "month") && (
+        {((staffMember && !isWorkerOnlyEffective) || isReceptionWorkspace) &&
+          (view === "week" || view === "month") && (
           <label className="flex items-center gap-2 text-sm text-zinc-400">
             {t("calendar.staff")}
             <select
@@ -633,6 +648,40 @@ export function CalendarPage() {
       )}
     </div>
   );
+
+  if (isReceptionWorkspace) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-950 to-black text-zinc-100">
+        <div className="border-b border-white/5 bg-black/20 px-3 py-3 backdrop-blur-md sm:px-4">
+          <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-2">
+            <Link
+              to="/book"
+              className="min-h-[48px] rounded-xl px-3 py-3 text-base text-sky-300 hover:text-sky-200"
+            >
+              ← {t("publicBook.title")}
+            </Link>
+            <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+              <Link
+                to="/help"
+                className="min-h-[48px] rounded-xl px-3 py-3 text-sm font-medium text-violet-300 hover:text-violet-200"
+              >
+                {t("publicBook.receptionSupport")}
+              </Link>
+              <Link
+                to={staffMember ? "/" : "/login"}
+                className="min-h-[48px] rounded-xl px-3 py-3 text-sm text-zinc-500 hover:text-zinc-300"
+              >
+                CRM
+              </Link>
+            </div>
+          </div>
+        </div>
+        <div className="mx-auto max-w-[1600px] px-3 pb-10 pt-4 sm:px-4">{main}</div>
+      </div>
+    );
+  }
+
+  return main;
 }
 
 function DayColumn({
