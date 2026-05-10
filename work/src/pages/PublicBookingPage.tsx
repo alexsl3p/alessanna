@@ -31,6 +31,7 @@ import {
 } from "../lib/roles";
 import { eachDayInDataRange, getCalendarDataRange, type PublicCalendarScope } from "../lib/publicCalendarRange";
 import {
+  crmServiceIdsForStaff,
   publicBookableStaffMembers,
   publicServiceIdsForStaff,
   splitStaffIntoHairAndNails,
@@ -83,6 +84,9 @@ export function PublicBookingPage() {
   const location = useLocation();
   const { isAdmin, staffMember } = useAuth();
   const [services, setServices] = useState<PublicService[]>([]);
+  /** Все активные сотрудники (не админы) из CRM — для ресепшена и ручного состава панели. */
+  const [staffDirectory, setStaffDirectory] = useState<StaffMember[]>([]);
+  /** Подмножество: показываются на маркетинге / публичной записи. */
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [links, setLinks] = useState<StaffServiceRow[]>([]);
   const [schedules, setSchedules] = useState<StaffScheduleRow[]>([]);
@@ -198,12 +202,11 @@ export function PublicBookingPage() {
       }
     }
     if (st.data) {
-      setStaff(
-        (st.data as Record<string, unknown>[])
-          .filter((row) => !isStaffRowAdmin(row))
-          .map((r) => normalizeStaffMember(r as StaffMember))
-          .filter((m) => isStaffShownOnPublicMarketing(m))
-      );
+      const directory = (st.data as Record<string, unknown>[])
+        .filter((row) => !isStaffRowAdmin(row))
+        .map((r) => normalizeStaffMember(r as StaffMember));
+      setStaffDirectory(directory);
+      setStaff(directory.filter((m) => isStaffShownOnPublicMarketing(m)));
     }
     if (lk.data) setLinks(lk.data as StaffServiceRow[]);
     if (sc.data) setSchedules(sc.data as StaffScheduleRow[]);
@@ -233,28 +236,51 @@ export function PublicBookingPage() {
     return eachDayOfInterval({ start: from, end: to });
   }, [monthStart]);
 
-  const eligibleStaff = useMemo(() => {
-    if (serviceId == null) return [];
-    const base = staffEligibleForService(staff, links, serviceId);
-    return applyPublicStaffVisibility(base, links, serviceId);
-  }, [staff, links, serviceId]);
-
-  const mastersPanelStaff = useMemo(
-    () => publicBookableStaffMembers(staff, links, services),
-    [staff, links, services],
-  );
+  const mastersPanelStaff = useMemo(() => {
+    if (receptionMastersConfig.assignment === "manual") {
+      const byId = new Map(staffDirectory.map((m) => [m.id, m]));
+      const ids = [
+        ...new Set([...receptionMastersConfig.hairStaffIds, ...receptionMastersConfig.nailsStaffIds]),
+      ];
+      let list = ids.map((id) => byId.get(id)).filter((m): m is StaffMember => m != null);
+      if (!isReceptionMode) {
+        list = list.filter((m) => isStaffShownOnPublicMarketing(m));
+      }
+      return list;
+    }
+    return publicBookableStaffMembers(staff, links, services);
+  }, [
+    isReceptionMode,
+    receptionMastersConfig.assignment,
+    receptionMastersConfig.hairStaffIds,
+    receptionMastersConfig.nailsStaffIds,
+    staffDirectory,
+    staff,
+    links,
+    services,
+  ]);
 
   const mastersSplitResolved = useMemo(() => {
-    const auto = splitStaffIntoHairAndNails(mastersPanelStaff, links, services);
-    if (receptionMastersConfig.assignment !== "manual") return auto;
-    const byId = new Map(mastersPanelStaff.map((m) => [m.id, m]));
-    const pick = (ids: string[]) =>
-      ids.map((id) => byId.get(id)).filter((m): m is StaffMember => m != null);
-    return {
-      hair: pick(receptionMastersConfig.hairStaffIds),
-      nails: pick(receptionMastersConfig.nailsStaffIds),
-    };
-  }, [mastersPanelStaff, links, services, receptionMastersConfig]);
+    if (receptionMastersConfig.assignment === "manual") {
+      const byId = new Map(staffDirectory.map((m) => [m.id, m]));
+      const allow = (m: StaffMember) => isReceptionMode || isStaffShownOnPublicMarketing(m);
+      const pick = (ids: string[]) =>
+        ids.map((id) => byId.get(id)).filter((m): m is StaffMember => m != null && allow(m));
+      return {
+        hair: pick(receptionMastersConfig.hairStaffIds),
+        nails: pick(receptionMastersConfig.nailsStaffIds),
+      };
+    }
+    return splitStaffIntoHairAndNails(mastersPanelStaff, links, services);
+  }, [receptionMastersConfig, staffDirectory, isReceptionMode, mastersPanelStaff, links, services]);
+
+  const eligibleStaff = useMemo(() => {
+    if (serviceId == null) return [];
+    const base = staffEligibleForService(staffDirectory, links, serviceId);
+    const afterPublic = isReceptionMode ? base : applyPublicStaffVisibility(base, links, serviceId);
+    const panel = new Set(mastersPanelStaff.map((m) => m.id));
+    return afterPublic.filter((m) => panel.has(m.id));
+  }, [staffDirectory, links, serviceId, isReceptionMode, mastersPanelStaff]);
 
   const loadDayData = useCallback(async () => {
     if (!isSupabaseConfigured() || serviceId == null) return;
@@ -492,7 +518,7 @@ export function PublicBookingPage() {
     return m;
   }, [calendarRangeAppointments]);
 
-  const staffById = useMemo(() => new Map(staff.map((s) => [s.id, s])), [staff]);
+  const staffById = useMemo(() => new Map(staffDirectory.map((s) => [s.id, s])), [staffDirectory]);
 
   const calendarWeekDays = useMemo(() => {
     const a = startOfWeek(selectedDay, { weekStartsOn: 1 });
@@ -588,32 +614,36 @@ export function PublicBookingPage() {
 
   const highlightServiceIds = useMemo(() => {
     if (!staffId || staffId === ANY_MASTER_ID) return new Set<string>();
-    const member = staff.find((s) => s.id === staffId);
+    const member = staffDirectory.find((s) => s.id === staffId);
     if (!member) return new Set<string>();
-    return publicServiceIdsForStaff(member, links, services);
-  }, [staffId, staff, links, services]);
+    return isReceptionMode
+      ? crmServiceIdsForStaff(member, links, services)
+      : publicServiceIdsForStaff(member, links, services);
+  }, [staffId, staffDirectory, links, services, isReceptionMode]);
 
   const pickMaster = useCallback(
     (masterId: string) => {
       setStaffId(masterId);
       setPickedStart(null);
-      const member = staff.find((s) => s.id === masterId);
+      const member = staffDirectory.find((s) => s.id === masterId);
       if (!member) return;
-      const ids = publicServiceIdsForStaff(member, links, services);
+      const ids = isReceptionMode
+        ? crmServiceIdsForStaff(member, links, services)
+        : publicServiceIdsForStaff(member, links, services);
       if (serviceId != null && !ids.has(serviceId)) {
         const first = services.find((s) => s.active && ids.has(s.id));
         if (first) setServiceId(first.id);
       }
     },
-    [staff, links, services, serviceId],
+    [staffDirectory, links, services, serviceId, isReceptionMode],
   );
 
   const receptionUpcoming = useMemo(() => {
-    const allowedStaffIds = new Set(staff.map((s) => s.id));
+    const allowedStaffIds = new Set(mastersPanelStaff.map((s) => s.id));
     return upcomingAppointments
       .filter((a) => allowedStaffIds.has(a.staff_id))
       .slice(0, 8);
-  }, [staff, upcomingAppointments]);
+  }, [mastersPanelStaff, upcomingAppointments]);
 
   async function confirmBook() {
     const normalizedClientName = clientName.trim();
@@ -798,7 +828,7 @@ export function PublicBookingPage() {
     upcoming: (
       <PublicBookingUpcomingSection
         receptionUpcoming={receptionUpcoming}
-        staff={staff}
+        staff={staffDirectory}
         services={services}
         i18n={i18n}
       />
@@ -918,7 +948,7 @@ export function PublicBookingPage() {
                   }}
                 />
                 <ReceptionMastersPanelEditor
-                  staff={mastersPanelStaff}
+                  staff={staffDirectory}
                   config={receptionMastersConfig}
                   disabled={!isReceptionMode || !isAdmin}
                   onChange={(next) => {

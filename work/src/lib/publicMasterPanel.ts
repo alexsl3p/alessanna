@@ -63,6 +63,24 @@ export function publicServiceIdsForStaff(
   return ids;
 }
 
+/**
+ * Все активные услуги мастера по строкам `staff_services` в CRM (без фильтра show_on_site).
+ * Для ресепшена: подсветка услуг и выбор услуги по клику на мастера совпадают с карточкой сотрудника в CRM.
+ */
+export function crmServiceIdsForStaff(
+  member: StaffMember,
+  links: StaffServiceRow[],
+  services: PublicServiceCatalogEntry[],
+): Set<string> {
+  const active = services.filter((s) => s.active);
+  const activeIds = new Set(active.map((s) => s.id));
+  const forSt = links.filter((l) => l.staff_id === member.id);
+  if (forSt.length === 0 && (hasStaffRole(member, "manager") || hasStaffRole(member, "admin"))) {
+    return activeIds;
+  }
+  return new Set(forSt.map((l) => String(l.service_id)).filter((id) => activeIds.has(id)));
+}
+
 /** Только услуги с явной публичной привязкой (без расширения «все услуги» для менеджера). */
 function linkedPublicServiceIds(
   member: StaffMember,

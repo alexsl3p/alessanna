@@ -52,6 +52,7 @@ export function ReceptionMastersPanelEditor({
       <div>
         <p className="text-sm font-medium text-zinc-200">{t("reception.layout.masters.title")}</p>
         <p className="mt-1 text-xs text-zinc-500">{t("reception.layout.masters.subtitle")}</p>
+        <p className="mt-1 text-xs text-zinc-600">{t("reception.layout.masters.crmServicesHint")}</p>
       </div>
 
       <div>

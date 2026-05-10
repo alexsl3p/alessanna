@@ -309,7 +309,8 @@
       },
       "masters": {
         "title": "Plokk «Meistrid»",
-        "subtitle": "Kes millises veerus, kaartide suurus ja üks või kaks veergu. Salvestatakse serverisse koos plokkide järjekorraga.",
+        "subtitle": "Nimekiri — kõik aktiivsed meistrid CRM-is. Režiim «Käsitsi»: märgi veerg; vastuvõtul tulevad teenused töötaja CRM-seostest (mitte ainult «saidil»).",
+        "crmServicesHint": "Vastuvõtul teenuse esiletõstmine ja vahetus meistriklõpsul läheb kõigi CRM-is määratud teenuste järgi.",
         "assignment": "Jaotus veergude vahel",
         "assignmentAuto": "Automaatne teenuste järgi",
         "assignmentManual": "Käsitsi",
