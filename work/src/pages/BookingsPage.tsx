@@ -25,6 +25,52 @@ type StaffName = { id: string; name: string };
 type ServiceName = { id: string; name: string };
 type SyncStatus = { status: "pending" | "sent" | "error"; last_error: string | null };
 
+const LEGACY_SKIPPED_HINT =
+  "Legacy skipped: Google scope was disconnected when the booking was created.";
+
+function mergeGoogleSyncByAppointment(
+  rows: Array<{ appointment_id: string | null; status: string; last_error: string | null }>,
+): Record<string, SyncStatus> {
+  type Agg = { rank: number; status: SyncStatus["status"]; errors: string[] };
+  const rank = (raw: string): number => {
+    if (raw === "error" || raw === "skipped") return 3;
+    if (raw === "pending") return 2;
+    if (raw === "sent") return 1;
+    return 0;
+  };
+  const map = new Map<string, Agg>();
+  for (const r of rows) {
+    if (!r.appointment_id) continue;
+    const raw = r.status;
+    const st: SyncStatus["status"] | null =
+      raw === "skipped"
+        ? "error"
+        : raw === "pending" || raw === "sent" || raw === "error"
+          ? raw
+          : null;
+    if (st === null) continue;
+    const rnk = rank(raw);
+    const err =
+      raw === "skipped" ? (r.last_error?.trim() ? r.last_error : LEGACY_SKIPPED_HINT) : r.last_error;
+    const cur = map.get(r.appointment_id);
+    if (!cur || rnk > cur.rank) {
+      map.set(r.appointment_id, {
+        rank: rnk,
+        status: st,
+        errors: err ? [err] : [],
+      });
+    } else if (cur && rnk === cur.rank && rnk >= 3 && err) {
+      cur.errors.push(err);
+    }
+  }
+  const out: Record<string, SyncStatus> = {};
+  for (const [id, v] of map) {
+    const joined = [...new Set(v.errors.map((e) => e.trim()).filter(Boolean))].join("; ");
+    out[id] = { status: v.status, last_error: joined || null };
+  }
+  return out;
+}
+
 type StatusFilter = "all" | "active" | "pending" | "confirmed" | "cancelled";
 type SourceSort = "none" | "asc" | "desc";
 
@@ -81,7 +127,7 @@ export function BookingsPage() {
           .from("notifications_outbox")
           .select("appointment_id,status,last_error,created_at")
           .eq("kind", "google_calendar_event")
-          .in("status", ["pending", "sent", "error"])
+          .in("status", ["pending", "sent", "error", "skipped"])
           .order("created_at", { ascending: false })
           .limit(1500),
       ]);
@@ -101,18 +147,15 @@ export function BookingsPage() {
       }
       setServices(merged);
       if (outbox.data) {
-        const map: Record<string, SyncStatus> = {};
-        for (const r of outbox.data as Array<{
-          appointment_id: string | null;
-          status: "pending" | "sent" | "error";
-          last_error: string | null;
-        }>) {
-          if (!r.appointment_id) continue;
-          if (!map[r.appointment_id]) {
-            map[r.appointment_id] = { status: r.status, last_error: r.last_error };
-          }
-        }
-        setSyncByAppointment(map);
+        setSyncByAppointment(
+          mergeGoogleSyncByAppointment(
+            outbox.data as Array<{
+              appointment_id: string | null;
+              status: string;
+              last_error: string | null;
+            }>,
+          ),
+        );
       } else {
         setSyncByAppointment({});
       }
@@ -557,7 +600,7 @@ export function BookingsPage() {
                         </div>
                       )}
                       {sync && (
-                        <div className="mt-1">
+                        <div className="mt-1 max-w-[280px]">
                           <span
                             className={
                               "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide " +
@@ -567,6 +610,14 @@ export function BookingsPage() {
                           >
                             {sync.label}
                           </span>
+                          {sync.error && (
+                            <p
+                              className="mt-1 text-[10px] leading-snug text-red-300/90 break-words"
+                              title={sync.error}
+                            >
+                              {sync.error}
+                            </p>
+                          )}
                         </div>
                       )}
                     </td>
@@ -591,15 +642,17 @@ export function BookingsPage() {
                               {t("bookings.delete", { defaultValue: "Удалить" })}
                             </button>
                           )}
-                          {canManage && sync?.label === "sync failed" && (
-                            <button
-                              type="button"
-                              onClick={() => void retrySync(b.id)}
-                              className="text-xs text-amber-300 hover:text-amber-200"
-                            >
-                              Retry sync
-                            </button>
-                          )}
+                          {sync?.label === "sync failed" &&
+                            (canManage ||
+                              (isWorkerOnlyEffective && staffMember && b.staff_id === staffMember.id)) && (
+                              <button
+                                type="button"
+                                onClick={() => void retrySync(b.id)}
+                                className="text-xs text-amber-300 hover:text-amber-200"
+                              >
+                                Retry sync
+                              </button>
+                            )}
                         </div>
                       </td>
                     )}

@@ -22,7 +22,10 @@ function subscribeTables(
 export function useBookingsRealtime(onChange: () => void) {
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
-  useEffect(() => subscribeTables("crm-appointments", ["appointments"], onChangeRef), []);
+  useEffect(
+    () => subscribeTables("crm-appointments", ["appointments", "notifications_outbox"], onChangeRef),
+    [],
+  );
 }
 
 export function useCalendarDataRealtime(onChange: () => void) {

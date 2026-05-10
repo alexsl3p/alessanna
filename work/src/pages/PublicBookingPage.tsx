@@ -843,16 +843,20 @@ export function PublicBookingPage() {
     const end = new Date(pickedStart.getTime() + durationMin * 60 * 1000);
     /* Колонок `source`/`notes` нет в актуальной схеме `appointments`. Отправляем
      *  только реально существующие — иначе PostgREST вернёт ошибку schema cache. */
-    const { error } = await supabase.from("appointments").insert({
-      staff_id: finalStaffId,
-      service_id: svc.id,
-      client_name: normalizedClientName || "Клиент (ресепшен)",
-      client_phone: clientPhone.trim() || null,
-      start_time: pickedStart.toISOString(),
-      end_time: end.toISOString(),
-      status: "confirmed",
-      source: "public_site",
-    });
+    const { data: insertedRows, error } = await supabase
+      .from("appointments")
+      .insert({
+        staff_id: finalStaffId,
+        service_id: svc.id,
+        client_name: normalizedClientName || "Клиент (ресепшен)",
+        client_phone: clientPhone.trim() || null,
+        start_time: pickedStart.toISOString(),
+        end_time: end.toISOString(),
+        status: "confirmed",
+        source: "public_site",
+      })
+      .select("id")
+      .limit(1);
     setBooking(false);
     if (error) {
       if (error.code === "23P01" || /overlap|занят/i.test(String(error.message || ""))) {
@@ -864,8 +868,14 @@ export function PublicBookingPage() {
       setMsg(error.message);
       return;
     }
+    const newAppointmentId = insertedRows?.[0]?.id != null ? String(insertedRows[0].id) : null;
     try {
-      const syncRes = await supabase.functions.invoke("google-calendar-sync", { body: { mode: "drain" } });
+      const syncRes = await supabase.functions.invoke("google-calendar-sync", {
+        body: {
+          mode: "drain",
+          ...(newAppointmentId ? { appointmentId: newAppointmentId } : {}),
+        },
+      });
       const syncData = (syncRes.data ?? {}) as { processed?: number; failed?: number; total?: number };
       const processed = Number(syncData.processed ?? 0);
       const total = Number(syncData.total ?? 0);

@@ -57,9 +57,34 @@ function parseClient(summary: string, description: string): { name: string; phon
   return { name, phone };
 }
 
-function detectScopeCalendarId(scope: string, staffCalendarId: string | null, salonCalendarId: string | null): string {
-  if (scope.startsWith("staff:") && staffCalendarId) return staffCalendarId;
-  return salonCalendarId || "primary";
+function normalizeCalendarId(raw: string | null | undefined): string | null {
+  const s = raw != null ? String(raw).trim() : "";
+  if (!s || s.toLowerCase() === "primary") return null;
+  return s;
+}
+
+/** Staff scope must use the master's calendar only (never fall back to salon — avoids silent wrong-calendar writes). */
+function calendarIdForScope(
+  scope: string,
+  staffCalendarId: string | null | undefined,
+  salonCalendarId: string | null | undefined,
+): string {
+  if (scope.startsWith("staff:")) {
+    const id = normalizeCalendarId(staffCalendarId);
+    if (!id) {
+      throw new Error(
+        "Missing staff.google_calendar_id — assign the master's calendar in CRM Integrations.",
+      );
+    }
+    return id;
+  }
+  const id = normalizeCalendarId(salonCalendarId);
+  if (!id) {
+    throw new Error(
+      "Missing salon google_calendar_id — configure the salon calendar in Integrations.",
+    );
+  }
+  return id;
 }
 
 async function refreshAccessToken(
@@ -78,7 +103,12 @@ async function refreshAccessToken(
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok || !data?.access_token) {
-    throw new Error(`Google token refresh failed (${res.status})`);
+    const oauthHint = [data?.error, data?.error_description].filter(Boolean).join(": ");
+    throw new Error(
+      oauthHint
+        ? `Google token refresh failed (${res.status}): ${oauthHint}`
+        : `Google token refresh failed (${res.status})`,
+    );
   }
   const expiresIn = Number(data.expires_in ?? 0);
   const expiresAtIso =
@@ -95,7 +125,11 @@ async function getScopeTokens(sb: ReturnType<typeof createClient>, scope: string
     .eq("scope_key", scope)
     .maybeSingle();
   if (tokenErr) throw new Error(tokenErr.message);
-  if (!tokenRow?.refresh_token) throw new Error(`Missing refresh token for scope ${scope}`);
+  if (!tokenRow?.refresh_token) {
+    throw new Error(
+      `Missing refresh token for scope ${scope} — reconnect Google OAuth in CRM Integrations.`,
+    );
+  }
   const refreshed = await refreshAccessToken(String(tokenRow.refresh_token));
   await sb
     .from("google_oauth_tokens")
@@ -179,16 +213,24 @@ async function upsertGoogleEvent(
     targetScope === "salon" && staffName ? ` [${staffName}]` : "";
   const title = `${baseTitle}${assignmentTag}`;
   const bookingId = String(payload.appointment_id ?? "");
+  const sourceNorm = source.toLowerCase();
+  const sourceLine =
+    sourceNorm === "public_site"
+      ? "Source: website booking (public_site)"
+      : source
+        ? `Source: ${source}`
+        : null;
   const body: Record<string, unknown> = {
     summary: title,
     description: [
       bookingId ? `Booking ID: ${bookingId}` : null,
+      `Client: ${name}`,
+      phone ? `Phone: ${phone}` : null,
       serviceName ? `Service: ${serviceName}` : null,
       staffName ? `Master: ${staffName}` : null,
       targetScope === "salon" && staffName ? `Assigned via salon calendar: ${staffName}` : null,
-      phone ? `Phone: ${phone}` : null,
       durationMin > 0 ? `Duration: ${durationMin} min` : null,
-      source ? `Source: ${source}` : null,
+      sourceLine,
       note ? `Note: ${note}` : null,
     ]
       .filter(Boolean)
@@ -212,6 +254,16 @@ async function upsertGoogleEvent(
     ? `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(existingEventId)}`
     : `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`;
   const method = hasId ? "PATCH" : "POST";
+  console.log(
+    JSON.stringify({
+      msg: "sync_google_api_request",
+      method,
+      calendar_id: calendarId,
+      event_id: existingEventId ?? null,
+      summary_preview: title.slice(0, 120),
+      time_range: { start, end, timeZone: "Europe/Tallinn" },
+    }),
+  );
   const res = await fetch(url, {
     method,
     headers: {
@@ -221,8 +273,29 @@ async function upsertGoogleEvent(
     body: JSON.stringify(body),
   });
   const jsonBody = await res.json().catch(() => ({}));
+  const apiErr =
+    jsonBody && typeof jsonBody === "object" && "error" in jsonBody
+      ? (jsonBody as { error?: { message?: string; errors?: unknown } }).error
+      : undefined;
+  const errMsg =
+    typeof apiErr?.message === "string"
+      ? apiErr.message
+      : !res.ok || !jsonBody?.id
+        ? JSON.stringify(jsonBody).slice(0, 800)
+        : "";
+  console.log(
+    JSON.stringify({
+      msg: "sync_google_api_response",
+      ok: res.ok,
+      http_status: res.status,
+      event_id: jsonBody?.id ?? null,
+      error: apiErr ?? null,
+    }),
+  );
   if (!res.ok || !jsonBody?.id) {
-    throw new Error(`Google upsert failed (${res.status})`);
+    throw new Error(
+      errMsg ? `Google upsert failed (${res.status}): ${errMsg}` : `Google upsert failed (${res.status})`,
+    );
   }
   return {
     eventId: String(jsonBody.id),
@@ -322,26 +395,34 @@ async function processOutbox(
       if (staffId) {
         const { data: staffRow } = await sb
           .from("staff")
-          .select("google_calendar_id")
+          .select("google_calendar_id,name")
           .eq("id", staffId)
           .maybeSingle();
         staffCalendarId = (staffRow?.google_calendar_id as string | null) ?? null;
+        console.log(
+          JSON.stringify({
+            msg: "sync_master_resolved",
+            outbox_id: row.id,
+            staff_id: staffId,
+            staff_name: staffRow?.name ?? null,
+            staff_calendar_id: staffCalendarId,
+          }),
+        );
+      } else {
+        console.log(
+          JSON.stringify({
+            msg: "sync_master_resolved",
+            outbox_id: row.id,
+            staff_id: null,
+            staff_name: null,
+            staff_calendar_id: null,
+          }),
+        );
       }
-      const calendarId = detectScopeCalendarId(scope, staffCalendarId, salonCalendarId);
+      const calendarId = calendarIdForScope(scope, staffCalendarId, salonCalendarId);
       console.log(
         JSON.stringify({
-          msg: "sync_master_resolved",
-          outbox_id: row.id,
-          staff_id: staffId,
-          staff_calendar_id: staffCalendarId,
-        }),
-      );
-      if (!calendarId || calendarId === "primary") {
-        throw new Error(`Missing calendarId for scope ${scope}`);
-      }
-      console.log(
-        JSON.stringify({
-          msg: "sync_calendar_selected",
+          msg: "sync_calendar_resolved",
           outbox_id: row.id,
           scope,
           scope_key: scopeKey,
@@ -359,6 +440,21 @@ async function processOutbox(
       const sourcePayload = snapshot
         ? { ...payload, ...snapshot, target_scope: scope }
         : { ...payload, target_scope: scope };
+
+      console.log(
+        JSON.stringify({
+          msg: "payload_generated",
+          outbox_id: row.id,
+          appointment_id: appointmentId,
+          target_scope: scope,
+          has_snapshot: !!snapshot,
+          operation: String(sourcePayload.operation ?? "upsert"),
+          start_time: sourcePayload.start_time ?? null,
+          end_time: sourcePayload.end_time ?? null,
+          client_name: sourcePayload.client_name ?? null,
+          source: sourcePayload.source ?? null,
+        }),
+      );
 
       let existingEventId = (sourcePayload.google_event_id as string | undefined) ?? null;
       if (!existingEventId && appointmentId) {
@@ -716,7 +812,7 @@ async function startWatch(sb: ReturnType<typeof createClient>, body: Record<stri
     settingsRows?.find((r: { key: string; value: string | null }) => r.key === "google_calendar_id")
       ?.value ?? "primary";
 
-  let calendarId = salonCalendarId;
+  let staffCal: string | null = null;
   if (scope.startsWith("staff:")) {
     const sid = scope.slice("staff:".length);
     const { data: staffRow } = await sb
@@ -724,8 +820,9 @@ async function startWatch(sb: ReturnType<typeof createClient>, body: Record<stri
       .select("google_calendar_id")
       .eq("id", sid)
       .maybeSingle();
-    if (staffRow?.google_calendar_id) calendarId = String(staffRow.google_calendar_id);
+    staffCal = (staffRow?.google_calendar_id as string | null) ?? null;
   }
+  const calendarId = calendarIdForScope(scope, staffCal, salonCalendarId);
 
   const scopeKey = scope === "salon" ? "salon" : scope;
   const accessToken = await getScopeTokens(sb, scopeKey);
@@ -783,10 +880,7 @@ async function testEvent(sb: ReturnType<typeof createClient>, body: Record<strin
     const { data: staffRow } = await sb.from("staff").select("google_calendar_id").eq("id", sid).maybeSingle();
     staffCalendarId = (staffRow?.google_calendar_id as string | null) ?? null;
   }
-  const calendarId = detectScopeCalendarId(scope, staffCalendarId, salonCalendarId);
-  if (!calendarId || calendarId === "primary") {
-    throw new Error(`Missing calendarId for test_event scope ${scope}`);
-  }
+  const calendarId = calendarIdForScope(scope, staffCalendarId, salonCalendarId);
   const start = new Date(Date.now() + 10 * 60 * 1000);
   const end = new Date(start.getTime() + 30 * 60 * 1000);
   const res = await fetch(
@@ -828,6 +922,13 @@ Deno.serve(async (req: Request) => {
 
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
     const mode = String(body.mode ?? "drain");
+    console.log(
+      JSON.stringify({
+        msg: "sync_request_received",
+        mode,
+        appointment_id: body.appointmentId ? String(body.appointmentId) : null,
+      }),
+    );
 
     if (mode === "start_watch") {
       return await startWatch(sb, body);

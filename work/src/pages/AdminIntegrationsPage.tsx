@@ -59,6 +59,7 @@ type StaffCalendarRow = {
   google_calendar_status: GoogleStatus;
   google_calendar_account_email: string | null;
   google_calendar_id: string | null;
+  google_calendar_sync_enabled: boolean;
   google_calendar_last_sync_at: string | null;
   google_calendar_last_error: string | null;
 };
@@ -639,7 +640,7 @@ export function AdminIntegrationsPage() {
     const { data, error } = await supabase
       .from("staff")
       .select(
-        "id,name,is_active,calendar_email,google_calendar_status,google_calendar_account_email,google_calendar_id,google_calendar_last_sync_at,google_calendar_last_error"
+        "id,name,is_active,calendar_email,google_calendar_status,google_calendar_account_email,google_calendar_id,google_calendar_sync_enabled,google_calendar_last_sync_at,google_calendar_last_error"
       )
       .order("name", { ascending: true });
     if (error) {
@@ -656,6 +657,7 @@ export function AdminIntegrationsPage() {
         (r.google_calendar_status as GoogleStatus | undefined) ?? "disconnected",
       google_calendar_account_email: r.google_calendar_account_email ?? null,
       google_calendar_id: r.google_calendar_id ?? null,
+      google_calendar_sync_enabled: (r as { google_calendar_sync_enabled?: boolean }).google_calendar_sync_enabled !== false,
       google_calendar_last_sync_at: r.google_calendar_last_sync_at ?? null,
       google_calendar_last_error: r.google_calendar_last_error ?? null,
     }));
@@ -768,6 +770,24 @@ export function AdminIntegrationsPage() {
     }
     setStaff((rows) =>
       rows.map((r) => (r.id === staffId ? { ...r, calendar_email: next } : r))
+    );
+    setStaffError(null);
+  }
+
+  async function saveStaffSyncEnabled(staffId: string, enabled: boolean) {
+    const key = `staff-sync-en-${staffId}`;
+    setActionBusy(key);
+    const { error } = await supabase
+      .from("staff")
+      .update({ google_calendar_sync_enabled: enabled })
+      .eq("id", staffId);
+    setActionBusy(null);
+    if (error) {
+      setStaffError(error.message);
+      return;
+    }
+    setStaff((rows) =>
+      rows.map((r) => (r.id === staffId ? { ...r, google_calendar_sync_enabled: enabled } : r)),
     );
     setStaffError(null);
   }
@@ -1359,23 +1379,26 @@ export function AdminIntegrationsPage() {
           <table className="w-full table-fixed text-left text-sm">
             <thead className="bg-zinc-900/60 text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
               <tr>
-                <th className="w-[20%] px-3 py-2">Мастер</th>
-                <th className="w-[12%] px-3 py-2">Режим</th>
-                <th className="w-[34%] px-3 py-2">E-mail для приглашений</th>
-                <th className="w-[20%] px-3 py-2">OAuth-аккаунт</th>
+                <th className="w-[18%] px-3 py-2">Мастер</th>
+                <th className="w-[8%] px-3 py-2 text-center" title="Создавать события в календаре мастера (staff scope)">
+                  GCal
+                </th>
+                <th className="w-[11%] px-3 py-2">Режим</th>
+                <th className="w-[30%] px-3 py-2">E-mail для приглашений</th>
+                <th className="w-[19%] px-3 py-2">OAuth-аккаунт</th>
                 <th className="w-[14%] px-3 py-2 text-right">OAuth</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-900">
               {staffLoading ? (
                 <tr>
-                  <td colSpan={5} className="px-3 py-6 text-center text-xs text-zinc-500">
+                  <td colSpan={6} className="px-3 py-6 text-center text-xs text-zinc-500">
                     Загрузка…
                   </td>
                 </tr>
               ) : staff.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-3 py-6 text-center text-xs text-zinc-500">
+                  <td colSpan={6} className="px-3 py-6 text-center text-xs text-zinc-500">
                     В CRM пока нет мастеров. Добавьте в разделе «Персонал».
                   </td>
                 </tr>
@@ -1403,6 +1426,16 @@ export function AdminIntegrationsPage() {
                             {s.google_calendar_last_error}
                           </p>
                         )}
+                      </td>
+                      <td className="px-3 py-2 text-center align-top">
+                        <input
+                          type="checkbox"
+                          checked={s.google_calendar_sync_enabled}
+                          disabled={actionBusy === `staff-sync-en-${s.id}`}
+                          title="Выкл — не ставить в очередь синхронизации в личный календарь мастера"
+                          onChange={(e) => void saveStaffSyncEnabled(s.id, e.target.checked)}
+                          className="h-4 w-4 accent-emerald-500"
+                        />
                       </td>
                       <td className="px-3 py-2">
                         <span

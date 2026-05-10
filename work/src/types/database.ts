@@ -43,6 +43,8 @@ export type StaffTableRow = {
   google_calendar_status?: "disconnected" | "connecting" | "connected" | "error" | null;
   google_calendar_account_email?: string | null;
   google_calendar_id?: string | null;
+  /** When false, staff-scope Google Calendar outbox rows are not enqueued. Default true. */
+  google_calendar_sync_enabled?: boolean | null;
   google_calendar_last_sync_at?: string | null;
   google_calendar_last_error?: string | null;
   /** Из Google Calendar calendarList (импорт). */
