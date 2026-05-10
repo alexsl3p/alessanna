@@ -86,11 +86,19 @@ function zonedParts(date: Date, timeZone: string) {
 
 /**
  * UTC-момент начала календарного дня ymd в Europe/Tallinn (00:00 местного времени).
+ *
+ * Важно: нельзя начинать поиск с «вечера (d−1) по UTC» — для зон восточнее UTC
+ * (EET/EEST) это уже следующий календарный день локально, и одноминутный проход
+ * вперёд никогда не попадёт в локальную полночь (см. could not resolve 2026-05-11).
  */
 export function salonDayStartUtc(ymd: string): Date {
   const [y, mo, d] = ymd.split("-").map((x) => parseInt(x, 10));
-  let t = Date.UTC(y, mo - 1, d - 1, 22, 0, 0);
-  for (let i = 0; i < 1440; i++) {
+  if (!Number.isFinite(y) || !Number.isFinite(mo) || !Number.isFinite(d)) {
+    throw new Error(`salonDayStartUtc: invalid ymd ${ymd}`);
+  }
+  let t = Date.UTC(y, mo - 1, d - 1, 0, 0, 0);
+  const maxSteps = 48 * 60;
+  for (let i = 0; i < maxSteps; i++) {
     const p = zonedParts(new Date(t), SALON_TIME_ZONE);
     const cur = `${p.y}-${String(p.m).padStart(2, "0")}-${String(p.d).padStart(2, "0")}`;
     if (cur === ymd && p.hour === 0 && p.minute === 0) {
