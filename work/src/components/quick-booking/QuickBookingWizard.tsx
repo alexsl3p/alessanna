@@ -23,12 +23,10 @@ import {
   salonYmdFromAnyDate,
   SALON_TIME_ZONE,
 } from "../../lib/bookingSalonTz";
-import { staffEligibleForService } from "../../lib/roles";
-import { crmServiceIdsForStaff } from "../../lib/publicMasterPanel";
 import { resolveClientIdForVisit } from "../../lib/clientLink";
 import { useQuickBookingResources } from "../../hooks/useQuickBookingResources";
 import { buildQuickCategories } from "./buildQuickCategories";
-import type { AppointmentRow, StaffMember } from "../../types/database";
+import type { StaffMember } from "../../types/database";
 
 const ANY_MASTER_ID = "any";
 
@@ -68,9 +66,7 @@ export function QuickBookingWizard({ createdByStaffId }: Props) {
     loading,
     services,
     staffDirectory,
-    links,
     schedules,
-    mastersPanelStaff,
     appointments,
     timeOff,
     setBookYmd,
@@ -142,15 +138,6 @@ export function QuickBookingWizard({ createdByStaffId }: Props) {
   const svc = useMemo(() => services.find((s) => s.id === serviceId) ?? null, [services, serviceId]);
 
   const durationMin = svc ? svc.duration_min + svc.buffer_after_min : 60;
-
-  const panelServiceIds = useMemo(() => {
-    const out = new Set<string>();
-    for (const m of mastersPanelStaff) {
-      const ids = crmServiceIdsForStaff(m, links, services);
-      for (const id of ids) out.add(id);
-    }
-    return out;
-  }, [mastersPanelStaff, links, services]);
 
   const eligibleStaff = useMemo(
     () => (serviceId ? eligibleStaffForService(serviceId) : []),
@@ -234,10 +221,22 @@ export function QuickBookingWizard({ createdByStaffId }: Props) {
     return eachDayOfInterval({ start: from, end: to });
   }, [monthStart]);
 
-  const stepIndexLabel = useMemo(() => {
-    const n = history.length;
-    return { n, total: Math.max(n, 7) };
-  }, [history.length]);
+  /** Фиксированные фазы: один экран — одна «ступень» прогресса (без скачков в середину). */
+  const stepPhase = useMemo(() => {
+    if (step === "intro") return { n: 0, total: 6, showBar: false as const };
+    const phase: Partial<Record<WizardStep, number>> = {
+      category: 1,
+      service: 2,
+      masterMode: 3,
+      masterPick: 3,
+      timeMode: 4,
+      schedule: 4,
+      client: 5,
+      confirm: 6,
+    };
+    const n = phase[step] ?? 0;
+    return { n, total: 6, showBar: true as const };
+  }, [step]);
 
   useEffect(() => {
     if (!clientQuery.trim() || clientQuery.trim().length < 2) {
@@ -279,101 +278,8 @@ export function QuickBookingWizard({ createdByStaffId }: Props) {
     setStaffId(ANY_MASTER_ID);
     setPickedStart(soonestForMasterMode.start);
     setTimeMode("soonest");
-    push("client");
+    push("schedule");
   }, [push, soonestForMasterMode, svc, t]);
-
-  const scanEarliestGlobally = useCallback(async () => {
-    const ymd = salonFirstBookableYmd(new Date(nowTick));
-    const dayStart = salonDayStartUtc(ymd);
-    const end = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
-    const panelIds = mastersPanelStaff.map((s) => s.id);
-    if (!panelIds.length) {
-      setMsg(t("quickBook.noPanelStaff"));
-      return;
-    }
-    const [ap, toff] = await Promise.all([
-      supabase
-        .from("appointments")
-        .select("staff_id,start_time,end_time,status")
-        .in("staff_id", panelIds)
-        .gte("start_time", dayStart.toISOString())
-        .lt("start_time", end.toISOString())
-        .neq("status", "cancelled"),
-      supabase
-        .from("staff_time_off")
-        .select("staff_id,start_time,end_time")
-        .in("staff_id", panelIds)
-        .lte("start_time", end.toISOString())
-        .gte("end_time", dayStart.toISOString()),
-    ]);
-    const appts = (ap.data ?? []) as AppointmentRow[];
-    const off = (toff.data ?? []).map((r) => ({
-      staff_id: r.staff_id,
-      start_time: r.start_time,
-      end_time: r.end_time,
-    }));
-    const wk = salonWeekdaySun0(ymd);
-    const t0 = Date.now();
-    let best: { serviceId: string; start: Date } | null = null;
-    for (const cand of services) {
-      if (!cand.active || !panelServiceIds.has(cand.id)) continue;
-      const eligible = staffEligibleForService(staffDirectory, links, cand.id).filter((m) =>
-        panelIds.includes(m.id),
-      );
-      const dur = cand.duration_min + cand.buffer_after_min;
-      for (const member of eligible) {
-        const memberSchedule = schedules
-          .filter((s) => s.staff_id === member.id)
-          .map((s) => ({
-            day_of_week: s.day_of_week,
-            start_time: s.start_time,
-            end_time: s.end_time,
-          }));
-        const raw = generateAvailableSlots({
-          schedule: memberSchedule,
-          appointments: appts,
-          timeOff: off,
-          duration: dur,
-          day: dayStart,
-          salonDayStartUtc: dayStart,
-          salonWeekdaySun0: wk,
-          stepMinutes: 15,
-          staffId: member.id,
-        });
-        const first = raw.find((s) => s.start.getTime() >= t0);
-        if (first && (!best || first.start < best.start)) {
-          best = { serviceId: cand.id, start: first.start };
-        }
-      }
-    }
-    if (!best) {
-      setMsg(t("quickBook.noSlotsTryWizard"));
-      return;
-    }
-    setBookYmd(ymd);
-    await loadDayData();
-    setServiceId(best.serviceId);
-    const cat = categories.find((c) => c.serviceIds.includes(best.serviceId));
-    setCategoryKey(cat?.id ?? null);
-    setMasterMode("any");
-    setStaffId(ANY_MASTER_ID);
-    setPickedStart(best.start);
-    setTimeMode("soonest");
-    setHistory(["intro", "client"]);
-    setMsg(null);
-  }, [
-    categories,
-    links,
-    loadDayData,
-    mastersPanelStaff,
-    nowTick,
-    panelServiceIds,
-    schedules,
-    services,
-    setBookYmd,
-    staffDirectory,
-    t,
-  ]);
 
   const confirmBook = useCallback(async () => {
     if (!svc || !pickedStart) {
@@ -488,15 +394,23 @@ export function QuickBookingWizard({ createdByStaffId }: Props) {
           {t("quickBook.back")}
         </button>
         <div className="flex-1">
-          <div className="h-2 overflow-hidden rounded-full bg-zinc-800">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-sky-500 to-violet-500 transition-all"
-              style={{ width: `${Math.min(100, (stepIndexLabel.n / Math.max(1, stepIndexLabel.total)) * 100)}%` }}
-            />
-          </div>
-          <p className="mt-1 text-center text-sm text-zinc-500">
-            {t("quickBook.stepOf", { n: stepIndexLabel.n, total: stepIndexLabel.total })}
-          </p>
+          {stepPhase.showBar ? (
+            <>
+              <div className="h-2 overflow-hidden rounded-full bg-zinc-800">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-sky-500 to-violet-500 transition-all"
+                  style={{
+                    width: `${Math.min(100, (stepPhase.n / Math.max(1, stepPhase.total)) * 100)}%`,
+                  }}
+                />
+              </div>
+              <p className="mt-1 text-center text-sm text-zinc-500">
+                {t("quickBook.stepOf", { n: stepPhase.n, total: stepPhase.total })}
+              </p>
+            </>
+          ) : (
+            <p className="mt-1 text-center text-sm text-zinc-500">{t("quickBook.introProgressHint")}</p>
+          )}
         </div>
         <Link
           to="/reception"
@@ -520,22 +434,9 @@ export function QuickBookingWizard({ createdByStaffId }: Props) {
         <div className="space-y-6">
           <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">{t("quickBook.title")}</h1>
           <p className="text-lg text-zinc-400">{t("quickBook.subtitle")}</p>
-
-          <button
-            type="button"
-            onClick={() => void scanEarliestGlobally()}
-            className="w-full rounded-2xl border border-emerald-500/40 bg-emerald-950/35 p-6 text-left shadow-[0_20px_60px_rgba(16,185,129,0.12)] backdrop-blur-sm transition hover:bg-emerald-950/50"
-          >
-            <div className="flex items-center gap-3">
-              <span className="text-4xl" aria-hidden>
-                ⚡
-              </span>
-              <div>
-                <p className="text-xl font-semibold text-white">{t("quickBook.nearestCardTitle")}</p>
-                <p className="mt-1 text-base text-emerald-100/80">{t("quickBook.nearestCardHint")}</p>
-              </div>
-            </div>
-          </button>
+          <p className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-base text-zinc-300">
+            {t("quickBook.linearFlowHint")}
+          </p>
 
           <button type="button" onClick={() => push("category")} className={bigBtnClass()}>
             {t("quickBook.startWizard")}

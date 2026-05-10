@@ -302,6 +302,8 @@
     "backToReception": "Tagasi vastuvõtule",
     "title": "Kiire broneering",
     "subtitle": "Sama salong ja CRM — suured sammud tahvlile.",
+    "introProgressHint": "Edasi ükshaaval: kategooria → teenus → aeg → klient.",
+    "linearFlowHint": "Ilma ühise nimekirjata all: igal ekraanil üks valik — kõigepealt kategooria, siis teenus, meister, aeg ja kliendi andmed.",
     "nearestCardTitle": "Lähim vaba aeg",
     "nearestCardHint": "Leiame teenuse, millel on täna kõige lähemal vaba aeg.",
     "startWizard": "Vali kategooria ja teenus",
