@@ -16,6 +16,8 @@ type OutboxRow = {
   target_scope: string;
   payload: Record<string, unknown>;
   attempts: number;
+  status: string;
+  last_attempt_at: string | null;
 };
 
 type AppointmentSnapshot = Record<string, unknown> & {
@@ -249,19 +251,45 @@ async function processOutbox(sb: ReturnType<typeof createClient>) {
 
   const { data: rows, error } = await sb
     .from("notifications_outbox")
-    .select("id,appointment_id,target_scope,payload,attempts")
+    .select("id,appointment_id,target_scope,payload,attempts,status,last_attempt_at")
     .eq("kind", "google_calendar_event")
-    .eq("status", "pending")
+    .in("status", ["pending", "error"])
     .order("created_at", { ascending: true })
-    .limit(50);
+    .limit(120);
   if (error) throw new Error(error.message);
 
-  const outboxRows = (rows ?? []) as OutboxRow[];
+  const now = Date.now();
+  const outboxRows = ((rows ?? []) as OutboxRow[]).filter((row) => {
+    if (row.status === "pending") return true;
+    // automatic retry queue for failed deliveries (max 6 attempts, progressive backoff)
+    if (row.attempts >= 6) return false;
+    const delayMs = Math.min(15 * 60 * 1000, Math.max(15_000, row.attempts * 45_000));
+    const lastTs = row.last_attempt_at ? Date.parse(row.last_attempt_at) : 0;
+    if (!Number.isFinite(lastTs) || lastTs <= 0) return true;
+    return now - lastTs >= delayMs;
+  });
   let processed = 0;
   let failed = 0;
+  console.log(
+    JSON.stringify({
+      msg: "sync_batch_started",
+      eligible: outboxRows.length,
+      fetched: (rows ?? []).length,
+    }),
+  );
 
   for (const row of outboxRows) {
     try {
+      console.log(
+        JSON.stringify({
+          msg: "sync_row_received",
+          outbox_id: row.id,
+          appointment_id: row.appointment_id,
+          target_scope: row.target_scope,
+          attempts: row.attempts,
+          previous_status: row.status,
+        }),
+      );
       const scope = row.target_scope || "salon";
       const scopeKey = scope === "salon" ? "salon" : scope;
       const staffId = scope.startsWith("staff:") ? scope.slice("staff:".length) : null;
@@ -275,6 +303,15 @@ async function processOutbox(sb: ReturnType<typeof createClient>) {
         staffCalendarId = (staffRow?.google_calendar_id as string | null) ?? null;
       }
       const calendarId = detectScopeCalendarId(scope, staffCalendarId, salonCalendarId);
+      console.log(
+        JSON.stringify({
+          msg: "sync_calendar_selected",
+          outbox_id: row.id,
+          scope,
+          scope_key: scopeKey,
+          calendar_id: calendarId,
+        }),
+      );
       const accessToken = await getScopeTokens(sb, scopeKey);
 
       const payload = { ...(row.payload ?? {}) };
@@ -311,7 +348,31 @@ async function processOutbox(sb: ReturnType<typeof createClient>) {
         }
       }
 
+      console.log(
+        JSON.stringify({
+          msg: "sync_google_upsert_start",
+          outbox_id: row.id,
+          appointment_id: appointmentId,
+          operation: op,
+          payload: {
+            start_time: sourcePayload.start_time ?? null,
+            end_time: sourcePayload.end_time ?? null,
+            client_name: sourcePayload.client_name ?? null,
+            staff_id: sourcePayload.staff_id ?? null,
+            service_id: sourcePayload.service_id ?? null,
+          },
+        }),
+      );
       const up = await upsertGoogleEvent(accessToken, calendarId, sourcePayload, existingEventId);
+      console.log(
+        JSON.stringify({
+          msg: "sync_google_upsert_done",
+          outbox_id: row.id,
+          appointment_id: appointmentId,
+          event_id: up.eventId,
+          etag: up.etag,
+        }),
+      );
 
       if (appointmentId && up.eventId) {
         await sb
@@ -351,17 +412,35 @@ async function processOutbox(sb: ReturnType<typeof createClient>) {
           external_ref: up.eventId,
         })
         .eq("id", row.id);
+      console.log(
+        JSON.stringify({
+          msg: "sync_row_completed",
+          outbox_id: row.id,
+          appointment_id: appointmentId,
+          status: "sent",
+        }),
+      );
       processed++;
     } catch (e) {
+      const errMsg = e instanceof Error ? e.message : String(e);
       await sb
         .from("notifications_outbox")
         .update({
           status: "error",
           attempts: row.attempts + 1,
           last_attempt_at: new Date().toISOString(),
-          last_error: e instanceof Error ? e.message : String(e),
+          last_error: errMsg,
         })
         .eq("id", row.id);
+      console.log(
+        JSON.stringify({
+          msg: "sync_row_failed",
+          outbox_id: row.id,
+          appointment_id: row.appointment_id,
+          reason: errMsg,
+          next_retry_attempt: row.attempts + 1,
+        }),
+      );
       failed++;
     }
   }

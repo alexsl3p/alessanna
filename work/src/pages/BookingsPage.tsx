@@ -23,8 +23,10 @@ import type { AppointmentRow } from "../types/database";
 
 type StaffName = { id: string; name: string };
 type ServiceName = { id: string; name: string };
+type SyncStatus = { status: "pending" | "sent" | "error"; last_error: string | null };
 
 type StatusFilter = "all" | "active" | "pending" | "confirmed" | "cancelled";
+type SourceSort = "none" | "asc" | "desc";
 
 const STATUS_FILTERS: StatusFilter[] = [
   "active",
@@ -50,10 +52,12 @@ export function BookingsPage() {
   const [services, setServices] = useState<ServiceName[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [syncByAppointment, setSyncByAppointment] = useState<Record<string, SyncStatus>>({});
 
   /* фильтры/поиск */
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
+  const [sourceSort, setSourceSort] = useState<SourceSort>("none");
   const [siteAlerts, setSiteAlerts] = useState<
     Array<{ id: string; client: string; when: string; staffId: string }>
   >([]);
@@ -68,11 +72,18 @@ export function BookingsPage() {
      * (bigint) и актуальный `service_listings` (uuid). Грузим оба источника и мёржим
      * по стринговому id — иначе в колонке «Услуга» у новых записей всегда прочерк. */
     try {
-      const [b, e, legacySvc, listingSvc] = await Promise.all([
+      const [b, e, legacySvc, listingSvc, outbox] = await Promise.all([
         q,
         supabase.from("staff").select("id,name"),
         supabase.from("services").select("id,name_et"),
         supabase.from("service_listings").select("id,name"),
+        supabase
+          .from("notifications_outbox")
+          .select("appointment_id,status,last_error,created_at")
+          .eq("kind", "google_calendar_event")
+          .in("status", ["pending", "sent", "error"])
+          .order("created_at", { ascending: false })
+          .limit(1500),
       ]);
       if (b.error) throw b.error;
       if (b.data) setRows(b.data as AppointmentRow[]);
@@ -89,6 +100,22 @@ export function BookingsPage() {
         }
       }
       setServices(merged);
+      if (outbox.data) {
+        const map: Record<string, SyncStatus> = {};
+        for (const r of outbox.data as Array<{
+          appointment_id: string | null;
+          status: "pending" | "sent" | "error";
+          last_error: string | null;
+        }>) {
+          if (!r.appointment_id) continue;
+          if (!map[r.appointment_id]) {
+            map[r.appointment_id] = { status: r.status, last_error: r.last_error };
+          }
+        }
+        setSyncByAppointment(map);
+      } else {
+        setSyncByAppointment({});
+      }
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : t("bookings.loadError"));
     } finally {
@@ -130,7 +157,7 @@ export function BookingsPage() {
   /* Подготовка отфильтрованного списка. */
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return rows.filter((b) => {
+    const filtered = rows.filter((b) => {
       if (!passesStatus(statusFilter, b.status)) return false;
       if (!q) return true;
       const em = staffNames.find((x) => x.id === b.staff_id);
@@ -147,7 +174,20 @@ export function BookingsPage() {
         .toLowerCase();
       return haystack.includes(q);
     });
-  }, [rows, search, statusFilter, staffNames, services]);
+    if (sourceSort === "none") return filtered;
+    const rank = (source: string | null | undefined): number => {
+      const s = String(source ?? "").toLowerCase();
+      if (s === "public_site") return 0;
+      if (s === "reception") return 1;
+      if (s === "crm") return 2;
+      return 3;
+    };
+    const sorted = [...filtered].sort((a, b) => {
+      const diff = rank(a.source) - rank(b.source);
+      return sourceSort === "asc" ? diff : -diff;
+    });
+    return sorted;
+  }, [rows, search, statusFilter, staffNames, services, sourceSort]);
 
   const filtersActive = statusFilter !== "active" || search.trim().length > 0;
 
@@ -259,6 +299,22 @@ export function BookingsPage() {
     if (f === "pending") return t("bookings.filterPending");
     if (f === "confirmed") return t("bookings.filterConfirmed");
     return t("bookings.filterCancelled");
+  }
+
+  function syncMeta(id: string): { label: string; tone: string; error?: string | null } | null {
+    const s = syncByAppointment[id];
+    if (!s) return null;
+    if (s.status === "pending") {
+      return { label: "sync pending", tone: "border-amber-800/60 bg-amber-950/40 text-amber-200" };
+    }
+    if (s.status === "error") {
+      return {
+        label: "sync failed",
+        tone: "border-red-800/60 bg-red-950/40 text-red-200",
+        error: s.last_error,
+      };
+    }
+    return { label: "synced", tone: "border-emerald-800/60 bg-emerald-950/40 text-emerald-200" };
   }
 
   return (
@@ -384,7 +440,21 @@ export function BookingsPage() {
                 <th className="px-4 py-3">{t("bookings.service")}</th>
                 <th className="px-4 py-3">{t("bookings.status")}</th>
                 <th className="px-4 py-3">
-                  {t("bookings.source", { defaultValue: "Источник" })}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSourceSort((prev) =>
+                        prev === "none" ? "asc" : prev === "asc" ? "desc" : "none",
+                      )
+                    }
+                    className="inline-flex items-center gap-1 text-xs uppercase tracking-wide text-zinc-500 hover:text-zinc-300"
+                    title={t("bookings.sortSource", { defaultValue: "Сортировать по источнику" })}
+                  >
+                    {t("bookings.source", { defaultValue: "Источник" })}
+                    <span className="text-[10px] text-zinc-600">
+                      {sourceSort === "asc" ? "↑" : sourceSort === "desc" ? "↓" : "↕"}
+                    </span>
+                  </button>
                 </th>
                 {(canManage || (isWorkerOnlyEffective && staffMember)) && <th className="px-4 py-3" />}
               </tr>
@@ -395,6 +465,7 @@ export function BookingsPage() {
                 const em = staffNames.find((x) => x.id === b.staff_id);
                 const sv = services.find((x) => x.id === String(b.service_id));
                 const src = sourceMeta(b.source);
+                const sync = syncMeta(b.id);
                 const acceptedBy = b.created_by_staff_id
                   ? staffNames.find((x) => x.id === b.created_by_staff_id)
                   : null;
@@ -472,6 +543,19 @@ export function BookingsPage() {
                             defaultValue: "Принял: {{name}}",
                             name: acceptedBy.name,
                           })}
+                        </div>
+                      )}
+                      {sync && (
+                        <div className="mt-1">
+                          <span
+                            className={
+                              "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide " +
+                              sync.tone
+                            }
+                            title={sync.error ?? undefined}
+                          >
+                            {sync.label}
+                          </span>
                         </div>
                       )}
                     </td>

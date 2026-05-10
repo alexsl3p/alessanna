@@ -851,6 +851,7 @@ export function PublicBookingPage() {
       start_time: pickedStart.toISOString(),
       end_time: end.toISOString(),
       status: "confirmed",
+      source: "public_site",
     });
     setBooking(false);
     if (error) {
@@ -863,12 +864,14 @@ export function PublicBookingPage() {
       setMsg(error.message);
       return;
     }
-    // Fire-and-forget: push outbox queue to Google right after website booking.
-    // If sync worker fails, booking stays in CRM and retry flow continues via integrations page.
-    void supabase.functions
-      .invoke("google-calendar-sync", { body: { mode: "drain" } })
-      .catch(() => undefined);
-    setMsg(t("publicBook.success"));
+    const syncRes = await supabase.functions.invoke("google-calendar-sync", { body: { mode: "drain" } });
+    if (syncRes.error) {
+      setMsg(
+        "Запись сохранена, но sync с Google Calendar не запущен. Проверьте Integrations -> Two-way sync engine.",
+      );
+    } else {
+      setMsg(t("publicBook.success"));
+    }
     setPickedStart(null);
     setClientName("");
     setClientPhone("");
