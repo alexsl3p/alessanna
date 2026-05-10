@@ -1268,7 +1268,6 @@ export function QuickBookingWizard({ createdByStaffId }: Props) {
 
       <QuickBookingSchedulePanel
         t={t}
-        i18n={i18n}
         schedules={schedules}
         nowTick={nowTick}
         firstBookableYmd={firstBookableYmd}

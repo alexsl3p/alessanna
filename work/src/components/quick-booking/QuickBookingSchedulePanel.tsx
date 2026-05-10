@@ -1,6 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
 import type { TFunction } from "i18next";
-import type { i18n } from "i18next";
 import { format } from "date-fns";
 import {
   compareSalonYmd,
@@ -8,7 +7,6 @@ import {
   salonCalendarYmd,
   salonDayStartUtc,
   salonWeekdaySun0,
-  SALON_TIME_ZONE,
 } from "../../lib/bookingSalonTz";
 import {
   firstFreeSlotOnDay,
@@ -87,7 +85,6 @@ const toneCls: Record<CellTone, string> = {
 
 type Props = {
   t: TFunction;
-  i18n: i18n;
   schedules: StaffScheduleRow[];
   nowTick: number;
   firstBookableYmd: string;
@@ -111,7 +108,6 @@ function scopeBtn(active: boolean): string {
 
 export function QuickBookingSchedulePanel({
   t,
-  i18n,
   schedules,
   nowTick,
   firstBookableYmd,
@@ -159,53 +155,6 @@ export function QuickBookingSchedulePanel({
     }),
     [rowStaff, schedules, durationMin],
   );
-
-  const insights = useMemo(() => {
-    const focusYmd = days[0] ?? fromYmd;
-    let sumFree = 0;
-    let bestMaster: StaffMember | null = null;
-    let bestFree = -1;
-    for (const m of rowStaff) {
-      const st = quickBookSlotStatsForMasterDay({
-        ymd: focusYmd,
-        master: m,
-        schedules,
-        appointments,
-        timeOff,
-        durationMin,
-        nowTick,
-        anyMasterToken: ANY_TOKEN,
-      });
-      sumFree += st.freeFuture;
-      if (st.freeFuture > bestFree) {
-        bestFree = st.freeFuture;
-        bestMaster = m;
-      }
-    }
-    const futureAppts = appointments
-      .filter((a) => a.status !== "cancelled")
-      .map((a) => new Date(a.start_time).getTime())
-      .filter((ts) => ts >= nowTick)
-      .sort((a, b) => a - b);
-    const nextTs = futureAppts[0];
-    const nextLabel =
-      nextTs != null
-        ? new Intl.DateTimeFormat(i18n.language, {
-            timeZone: SALON_TIME_ZONE,
-            weekday: "short",
-            day: "numeric",
-            month: "short",
-            hour: "2-digit",
-            minute: "2-digit",
-          }).format(new Date(nextTs))
-        : null;
-    return {
-      sumFree,
-      freest: bestMaster,
-      nextLabel,
-      focusYmd,
-    };
-  }, [appointments, days, durationMin, fromYmd, i18n.language, nowTick, rowStaff, schedules, timeOff]);
 
   const shiftAnchor = (deltaDays: number) => {
     setAnchorYmd((a) => gregorianAddDays(a, deltaDays));
@@ -647,34 +596,6 @@ export function QuickBookingSchedulePanel({
         <span className="ml-2 text-zinc-500">
           {t("quickBook.panelRangeLabel")}: {fromYmd} — {toYmd}
         </span>
-      </div>
-
-      <div className="mb-6 grid gap-3 sm:grid-cols-3">
-        <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/20 px-4 py-4">
-          <p className="text-base text-emerald-200/80">{t("quickBook.panelInsightFreeWindows")}</p>
-          <p className="mt-1 text-3xl font-bold text-emerald-100">{insights.sumFree}</p>
-          <p className="mt-1 text-sm text-zinc-500">
-            {t("quickBook.panelInsightOnDay")}{" "}
-            {new Intl.DateTimeFormat(i18n.language, {
-              timeZone: SALON_TIME_ZONE,
-              weekday: "long",
-              day: "numeric",
-              month: "long",
-            }).format(salonDayStartUtc(insights.focusYmd))}
-          </p>
-        </div>
-        <div className="rounded-2xl border border-sky-500/30 bg-sky-950/20 px-4 py-4">
-          <p className="text-base text-sky-200/80">{t("quickBook.panelInsightNext")}</p>
-          <p className="mt-1 text-2xl font-bold text-sky-50">
-            {insights.nextLabel ?? t("quickBook.panelInsightNoNext")}
-          </p>
-        </div>
-        <div className="rounded-2xl border border-violet-500/30 bg-violet-950/20 px-4 py-4">
-          <p className="text-base text-violet-200/80">{t("quickBook.panelInsightFreest")}</p>
-          <p className="mt-1 text-2xl font-bold text-violet-50">
-            {insights.freest?.name ?? "—"}
-          </p>
-        </div>
       </div>
 
       {!canApplySlot ? (
