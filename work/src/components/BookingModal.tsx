@@ -87,6 +87,15 @@ export function BookingModal({
 
   useEffect(() => {
     if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  useEffect(() => {
+    if (!open) return;
     setStaffId(initialStaffId);
     setClientName("");
     setClientPhone("");
@@ -199,18 +208,42 @@ export function BookingModal({
       : "border border-zinc-800 bg-zinc-950 shadow-2xl";
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/75 p-4 backdrop-blur-[2px]">
-      <div className={`w-full max-w-md rounded-2xl p-6 ${shell}`}>
-        <h2 className="text-lg font-semibold text-white">{t("modal.newBooking")}</h2>
-        <p className="mt-1 text-sm text-zinc-500">
-          {initialStart.toLocaleString(i18n.language, {
-            weekday: "short",
-            month: "short",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
-        </p>
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/75 p-4 backdrop-blur-[2px]"
+      role="presentation"
+      onClick={onClose}
+    >
+      <div
+        className={`max-h-[min(92vh,calc(100vh-2rem))] w-full max-w-md overflow-y-auto rounded-2xl p-6 ${shell}`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="booking-modal-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <h2 id="booking-modal-title" className="text-lg font-semibold text-white">
+              {t("modal.newBooking")}
+            </h2>
+            <p className="mt-1 text-sm text-zinc-500">
+              {initialStart.toLocaleString(i18n.language, {
+                weekday: "short",
+                month: "short",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-11 min-w-11 shrink-0 items-center justify-center rounded-xl border border-zinc-600 bg-zinc-900/80 text-lg leading-none text-zinc-200 hover:border-zinc-500 hover:bg-zinc-800 hover:text-white"
+            aria-label={t("modal.closeBooking")}
+          >
+            ×
+          </button>
+        </div>
         <form onSubmit={submit} className="mt-4 space-y-3">
           <div>
             <label className="text-xs text-zinc-500">{t("modal.service")}</label>
