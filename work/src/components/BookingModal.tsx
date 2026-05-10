@@ -19,6 +19,7 @@ type Props = {
   links?: StaffServiceRow[];
   lockStaff?: boolean;
   variant?: "default" | "pro";
+  layout?: "modal" | "drawer";
   /** Колонки «волосы» / «ногти» (как на ресепшене). Если заданы вместе с fullPanel — список мастеров режется по залу выбранной услуги. */
   mastersHallSplit?: { hair: StaffMember[]; nails: StaffMember[] };
   mastersHallFullPanel?: StaffMember[];
@@ -35,6 +36,7 @@ export function BookingModal({
   links = [],
   lockStaff = false,
   variant = "default",
+  layout = "modal",
   mastersHallSplit,
   mastersHallFullPanel,
 }: Props) {
@@ -45,8 +47,6 @@ export function BookingModal({
   /* `services.id` приходит и как UUID (service_listings), и как bigint (services).
    * Поэтому serviceId — `string | number`, чтобы fallback-цепочки не ломались. */
   const [serviceId, setServiceId] = useState<string | number>(0);
-  const [manualServiceNote, setManualServiceNote] = useState("");
-  const [extraBlockMin, setExtraBlockMin] = useState(0);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -99,8 +99,6 @@ export function BookingModal({
     setStaffId(initialStaffId);
     setClientName("");
     setClientPhone("");
-    setManualServiceNote("");
-    setExtraBlockMin(0);
     setError("");
     const firstSvc = eligibleServices[0]?.id ?? services.find((s) => s.active)?.id ?? 0;
     setServiceId(firstSvc);
@@ -145,8 +143,7 @@ export function BookingModal({
       setError("Нельзя создать запись в прошедшее время. Выберите актуальный слот.");
       return;
     }
-    const safeExtraBlockMin = Number.isFinite(extraBlockMin) ? Math.max(0, Math.min(240, extraBlockMin)) : 0;
-    const end = addMinutes(start, svc.duration_min + svc.buffer_after_min + safeExtraBlockMin);
+    const end = addMinutes(start, svc.duration_min + svc.buffer_after_min);
 
     const { data: existingRows, error: loadErr } = await supabase
       .from("appointments")
@@ -170,15 +167,10 @@ export function BookingModal({
      *  the 'source' column of 'appointments' in the schema cache» и запись не
      *  создаётся. Поэтому отправляем только реально существующие колонки. */
     const normalizedClientName = clientName.trim() || "Клиент (CRM)";
-    const normalizedManualService = manualServiceNote.trim();
-    const noteParts = [
-      normalizedManualService ? `Услуга вручную: ${normalizedManualService}` : null,
-      safeExtraBlockMin > 0 ? `Доп. блок после услуги: ${safeExtraBlockMin} мин` : null,
-    ].filter(Boolean);
     const { error: insErr } = await supabase.from("appointments").insert({
       client_name: normalizedClientName,
       client_phone: clientPhone.trim() || null,
-      note: noteParts.length ? noteParts.join("\n") : null,
+      note: null,
       staff_id: staffId,
       service_id: serviceId,
       start_time: start.toISOString(),
@@ -198,23 +190,23 @@ export function BookingModal({
     onClose();
     setClientName("");
     setClientPhone("");
-    setManualServiceNote("");
-    setExtraBlockMin(0);
   }
 
   const shell =
     variant === "pro"
-      ? "border border-amber-500/25 bg-zinc-950/90 shadow-[0_0_60px_rgba(245,158,11,0.12),0_24px_80px_rgba(0,0,0,0.75)] backdrop-blur-xl"
-      : "border border-zinc-800 bg-zinc-950 shadow-2xl";
+      ? "border border-gold/25 bg-panel/95 shadow-[0_18px_50px_rgba(0,0,0,0.28)] backdrop-blur-xl"
+      : "border border-line/12 bg-panel shadow-2xl";
+  const isDrawer = layout === "drawer";
+  const activeStaffName = eligibleStaff.find((s) => s.id === staffId)?.name ?? initialStaffRow?.name ?? "—";
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/75 p-4 backdrop-blur-[2px]"
+      className={`fixed inset-0 z-[60] ${isDrawer ? "flex items-stretch justify-end bg-black/35 p-0 backdrop-blur-[1px]" : "flex items-center justify-center bg-black/75 p-4 backdrop-blur-[2px]"}`}
       role="presentation"
       onClick={onClose}
     >
       <div
-        className={`max-h-[min(92vh,calc(100vh-2rem))] w-full max-w-md overflow-y-auto rounded-2xl p-6 ${shell}`}
+        className={`${isDrawer ? "h-full w-full max-w-[440px] overflow-y-auto rounded-none border-l p-5 sm:max-w-[460px]" : "max-h-[min(92vh,calc(100vh-2rem))] w-full max-w-md overflow-y-auto rounded-2xl p-6"} ${shell}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="booking-modal-title"
@@ -225,7 +217,7 @@ export function BookingModal({
             <h2 id="booking-modal-title" className="text-lg font-semibold text-white">
               {t("modal.newBooking")}
             </h2>
-            <p className="mt-1 text-sm text-zinc-500">
+            <p className="mt-1 text-sm text-muted">
               {initialStart.toLocaleString(i18n.language, {
                 weekday: "short",
                 month: "short",
@@ -238,17 +230,33 @@ export function BookingModal({
           <button
             type="button"
             onClick={onClose}
-            className="flex h-11 min-w-11 shrink-0 items-center justify-center rounded-xl border border-zinc-600 bg-zinc-900/80 text-lg leading-none text-zinc-200 hover:border-zinc-500 hover:bg-zinc-800 hover:text-white"
+            className="flex h-11 min-w-11 shrink-0 items-center justify-center rounded-xl border border-line/15 bg-surface/80 text-lg leading-none text-fg hover:border-line/30 hover:bg-surface"
             aria-label={t("modal.closeBooking")}
           >
             ×
           </button>
         </div>
         <form onSubmit={submit} className="mt-4 space-y-3">
+          <div className="rounded-xl border border-line/12 bg-canvas/30 px-3 py-2">
+            <p className="text-xs text-muted">{t("calendar.day", { defaultValue: "День" })}</p>
+            <p className="text-sm font-medium text-fg">
+              {initialStart.toLocaleString(i18n.language, {
+                weekday: "short",
+                month: "short",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </p>
+            <p className="mt-1 text-xs text-muted">
+              {t("modal.staff")} · <span className="text-fg">{activeStaffName}</span>
+            </p>
+          </div>
+
           <div>
-            <label className="text-xs text-zinc-500">{t("modal.service")}</label>
+            <label className="text-xs text-muted">{t("modal.service")}</label>
             {eligibleServices.length > 0 ? (
-              <div className="mt-2 rounded-xl border border-zinc-800 bg-black/40 p-2">
+              <div className="mt-2 rounded-xl border border-line/12 bg-canvas/30 p-2">
                 <ServiceListPicker
                   items={modalServiceRows}
                   selectedId={String(serviceId)}
@@ -271,11 +279,11 @@ export function BookingModal({
           </div>
           {!lockStaff && (
             <div>
-              <label className="text-xs text-zinc-500">{t("modal.staff")}</label>
+              <label className="text-xs text-muted">{t("modal.staff")}</label>
               <select
                 value={staffId}
                 onChange={(e) => setStaffId(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-zinc-700 bg-black px-3 py-2 text-sm text-white"
+                className="mt-1 w-full rounded-lg border border-line/15 bg-panel px-3 py-2 text-sm text-fg"
               >
                 {eligibleStaff
                   .filter((x) => x.active)
@@ -291,54 +299,29 @@ export function BookingModal({
             </div>
           )}
           <div>
-            <label className="text-xs text-zinc-500">{t("modal.client")}</label>
+            <label className="text-xs text-muted">{t("modal.client")}</label>
             <input
               value={clientName}
               onChange={(e) => setClientName(e.target.value)}
               placeholder="Необязательно"
-              className="mt-1 w-full rounded-lg border border-zinc-700 bg-black px-3 py-2 text-sm text-white"
+              className="mt-1 w-full rounded-lg border border-line/15 bg-panel px-3 py-2 text-sm text-fg"
             />
           </div>
           <div>
-            <label className="text-xs text-zinc-500">{t("modal.phone")}</label>
+            <label className="text-xs text-muted">{t("modal.phone")}</label>
             <input
               value={clientPhone}
               onChange={(e) => setClientPhone(e.target.value)}
               placeholder="Необязательно"
-              className="mt-1 w-full rounded-lg border border-zinc-700 bg-black px-3 py-2 text-sm text-white"
+              className="mt-1 w-full rounded-lg border border-line/15 bg-panel px-3 py-2 text-sm text-fg"
             />
-          </div>
-          <div>
-            <label className="text-xs text-zinc-500">Описание услуги вручную (необязательно)</label>
-            <textarea
-              value={manualServiceNote}
-              onChange={(e) => setManualServiceNote(e.target.value)}
-              rows={2}
-              placeholder="Например: сложное окрашивание + уход"
-              className="mt-1 w-full rounded-lg border border-zinc-700 bg-black px-3 py-2 text-sm text-white"
-            />
-          </div>
-          <div>
-            <label className="text-xs text-zinc-500">Закрыть время после услуги (мин)</label>
-            <input
-              type="number"
-              min={0}
-              max={240}
-              step={5}
-              value={extraBlockMin}
-              onChange={(e) => setExtraBlockMin(Number(e.target.value || 0))}
-              className="mt-1 w-full rounded-lg border border-zinc-700 bg-black px-3 py-2 text-sm text-white"
-            />
-            <p className="mt-1 text-[11px] text-zinc-500">
-              Добавляет дополнительный блок после услуги, чтобы следующий слот был позже.
-            </p>
           </div>
           {error && <p className="text-sm text-red-400">{error}</p>}
           <div className="flex justify-end gap-2 pt-2">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-900"
+              className="rounded-lg border border-line/15 px-4 py-2 text-sm text-muted hover:bg-surface/80 hover:text-fg"
             >
               {t("common.cancel")}
             </button>
@@ -347,11 +330,11 @@ export function BookingModal({
               disabled={saving}
               className={`rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50 ${
                 variant === "pro"
-                  ? "bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 shadow-[0_0_24px_rgba(245,158,11,0.25)]"
+                  ? "bg-gradient-to-r from-gold-deep to-gold hover:brightness-110 shadow-[0_0_24px_rgba(196,165,116,0.25)]"
                   : "bg-sky-600 hover:bg-sky-500"
               }`}
             >
-              {t("common.save")}
+              {t("calendar.createBooking", { defaultValue: "Сделать запись" })}
             </button>
           </div>
         </form>

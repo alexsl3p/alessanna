@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { format, parseISO, startOfDay, endOfDay, isSameDay, isAfter } from "date-fns";
+import { countFreeWindowsForDay, nextAppointmentForStaffFrom } from "../lib/weekTimeline";
 import type {
   AppointmentRow,
   ServiceRow,
@@ -20,6 +21,12 @@ type Props = {
   timeOff: StaffTimeOffRow[];
   /** Сколько ближайших записей показать. По умолчанию 5. */
   upcomingLimit?: number;
+  /** Мастер недельного таймлайна — для снимка «сегодня» и быстрых действий. */
+  focusStaffId?: string | null;
+  /** Длина брони из выбранной услуги (для подсчёта окон). */
+  serviceDurationMin?: number;
+  onNearestSlot?: () => void;
+  onCreateBooking?: () => void;
 };
 
 function staffInitials(name: string | null | undefined): string {
@@ -119,8 +126,32 @@ export function CalendarSidePanels({
   schedules,
   timeOff,
   upcomingLimit = 5,
+  focusStaffId = null,
+  serviceDurationMin = 60,
+  onNearestSlot,
+  onCreateBooking,
 }: Props) {
   const { t } = useTranslation();
+
+  const todaySnapshot = useMemo(() => {
+    if (!focusStaffId) return null;
+    const now = new Date();
+    const day = startOfDay(now);
+    const freeWindows = countFreeWindowsForDay(
+      day,
+      focusStaffId,
+      schedules,
+      appointments,
+      timeOff,
+      serviceDurationMin,
+    );
+    const w = workloadFor(focusStaffId, day, schedules, timeOff, appointments);
+    const pct =
+      w.workingMin > 0 ? Math.min(100, Math.round((w.busyMin / w.workingMin) * 100)) : 0;
+    const next = nextAppointmentForStaffFrom(appointments, focusStaffId, now);
+    const focusMember = staff.find((s) => s.id === focusStaffId);
+    return { freeWindows, loadPct: pct, next, focusMember, workload: w };
+  }, [appointments, focusStaffId, schedules, serviceDurationMin, staff, timeOff]);
 
   const upcoming = useMemo(() => {
     const now = Date.now();
@@ -153,10 +184,86 @@ export function CalendarSidePanels({
     });
   }, [staff, cursor, schedules, timeOff, appointments]);
 
+  const showQuick = Boolean(onNearestSlot || onCreateBooking);
+
   return (
     <aside className="flex flex-col gap-4">
+      {todaySnapshot && (
+        <section className="rounded-xl border border-line/10 bg-panel/80 p-4 shadow-sm">
+          <header className="mb-3 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-fg">
+              {t("calendar.todaySnapshotTitle", { defaultValue: "Сегодня" })}
+            </h3>
+            <span className="text-[11px] text-muted">
+              {todaySnapshot.focusMember?.name ?? ""}
+            </span>
+          </header>
+          <ul className="space-y-2 text-sm">
+            <li className="flex justify-between gap-2 border-b border-line/10 pb-2">
+              <span className="text-muted">
+                {t("calendar.todayFreeWindows", { defaultValue: "Свободных окон" })}
+              </span>
+              <span className="font-medium tabular-nums text-fg">{todaySnapshot.freeWindows}</span>
+            </li>
+            <li className="flex justify-between gap-2 border-b border-line/10 pb-2">
+              <span className="text-muted">
+                {t("calendar.todayLoad", { defaultValue: "Загрузка" })}
+              </span>
+              <span className="font-medium tabular-nums text-fg">
+                {todaySnapshot.workload.isOff || !todaySnapshot.workload.isWorking
+                  ? "—"
+                  : `${todaySnapshot.loadPct}%`}
+              </span>
+            </li>
+            <li className="flex flex-col gap-0.5">
+              <span className="text-muted">
+                {t("calendar.todayNextAppt", { defaultValue: "Ближайшая запись" })}
+              </span>
+              {todaySnapshot.next ? (
+                <span className="font-medium text-fg">
+                  {format(parseISO(todaySnapshot.next.start_time), "HH:mm")} ·{" "}
+                  {todaySnapshot.next.client_name || t("modal.client", { defaultValue: "Клиент" })}
+                </span>
+              ) : (
+                <span className="text-xs text-muted">
+                  {t("calendar.todayNextNone", { defaultValue: "Нет записей впереди" })}
+                </span>
+              )}
+            </li>
+          </ul>
+        </section>
+      )}
+
+      {showQuick && (
+        <section className="rounded-xl border border-line/10 bg-panel/80 p-4 shadow-sm">
+          <h3 className="mb-3 text-sm font-semibold text-fg">
+            {t("calendar.quickActions", { defaultValue: "Быстрые действия" })}
+          </h3>
+          <div className="flex flex-col gap-2">
+            {onNearestSlot && (
+              <button
+                type="button"
+                onClick={onNearestSlot}
+                className="rounded-lg border border-gold/35 bg-gold/10 px-3 py-2.5 text-left text-sm font-medium text-fg transition hover:bg-gold/15"
+              >
+                {t("calendar.nearestSlot", { defaultValue: "Ближайшее свободное время" })}
+              </button>
+            )}
+            {onCreateBooking && (
+              <button
+                type="button"
+                onClick={onCreateBooking}
+                className="rounded-lg border border-line/15 bg-surface/80 px-3 py-2.5 text-left text-sm font-medium text-fg transition hover:border-gold/30"
+              >
+                {t("calendar.createBooking", { defaultValue: "Сделать запись" })}
+              </button>
+            )}
+          </div>
+        </section>
+      )}
+
       {/* ── Ближайшие записи ─────────────────────────────────── */}
-      <section className="rounded-xl border border-line/10 bg-panel/80 p-4">
+      <section className="rounded-xl border border-line/10 bg-panel/80 p-4 shadow-sm">
         <header className="mb-3 flex items-center justify-between">
           <h3 className="text-sm font-semibold text-fg">
             {t("calendar.upcomingTitle", { defaultValue: "Ближайшие записи" })}
@@ -229,7 +336,7 @@ export function CalendarSidePanels({
       </section>
 
       {/* ── Загрузка мастеров ────────────────────────────────── */}
-      <section className="rounded-xl border border-line/10 bg-panel/80 p-4">
+      <section className="rounded-xl border border-line/10 bg-panel/80 p-4 shadow-sm">
         <header className="mb-3 flex items-center justify-between">
           <h3 className="text-sm font-semibold text-fg">
             {t("calendar.workloadTitle", { defaultValue: "Загрузка мастеров" })}
@@ -260,7 +367,9 @@ export function CalendarSidePanels({
                   ? t("calendar.workloadDayOff", { defaultValue: "Не работает" })
                   : pct >= 90
                     ? t("calendar.workloadFull", { defaultValue: "Занята" })
-                    : t("calendar.workloadFree", { defaultValue: "Свободна" });
+                    : pct >= 60
+                      ? t("calendar.workloadSoon", { defaultValue: "Почти занят" })
+                      : t("calendar.workloadFree", { defaultValue: "Свободно" });
               const showAfter = !isOff && isWorking;
               return (
                 <li

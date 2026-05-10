@@ -1,0 +1,64 @@
+.reception-big-calendar .rbc-toolbar {
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.reception-big-calendar .rbc-toolbar button {
+  border-radius: 10px;
+  border: 1px solid rgb(var(--c-line) / 0.14);
+  background: rgb(var(--c-surface) / 0.82);
+  color: rgb(var(--c-fg));
+  padding: 6px 10px;
+}
+
+.reception-big-calendar .rbc-toolbar button.rbc-active,
+.reception-big-calendar .rbc-toolbar button:hover {
+  background: rgb(var(--c-gold) / 0.14);
+  border-color: rgb(var(--c-gold) / 0.45);
+}
+
+.reception-big-calendar .rbc-time-view,
+.reception-big-calendar .rbc-month-view {
+  border: 1px solid rgb(var(--c-line) / 0.1);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.reception-big-calendar .rbc-header {
+  background: rgb(var(--c-panel) / 0.92);
+  color: rgb(var(--c-fg));
+  border-bottom: 1px solid rgb(var(--c-line) / 0.08);
+  padding: 8px 4px;
+}
+
+.reception-big-calendar .rbc-time-content,
+.reception-big-calendar .rbc-month-row + .rbc-month-row {
+  border-top: 1px solid rgb(var(--c-line) / 0.06);
+}
+
+.reception-big-calendar .rbc-time-gutter,
+.reception-big-calendar .rbc-time-header-gutter {
+  background: rgb(var(--c-canvas) / 0.62);
+}
+
+.reception-big-calendar .rbc-time-slot {
+  border-top: 1px solid rgb(var(--c-line) / 0.06);
+}
+
+.reception-big-calendar .rbc-day-slot .rbc-time-slot {
+  border-top-color: rgb(var(--c-line) / 0.07);
+}
+
+.reception-big-calendar .rbc-today {
+  background: rgb(var(--c-gold) / 0.08);
+}
+
+.reception-big-calendar .rbc-current-time-indicator {
+  background-color: #ef4444;
+}
+
+.reception-big-calendar .rbc-event {
+  padding: 3px 6px;
+  font-size: 12px;
+}
+

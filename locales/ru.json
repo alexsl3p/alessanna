@@ -532,7 +532,7 @@
   },
   "calendar": {
     "title": "Календарь",
-    "subtitle": "День: сетка, перенос, фильтры. Неделя: слоты.",
+    "subtitle": "День: сетка и перенос. Неделя: таймлайн как в календаре.",
     "day": "День",
     "week": "Неделя",
     "today": "Сегодня",
@@ -560,10 +560,21 @@
     "workloadOff": "Выходной",
     "workloadDayOff": "Не работает",
     "workloadFull": "Занята",
-    "workloadFree": "Свободна",
+    "workloadFree": "Свободно",
     "dayClosed": "День закрыт",
     "dayOff": "Выходной",
-    "freeMasters": "Свободно: {{free}}/{{total}}"
+    "freeMasters": "Свободно: {{free}}/{{total}}",
+    "weekTimelineHint": "Свободные промежутки (зелёный оттенок) — нажмите, чтобы записать. Карточки — записи; полоски — перерыв/недоступно.",
+    "weekTimelineFreeHint": "Свободное время — создать запись",
+    "weekTimelineFreeAria": "Создать запись с {{time}}",
+    "todaySnapshotTitle": "Сегодня",
+    "todayFreeWindows": "Свободных окон",
+    "todayLoad": "Загрузка",
+    "todayNextAppt": "Ближайшая запись",
+    "todayNextNone": "Нет записей впереди",
+    "quickActions": "Быстрые действия",
+    "nearestSlot": "Ближайшее свободное время",
+    "workloadSoon": "Почти занят"
   },
   "weekday": {
     "0": "Вс",

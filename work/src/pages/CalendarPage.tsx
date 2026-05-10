@@ -20,12 +20,6 @@ import { supabase } from "../lib/supabase";
 import { useCalendarDataRealtime } from "../hooks/useSalonRealtime";
 import { useAuth } from "../context/AuthContext";
 import { useEffectiveRole } from "../context/EffectiveRoleContext";
-import {
-  buildSlotsForDay,
-  appointmentsForStaffOnDay,
-  formatSlotRange,
-  type Slot,
-} from "../lib/slots";
 import type {
   AppointmentRow,
   ServiceRow,
@@ -51,6 +45,8 @@ import { fetchReceptionLayoutFromServer } from "../lib/receptionLayoutRemote";
 import { BookingModal } from "../components/BookingModal";
 import { CalendarSidePanels } from "../components/CalendarSidePanels";
 import { ProCalendar } from "../components/calendar/ProCalendar";
+import { ReceptionBigCalendar } from "../components/calendar/ReceptionBigCalendar";
+import { WeekTimelineGrid } from "../components/calendar/WeekTimelineGrid";
 import { buildStaffHueMap } from "../lib/staffHue";
 import {
   CALENDAR_WEEK_EXCEPT_SUNDAY_STAFF_SETTING_KEY,
@@ -88,7 +84,6 @@ export function CalendarPage({ workspace = "crm" }: CalendarPageProps) {
   const [calendarServiceId, setCalendarServiceId] = useState<string | number | null>(null);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState<{ start: Date; staffId: string } | null>(null);
-  const [durationMin, setDurationMin] = useState(60);
   const [receptionMastersConfig, setReceptionMastersConfig] = useState<ReceptionMastersPanelConfig>(() => ({
     ...DEFAULT_RECEPTION_MASTERS_PANEL,
   }));
@@ -152,9 +147,9 @@ export function CalendarPage({ workspace = "crm" }: CalendarPageProps) {
     }
   }, [services, calendarServiceId]);
 
-  useEffect(() => {
+  const durationMin = useMemo(() => {
     const s = services.find((x) => x.id === calendarServiceId);
-    if (s) setDurationMin(s.duration_min);
+    return Math.max(15, s?.duration_min ?? 60);
   }, [calendarServiceId, services]);
 
   const servicesCatalog = useMemo(
@@ -246,6 +241,54 @@ export function CalendarPage({ workspace = "crm" }: CalendarPageProps) {
     return appointments;
   }, [appointments, staffMember, isWorkerOnlyEffective]);
 
+  const goNearestSlot = useCallback(() => {
+    if (!canUseCalendar || staffId == null) return;
+    const now = new Date();
+    const sched = schedules
+      .filter((s) => s.staff_id === staffId)
+      .map((s) => ({
+        day_of_week: s.day_of_week,
+        start_time: s.start_time,
+        end_time: s.end_time,
+      }));
+    for (let d = 0; d < 21; d++) {
+      const day = addDays(startOfDay(now), d);
+      const slots = generateAvailableSlots({
+        schedule: sched,
+        appointments: filteredAppointments,
+        timeOff,
+        duration: durationMin,
+        day,
+        stepMinutes: 15,
+        staffId,
+      });
+      for (const s of slots) {
+        if (s.start.getTime() >= now.getTime() - 30_000) {
+          setCursor(day);
+          setModal({ start: s.start, staffId });
+          return;
+        }
+      }
+    }
+  }, [canUseCalendar, staffId, schedules, filteredAppointments, timeOff, durationMin]);
+
+  const moveOrResizeBooking = useCallback(
+    async (args: { bookingId: string; start: Date; end: Date; staffId: string }) => {
+      const { error } = await supabase
+        .from("appointments")
+        .update({
+          staff_id: args.staffId,
+          start_time: args.start.toISOString(),
+          end_time: args.end.toISOString(),
+        })
+        .eq("id", args.bookingId);
+      if (!error) {
+        await load();
+      }
+    },
+    [load],
+  );
+
   const weekStart = startOfWeek(cursor, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(cursor, { weekStartsOn: 1 });
   const monthStart = startOfMonth(cursor);
@@ -257,20 +300,6 @@ export function CalendarPage({ workspace = "crm" }: CalendarPageProps) {
     view === "day"
       ? [startOfDay(cursor)]
       : Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-
-  function slotsForDay(day: Date): Slot[] {
-    if (staffId == null) return [];
-    const wd = day.getDay();
-    const existing = appointmentsForStaffOnDay(filteredAppointments, staffId, day);
-    const sched = schedules
-      .filter((s) => s.staff_id === staffId)
-      .map((s) => ({
-        day_of_week: s.day_of_week,
-        start_time: s.start_time,
-        end_time: s.end_time,
-      }));
-    return buildSlotsForDay(day, wd, sched, existing, durationMin, 30);
-  }
 
   function appointmentBlocks(day: Date, allStaff = false) {
     if (!allStaff && staffId == null) return [];
@@ -361,20 +390,20 @@ export function CalendarPage({ workspace = "crm" }: CalendarPageProps) {
     <div className="space-y-6">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-white">
+          <h1 className="text-2xl font-semibold text-fg">
             {isReceptionWorkspace ? t("reception.workspaceTitle") : t("calendar.title")}
           </h1>
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-muted">
             {isReceptionWorkspace ? t("reception.workspaceSubtitle") : t("calendar.subtitle")}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex rounded-lg border border-zinc-800 p-0.5">
+          <div className="flex rounded-lg border border-line/12 bg-panel/40 p-0.5">
             <button
               type="button"
               onClick={() => setView("day")}
               className={`rounded-md px-3 py-1.5 text-sm ${
-                view === "day" ? "bg-zinc-800 text-white" : "text-zinc-500 hover:text-zinc-300"
+                view === "day" ? "bg-surface text-fg shadow-sm" : "text-muted hover:text-fg"
               }`}
             >
               {t("calendar.day")}
@@ -383,7 +412,7 @@ export function CalendarPage({ workspace = "crm" }: CalendarPageProps) {
               type="button"
               onClick={() => setView("week")}
               className={`rounded-md px-3 py-1.5 text-sm ${
-                view === "week" ? "bg-zinc-800 text-white" : "text-zinc-500 hover:text-zinc-300"
+                view === "week" ? "bg-surface text-fg shadow-sm" : "text-muted hover:text-fg"
               }`}
             >
               {t("calendar.week")}
@@ -392,7 +421,7 @@ export function CalendarPage({ workspace = "crm" }: CalendarPageProps) {
               type="button"
               onClick={() => setView("month")}
               className={`rounded-md px-3 py-1.5 text-sm ${
-                view === "month" ? "bg-zinc-800 text-white" : "text-zinc-500 hover:text-zinc-300"
+                view === "month" ? "bg-surface text-fg shadow-sm" : "text-muted hover:text-fg"
               }`}
             >
               {t("calendar.month", { defaultValue: "Месяц" })}
@@ -405,14 +434,14 @@ export function CalendarPage({ workspace = "crm" }: CalendarPageProps) {
                 view === "day" ? addDays(cursor, -1) : view === "week" ? addDays(cursor, -7) : addMonths(cursor, -1)
               )
             }
-            className="rounded-lg border border-zinc-700 px-3 py-1.5 text-sm text-zinc-300 hover:bg-zinc-900"
+            className="rounded-lg border border-line/15 px-3 py-1.5 text-sm text-fg transition hover:bg-surface/80"
           >
             ←
           </button>
           <button
             type="button"
             onClick={() => setCursor(new Date())}
-            className="rounded-lg border border-zinc-700 px-3 py-1.5 text-sm text-zinc-300 hover:bg-zinc-900"
+            className="rounded-lg border border-line/15 px-3 py-1.5 text-sm text-fg transition hover:bg-surface/80"
           >
             {t("calendar.today")}
           </button>
@@ -423,7 +452,7 @@ export function CalendarPage({ workspace = "crm" }: CalendarPageProps) {
                 view === "day" ? addDays(cursor, 1) : view === "week" ? addDays(cursor, 7) : addMonths(cursor, 1)
               )
             }
-            className="rounded-lg border border-zinc-700 px-3 py-1.5 text-sm text-zinc-300 hover:bg-zinc-900"
+            className="rounded-lg border border-line/15 px-3 py-1.5 text-sm text-fg transition hover:bg-surface/80"
           >
             →
           </button>
@@ -432,7 +461,7 @@ export function CalendarPage({ workspace = "crm" }: CalendarPageProps) {
 
       <div className="flex flex-wrap items-center gap-3">
         {((staffMember && !isWorkerOnlyEffective) || isReceptionWorkspace) && services.length > 0 && (
-          <label className="flex items-center gap-2 text-sm text-zinc-400">
+          <label className="flex items-center gap-2 text-sm text-muted">
             {t("calendar.bookingService")}
             <select
               value={calendarServiceId ?? ""}
@@ -441,7 +470,7 @@ export function CalendarPage({ workspace = "crm" }: CalendarPageProps) {
                 const n = Number(v);
                 setCalendarServiceId(Number.isFinite(n) && String(n) === v ? n : v);
               }}
-              className="rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-white"
+              className="rounded-lg border border-line/15 bg-panel px-3 py-2 text-fg"
             >
               {services.map((s) => (
                 <option key={s.id} value={s.id}>
@@ -451,14 +480,14 @@ export function CalendarPage({ workspace = "crm" }: CalendarPageProps) {
             </select>
           </label>
         )}
-        {((staffMember && !isWorkerOnlyEffective) || isReceptionWorkspace) &&
+        {((staffMember && !isWorkerOnlyEffective) && !isReceptionWorkspace) &&
           (view === "week" || view === "month") && (
-          <label className="flex items-center gap-2 text-sm text-zinc-400">
+          <label className="flex items-center gap-2 text-sm text-muted">
             {t("calendar.staff")}
             <select
               value={staffId ?? ""}
               onChange={(e) => setStaffId(e.target.value)}
-              className="rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-white"
+              className="rounded-lg border border-line/15 bg-panel px-3 py-2 text-fg"
             >
               {activeStaffForCalendar.map((e) => (
                 <option key={e.id} value={e.id}>
@@ -468,21 +497,7 @@ export function CalendarPage({ workspace = "crm" }: CalendarPageProps) {
             </select>
           </label>
         )}
-        <label className="flex items-center gap-2 text-sm text-zinc-400">
-          {t("calendar.slotLength")}
-          <select
-            value={durationMin}
-            onChange={(e) => setDurationMin(Number(e.target.value))}
-            className="rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-white"
-          >
-            {[30, 45, 60, 90, 120].map((m) => (
-              <option key={m} value={m}>
-                {m} {t("common.min")}
-              </option>
-            ))}
-          </select>
-        </label>
-        <span className="text-sm text-zinc-600">
+        <span className="text-sm text-muted">
           {view === "week"
             ? `${format(weekStart, "d MMM")} – ${format(weekEnd, "d MMM yyyy")}`
             : view === "month"
@@ -505,7 +520,19 @@ export function CalendarPage({ workspace = "crm" }: CalendarPageProps) {
       ) : (
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
           <div className="min-w-0">
-            {view === "day" ? (
+            {isReceptionWorkspace ? (
+              <ReceptionBigCalendar
+                view={view}
+                cursor={cursor}
+                staff={activeStaffForCalendar}
+                appointments={filteredAppointments}
+                canEdit={canUseCalendar}
+                onNavigate={setCursor}
+                onViewChange={setView}
+                onCreateFromSlot={(start, sid) => setModal({ start, staffId: sid })}
+                onMoveOrResize={moveOrResizeBooking}
+              />
+            ) : view === "day" ? (
               <ProCalendar
                 day={startOfDay(cursor)}
                 appointments={filteredAppointments}
@@ -600,22 +627,21 @@ export function CalendarPage({ workspace = "crm" }: CalendarPageProps) {
                 })}
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-7">
-                {days.map((day) => (
-                  <DayColumn
-                    key={day.toISOString()}
-                    day={day}
-                    slots={slotsForDay(day)}
-                    blocks={appointmentBlocks(day)}
-                    services={services}
-                    staff={staff}
-                    staffHueMap={staffHueMap}
-                    workingStaff={panelStaffWorkingOnDate(staff, schedules, day, implicitWeekStaffSet)}
-                    onBookSlot={(start) => setModal({ start, staffId })}
-                    canClick={canUseCalendar}
-                  />
-                ))}
-              </div>
+              <WeekTimelineGrid
+                days={days}
+                staffId={staffId}
+                schedules={schedules}
+                timeOff={timeOff}
+                appointments={filteredAppointments}
+                services={services}
+                staff={staff}
+                staffHueMap={staffHueMap}
+                getWorkingStaffForDay={(d) =>
+                  panelStaffWorkingOnDate(staff, schedules, d, implicitWeekStaffSet)
+                }
+                onFreeClick={(start) => setModal({ start, staffId })}
+                canClick={canUseCalendar}
+              />
             )}
           </div>
 
@@ -626,6 +652,10 @@ export function CalendarPage({ workspace = "crm" }: CalendarPageProps) {
             services={services}
             schedules={schedules}
             timeOff={timeOff}
+            focusStaffId={staffId}
+            serviceDurationMin={durationMin}
+            onNearestSlot={canUseCalendar && staffId ? goNearestSlot : undefined}
+            onCreateBooking={canUseCalendar && staffId ? openQuickBooking : undefined}
           />
         </div>
       )}
@@ -634,6 +664,7 @@ export function CalendarPage({ workspace = "crm" }: CalendarPageProps) {
         <BookingModal
           open
           variant="pro"
+          layout={isReceptionWorkspace ? "drawer" : "modal"}
           onClose={() => setModal(null)}
           onSaved={load}
           initialStart={modal.start}
@@ -651,25 +682,25 @@ export function CalendarPage({ workspace = "crm" }: CalendarPageProps) {
 
   if (isReceptionWorkspace) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-950 to-black text-zinc-100">
-        <div className="border-b border-white/5 bg-black/20 px-3 py-3 backdrop-blur-md sm:px-4">
+      <div className="reception-workspace min-h-screen">
+        <div className="border-b border-line/10 bg-panel/70 px-3 py-3 backdrop-blur-md sm:px-4">
           <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-2">
             <Link
               to="/book"
-              className="min-h-[48px] rounded-xl px-3 py-3 text-base text-sky-300 hover:text-sky-200"
+              className="min-h-[48px] rounded-xl px-3 py-3 text-base font-medium text-sky-700 hover:text-sky-900"
             >
               ← {t("publicBook.title")}
             </Link>
             <div className="flex flex-wrap items-center gap-1 sm:gap-2">
               <Link
                 to="/help"
-                className="min-h-[48px] rounded-xl px-3 py-3 text-sm font-medium text-violet-300 hover:text-violet-200"
+                className="min-h-[48px] rounded-xl px-3 py-3 text-sm font-medium text-violet-700 hover:text-violet-900"
               >
                 {t("publicBook.receptionSupport")}
               </Link>
               <Link
                 to={staffMember ? "/" : "/login"}
-                className="min-h-[48px] rounded-xl px-3 py-3 text-sm text-zinc-500 hover:text-zinc-300"
+                className="min-h-[48px] rounded-xl px-3 py-3 text-sm text-muted hover:text-fg"
               >
                 CRM
               </Link>
@@ -682,93 +713,4 @@ export function CalendarPage({ workspace = "crm" }: CalendarPageProps) {
   }
 
   return main;
-}
-
-function DayColumn({
-  day,
-  slots,
-  blocks,
-  services,
-  staff,
-  staffHueMap,
-  workingStaff,
-  onBookSlot,
-  canClick,
-}: {
-  day: Date;
-  slots: Slot[];
-  blocks: AppointmentRow[];
-  services: ServiceRow[];
-  staff: StaffMember[];
-  staffHueMap: Map<string, number>;
-  workingStaff: StaffMember[];
-  onBookSlot: (d: Date) => void;
-  canClick: boolean;
-}) {
-  const { t } = useTranslation();
-  const wd = String(day.getDay()) as "0" | "1" | "2" | "3" | "4" | "5" | "6";
-  return (
-    <div className="flex min-h-[320px] flex-col rounded-xl border border-zinc-800 bg-zinc-950">
-      <div className="border-b border-zinc-800 px-3 py-2 text-center">
-        <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">{t(`weekday.${wd}`)}</p>
-        <p className="text-lg font-semibold text-white">{format(day, "d")}</p>
-        {workingStaff.length > 0 && (
-          <div className="mt-2 flex flex-wrap justify-center gap-1">
-            {workingStaff.map((m) => {
-              const style = staffCrmAppointmentBlockStyle(m.id, staff, staffHueMap);
-              const short = m.name?.trim().split(/\s+/)[0] || "—";
-              return (
-                <span
-                  key={m.id}
-                  title={m.name}
-                  className="inline-flex max-w-[5.5rem] items-center truncate rounded-md border px-1.5 py-0.5 text-[10px] font-semibold"
-                  style={style}
-                >
-                  {short}
-                </span>
-              );
-            })}
-          </div>
-        )}
-      </div>
-      <div className="max-h-[480px] flex-1 overflow-y-auto p-2">
-        {blocks.map((b) => {
-          const svc = services.find((s) => s.id === b.service_id);
-          return (
-            <div
-              key={b.id}
-              className="mb-1 rounded-lg border px-2 py-1.5 text-xs"
-              style={staffCrmAppointmentBlockStyle(b.staff_id, staff, staffHueMap)}
-            >
-              <p className="font-medium">{b.client_name}</p>
-              <p className="opacity-85">
-                {format(parseISO(b.start_time), "HH:mm")} · {svc?.name_et ?? t("common.service")}
-              </p>
-            </div>
-          );
-        })}
-        <p className="mb-2 mt-3 text-[10px] font-semibold uppercase tracking-wide text-zinc-600">
-          {t("calendar.freeSlots")}
-        </p>
-        {slots.length === 0 && <p className="text-xs text-zinc-600">{t("calendar.noWorkingHours")}</p>}
-        <div className="flex flex-col gap-1">
-          {slots.map((s) => (
-            <button
-              key={s.start.toISOString()}
-              type="button"
-              disabled={!s.available || !canClick}
-              onClick={() => s.available && canClick && onBookSlot(s.start)}
-              className={`rounded-md px-2 py-1.5 text-left text-xs transition-colors ${
-                s.available && canClick
-                  ? "bg-zinc-900 text-zinc-300 hover:bg-sky-900/40 hover:text-white"
-                  : "cursor-not-allowed bg-zinc-900/50 text-zinc-600 line-through"
-              }`}
-            >
-              {formatSlotRange(s)}
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
 }

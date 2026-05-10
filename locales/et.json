@@ -532,7 +532,7 @@
   },
   "calendar": {
     "title": "Kalender",
-    "subtitle": "Päev: ruudustik, lohistamine, filtrid. Nädal: ajad.",
+    "subtitle": "Päev: ruudustik ja lohistamine. Nädal: ajajoon nagu kalendris.",
     "day": "Päev",
     "week": "Nädal",
     "today": "Täna",
@@ -563,7 +563,18 @@
     "workloadFree": "Vaba",
     "dayClosed": "Päev suletud",
     "dayOff": "Puhkepäev",
-    "freeMasters": "Vaba: {{free}}/{{total}}"
+    "freeMasters": "Vaba: {{free}}/{{total}}",
+    "weekTimelineHint": "Vabad vahed (rohekas) — klõps uueks broneeringuks. Kaardid — broneeringud; triip — paus/pole saadaval.",
+    "weekTimelineFreeHint": "Vaba aeg — loo broneering",
+    "weekTimelineFreeAria": "Loo broneering kell {{time}}",
+    "todaySnapshotTitle": "Täna",
+    "todayFreeWindows": "Vabu aknaid",
+    "todayLoad": "Koormus",
+    "todayNextAppt": "Lähim broneering",
+    "todayNextNone": "Ees pole broneeringuid",
+    "quickActions": "Kiired toimingud",
+    "nearestSlot": "Lähim vaba aeg",
+    "workloadSoon": "Peaaegu täis"
   },
   "weekday": {
     "0": "P", "1": "E", "2": "T", "3": "K", "4": "N", "5": "R", "6": "L"
