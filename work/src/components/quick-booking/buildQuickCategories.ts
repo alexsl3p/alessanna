@@ -7,11 +7,13 @@ export type QuickCategoryCard = {
   serviceIds: string[];
 };
 
-function pickEmoji(categoryTitle: string, exampleServiceName: string): string {
+/** Эмодзи-превью услуги (категория + название) — для компактного списка на планшете. */
+export function pickEmoji(categoryTitle: string, exampleServiceName: string): string {
   const blob = `${categoryTitle} ${exampleServiceName}`.toLowerCase();
   if (/маник|nail|гель|lakk|geel/i.test(blob)) return "💅";
   if (/педик|pedic|стоп|jalg/i.test(blob)) return "🦶";
   if (/бров|ресниц|kulm|ripsm/i.test(blob)) return "👁️";
+  if (/уклад|soeng|styling|фен/i.test(blob)) return "💇";
   if (/стриж|барбер|бород|mehed|lõikus|juus/i.test(blob)) return "✂️";
   if (/окраш|värv|värvim|juuksevärv|color/i.test(blob)) return "🎨";
   if (/космет|facial|näo|massaa|массаж/i.test(blob)) return "✨";

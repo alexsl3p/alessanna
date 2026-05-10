@@ -31,7 +31,7 @@ import {
 } from "../../lib/quickBookingSchedule";
 import { resolveClientIdForVisit } from "../../lib/clientLink";
 import { useQuickBookingResources } from "../../hooks/useQuickBookingResources";
-import { buildQuickCategories } from "./buildQuickCategories";
+import { buildQuickCategories, pickEmoji } from "./buildQuickCategories";
 import { QuickBookingSchedulePanel } from "./QuickBookingSchedulePanel";
 import { ServiceListPicker } from "../service-picker/ServiceListPicker";
 import type { AppointmentRow, StaffMember } from "../../types/database";
@@ -160,6 +160,7 @@ export function QuickBookingWizard({ createdByStaffId }: Props) {
         durationMin: s.duration_min,
         priceEur: s.priceEur,
         categoryName: selectedCategory?.title ?? null,
+        thumbEmoji: pickEmoji(selectedCategory?.title ?? "", s.name),
       })),
     [categoryServices, selectedCategory?.title],
   );
@@ -769,6 +770,7 @@ export function QuickBookingWizard({ createdByStaffId }: Props) {
         <div className="space-y-4">
           <h2 className="text-2xl font-semibold text-white">{t("quickBook.pickService")}</h2>
           <div className="rounded-2xl border border-white/10 bg-black/25 p-3 backdrop-blur-md sm:p-4">
+            <p className="mb-2 text-sm font-medium text-zinc-500">{selectedCategory.title}</p>
             <ServiceListPicker
               items={quickServicePickRows}
               selectedId={serviceId ?? ""}
@@ -782,6 +784,8 @@ export function QuickBookingWizard({ createdByStaffId }: Props) {
               priceUnknownLabel={t("quickBook.priceOnConfirm")}
               minLabel={t("quickBook.min")}
               listMaxClassName="max-h-[min(56vh,520px)]"
+              compact
+              tileThumbnails
             />
           </div>
         </div>

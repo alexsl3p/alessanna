@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import type { TFunction } from "i18next";
 
 export type ServicePickRow = {
@@ -7,6 +7,10 @@ export type ServicePickRow = {
   durationMin: number;
   priceEur: number | null;
   categoryName?: string | null;
+  /** Публичный URL картинки услуги (если появится в каталоге). */
+  thumbUrl?: string | null;
+  /** Запасной «значок» слева (эмодзи), если нет thumbUrl. */
+  thumbEmoji?: string | null;
 };
 
 type Props = {
@@ -26,6 +30,10 @@ type Props = {
   listMaxClassName?: string;
   /** Более плотный вид (модалка). */
   compact?: boolean;
+  /**
+   * Компактные ряды с миниатюрой слева (эмодзи или thumbUrl) — быстрая запись / планшет.
+   */
+  tileThumbnails?: boolean;
 };
 
 function lsRecent(key: string): string[] {
@@ -74,6 +82,51 @@ function bumpUsage(storageKey: string, id: string) {
   savePop(storageKey, pop);
 }
 
+function ServiceTileThumb({
+  thumbUrl,
+  emoji,
+  selected,
+  checkIcon,
+}: {
+  thumbUrl?: string | null;
+  emoji: string;
+  selected: boolean;
+  checkIcon: ReactNode;
+}) {
+  const [imgFailed, setImgFailed] = useState(false);
+  const url = thumbUrl?.trim() ?? "";
+  const showImg = url.length > 0 && !imgFailed;
+
+  return (
+    <div className="relative h-[52px] w-[52px] shrink-0 overflow-hidden rounded-xl border border-white/12 bg-gradient-to-br from-white/[0.12] to-black/25">
+      {showImg ? (
+        <img
+          src={url}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover"
+          loading="lazy"
+          decoding="async"
+          onError={() => setImgFailed(true)}
+        />
+      ) : null}
+      <span
+        className={`absolute inset-0 flex items-center justify-center text-2xl leading-none ${showImg ? "sr-only" : ""}`}
+        aria-hidden={showImg}
+      >
+        {emoji}
+      </span>
+      {selected ? (
+        <span
+          className="absolute bottom-0.5 right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-sky-500 text-white shadow-md"
+          aria-hidden
+        >
+          {checkIcon}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
 export function ServiceListPicker({
   items,
   selectedId,
@@ -86,6 +139,7 @@ export function ServiceListPicker({
   minLabel,
   listMaxClassName = "max-h-[min(58vh,560px)]",
   compact = false,
+  tileThumbnails = false,
 }: Props) {
   const [query, setQuery] = useState("");
   const [tick, setTick] = useState(0);
@@ -149,11 +203,73 @@ export function ServiceListPicker({
         : "border-white/10 bg-white/[0.04] hover:border-violet-400/45 hover:bg-white/[0.07] hover:shadow-[0_0_26px_rgba(139,92,246,0.12)] active:scale-[0.99]",
     ].join(" ");
 
+  const tileCardCls = (sel: boolean) =>
+    [
+      "flex w-full min-h-[56px] items-center gap-2.5 rounded-xl border-2 px-2.5 py-2 text-left transition",
+      sel
+        ? "border-sky-400 bg-sky-500/[0.12] shadow-[0_0_20px_rgba(56,189,248,0.14)] ring-1 ring-sky-400/30"
+        : "border-white/10 bg-white/[0.05] hover:border-violet-400/40 hover:bg-white/[0.08] active:scale-[0.99]",
+    ].join(" ");
+
+  const chevronWrapCls = tileThumbnails
+    ? "rounded-full border border-white/10 bg-white/[0.06] p-1.5 text-zinc-400"
+    : `rounded-xl border border-white/10 bg-white/[0.06] text-zinc-400 ${compact ? "p-1.5" : "p-2.5"}`;
+  const chevronSize = tileThumbnails ? 18 : compact ? 18 : 22;
+
   const renderCard = (s: ServicePickRow) => {
     const sel = s.id === selectedId;
     const mark = markedIds?.has(s.id);
     const priceStr =
       s.priceEur != null ? `€${Number.isInteger(s.priceEur) ? s.priceEur : s.priceEur.toFixed(2)}` : priceUnknownLabel;
+    const emoji = (s.thumbEmoji?.trim() || "📋").slice(0, 4);
+
+    if (tileThumbnails) {
+      const check = (
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+          <path
+            d="M20 6L9 17l-5-5"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      );
+      return (
+        <button key={s.id} type="button" onClick={() => pick(s.id)} className={tileCardCls(sel)}>
+          <ServiceTileThumb thumbUrl={s.thumbUrl} emoji={emoji} selected={sel} checkIcon={check} />
+          <div className="min-w-0 flex-1 py-0.5">
+            <p className="text-base font-semibold leading-snug text-white">
+              {mark ? <span className="mr-1 text-amber-300" aria-hidden>★</span> : null}
+              {s.name}
+            </p>
+            <p className="mt-0.5 text-xs leading-snug text-zinc-400">
+              {s.durationMin > 0 ? (
+                <>
+                  {s.durationMin} {minLabel}
+                  <span className="text-zinc-600"> · </span>
+                </>
+              ) : null}
+              {priceStr}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center">
+            <span className={chevronWrapCls} aria-hidden>
+              <svg width={chevronSize} height={chevronSize} viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M9 18l6-6-6-6"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </span>
+          </div>
+        </button>
+      );
+    }
+
     return (
       <button key={s.id} type="button" onClick={() => pick(s.id)} className={cardCls(sel)}>
         <div className="flex min-w-0 flex-1 flex-col justify-center">
@@ -194,11 +310,8 @@ export function ServiceListPicker({
           </div>
         </div>
         <div className="flex shrink-0 items-center">
-          <span
-            className={`rounded-xl border border-white/10 bg-white/[0.06] text-zinc-400 ${compact ? "p-1.5" : "p-2.5"}`}
-            aria-hidden
-          >
-            <svg width={compact ? 18 : 22} height={compact ? 18 : 22} viewBox="0 0 24 24" fill="none">
+          <span className={chevronWrapCls} aria-hidden>
+            <svg width={chevronSize} height={chevronSize} viewBox="0 0 24 24" fill="none">
               <path
                 d="M9 18l6-6-6-6"
                 stroke="currentColor"
@@ -230,20 +343,20 @@ export function ServiceListPicker({
         />
       </div>
 
-      <div className={`space-y-2 overflow-y-auto scroll-smooth ${listMaxClassName}`}>
+      <div className={`${tileThumbnails ? "space-y-1.5" : "space-y-2"} overflow-y-auto scroll-smooth ${listMaxClassName}`}>
         {sorted.length === 0 ? (
           <p className="py-10 text-center text-zinc-500">{t("servicePicker.noMatch")}</p>
         ) : grouped ? (
           grouped.map(([title, rows]) => (
-            <div key={title} className="space-y-2">
+            <div key={title} className={tileThumbnails ? "space-y-1.5" : "space-y-2"}>
               <p className={`sticky top-0 z-10 bg-zinc-950/90 py-1 text-zinc-500 backdrop-blur ${compact ? "text-xs" : "text-sm"}`}>
                 {title}
               </p>
-              <div className="space-y-2">{rows.map(renderCard)}</div>
+              <div className={tileThumbnails ? "space-y-1.5" : "space-y-2"}>{rows.map(renderCard)}</div>
             </div>
           ))
         ) : (
-          <div className="space-y-2">{sorted.map(renderCard)}</div>
+          <div className={tileThumbnails ? "space-y-1.5" : "space-y-2"}>{sorted.map(renderCard)}</div>
         )}
       </div>
     </div>
