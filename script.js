@@ -1669,6 +1669,19 @@
           if (!firstMatchValue) firstMatchValue = opt.value;
         }
       }
+      /* Failsafe: если категория выбрана, но по data-category-id не нашлось
+       * ни одной услуги (рассинхрон id/legacy данных), не блокируем форму —
+       * показываем все услуги, чтобы клиент всё равно мог записаться. */
+      if (catId && matched === 0) {
+        for (var a = 0; a < opts.length; a++) {
+          var allOpt = opts[a];
+          if (!allOpt.value) continue;
+          allOpt.hidden = false;
+          allOpt.disabled = false;
+          matched++;
+          if (!firstMatchValue) firstMatchValue = allOpt.value;
+        }
+      }
       /* Перерисовываем placeholder (всегда первый, всегда видимый,
        * disabled, чтобы не выбирался). */
       var existingPh = serviceItemSelect.querySelector('option[data-form-placeholder="1"]');
