@@ -50,10 +50,12 @@
       window.alert(message);
       return;
     }
-    var DEFAULT_TTL_MS =
-      kind === "err" ? 8000 : String(message).indexOf("\n\n") >= 0 ? 12000 : 5500;
+    var msgStr = String(message);
+    var isLongForm = msgStr.indexOf("\n\n") >= 0;
+    var DEFAULT_TTL_MS = kind === "err" ? 8000 : isLongForm ? 12000 : 5500;
     var t = document.createElement("div");
     t.className = "toast " + (kind === "err" ? "toast--err" : "toast--ok");
+    if (isLongForm) t.classList.add("toast--lg");
     t.setAttribute("role", kind === "err" ? "alert" : "status");
 
     var icon = document.createElement("span");
