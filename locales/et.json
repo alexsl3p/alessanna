@@ -428,12 +428,6 @@
   },
   "servicePicker": {
     "searchPlaceholder": "Otsi teenust…",
-    "chipAll": "Kõik",
-    "chipRecent": "Hiljutised",
-    "chipPopular": "Sagedased",
-    "chipFast": "Kuni 45 min",
-    "chipLong": "Alates 75 min",
-    "chipExpensive": "Kallimad",
     "noMatch": "Ei leidnud — muuda filtrit või otsingut.",
     "groupOther": "Muu"
   },

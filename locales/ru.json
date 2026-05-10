@@ -428,12 +428,6 @@
   },
   "servicePicker": {
     "searchPlaceholder": "Поиск услуги…",
-    "chipAll": "Все",
-    "chipRecent": "Недавние",
-    "chipPopular": "Частые",
-    "chipFast": "До 45 мин",
-    "chipLong": "От 75 мин",
-    "chipExpensive": "Дороже",
     "noMatch": "Ничего не нашли — смените фильтр или поиск.",
     "groupOther": "Прочее"
   },

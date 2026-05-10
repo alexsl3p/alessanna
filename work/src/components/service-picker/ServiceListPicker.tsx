@@ -9,8 +9,6 @@ export type ServicePickRow = {
   categoryName?: string | null;
 };
 
-type Chip = "all" | "recent" | "popular" | "fast" | "long" | "expensive";
-
 type Props = {
   items: ServicePickRow[];
   selectedId: string;
@@ -76,23 +74,6 @@ function bumpUsage(storageKey: string, id: string) {
   savePop(storageKey, pop);
 }
 
-function expensiveThreshold(prices: number[]): number | null {
-  const sorted = [...prices].filter((p) => Number.isFinite(p)).sort((a, b) => a - b);
-  if (sorted.length < 2) return sorted[0] ?? null;
-  const idx = Math.max(0, Math.floor(sorted.length * 0.65) - 1);
-  return sorted[idx] ?? null;
-}
-
-function chipBtn(active: boolean, compact: boolean): string {
-  return [
-    compact ? "min-h-[40px] px-3 text-sm" : "min-h-[48px] px-4 text-base",
-    "shrink-0 rounded-xl border font-semibold transition",
-    active
-      ? "border-sky-400/80 bg-sky-500/20 text-white shadow-[0_0_20px_rgba(56,189,248,0.12)]"
-      : "border-white/10 bg-white/5 text-zinc-300 hover:border-white/25 hover:bg-white/10",
-  ].join(" ");
-}
-
 export function ServiceListPicker({
   items,
   selectedId,
@@ -107,54 +88,21 @@ export function ServiceListPicker({
   compact = false,
 }: Props) {
   const [query, setQuery] = useState("");
-  const [chip, setChip] = useState<Chip>("all");
   const [tick, setTick] = useState(0);
 
   const recent = useMemo(() => lsRecent(storageKey), [storageKey, tick]);
   const pop = useMemo(() => lsPop(storageKey), [storageKey, tick]);
 
-  const priceThreshold = useMemo(() => {
-    const nums = items.map((i) => i.priceEur).filter((p): p is number => p != null);
-    return expensiveThreshold(nums);
-  }, [items]);
-
-  const hasPrice = useMemo(() => items.some((i) => i.priceEur != null), [items]);
-
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    let base = items;
-    if (q) {
-      base = base.filter((s) => {
-        const blob = `${s.name} ${s.categoryName ?? ""}`.toLowerCase();
-        return blob.includes(q);
-      });
-    }
-    switch (chip) {
-      case "fast":
-        return base.filter((s) => s.durationMin > 0 && s.durationMin <= 45);
-      case "long":
-        return base.filter((s) => s.durationMin >= 75);
-      case "expensive":
-        if (priceThreshold == null) return base.filter((s) => s.priceEur != null);
-        return base.filter((s) => s.priceEur != null && s.priceEur >= priceThreshold);
-      case "recent":
-        return recent
-          .map((id) => base.find((s) => s.id === id))
-          .filter((s): s is ServicePickRow => s != null);
-      case "popular":
-        return [...base].sort((a, b) => {
-          const pa = pop[a.id] ?? 0;
-          const pb = pop[b.id] ?? 0;
-          if (pb !== pa) return pb - pa;
-          return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
-        });
-      default:
-        return base;
-    }
-  }, [items, query, chip, priceThreshold, recent, pop]);
+    if (!q) return items;
+    return items.filter((s) => {
+      const blob = `${s.name} ${s.categoryName ?? ""}`.toLowerCase();
+      return blob.includes(q);
+    });
+  }, [items, query]);
 
   const sorted = useMemo(() => {
-    if (chip === "popular" || chip === "recent") return filtered;
     const recentIdx = (id: string) => {
       const i = recent.indexOf(id);
       return i === -1 ? 9999 : i;
@@ -168,7 +116,7 @@ export function ServiceListPicker({
       if (pb !== pa) return pb - pa;
       return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
     });
-  }, [filtered, chip, recent, pop]);
+  }, [filtered, recent, pop]);
 
   const grouped = useMemo(() => {
     if (!groupByCategory) return null;
@@ -191,8 +139,6 @@ export function ServiceListPicker({
     },
     [onSelect, storageKey],
   );
-
-  const showRecentChip = recent.length > 0;
 
   const cardCls = (sel: boolean) =>
     [
@@ -282,33 +228,6 @@ export function ServiceListPicker({
             compact ? "h-11 px-3 text-sm" : "h-14 px-4 text-lg"
           }`}
         />
-        <div className="flex flex-wrap gap-2">
-          <button type="button" className={chipBtn(chip === "all", compact)} onClick={() => setChip("all")}>
-            {t("servicePicker.chipAll")}
-          </button>
-          {showRecentChip ? (
-            <button type="button" className={chipBtn(chip === "recent", compact)} onClick={() => setChip("recent")}>
-              {t("servicePicker.chipRecent")}
-            </button>
-          ) : null}
-          <button type="button" className={chipBtn(chip === "popular", compact)} onClick={() => setChip("popular")}>
-            {t("servicePicker.chipPopular")}
-          </button>
-          <button type="button" className={chipBtn(chip === "fast", compact)} onClick={() => setChip("fast")}>
-            {t("servicePicker.chipFast")}
-          </button>
-          <button type="button" className={chipBtn(chip === "long", compact)} onClick={() => setChip("long")}>
-            {t("servicePicker.chipLong")}
-          </button>
-          <button
-            type="button"
-            disabled={!hasPrice}
-            className={`${chipBtn(chip === "expensive", compact)} ${!hasPrice ? "cursor-not-allowed opacity-35" : ""}`}
-            onClick={() => hasPrice && setChip("expensive")}
-          >
-            {t("servicePicker.chipExpensive")}
-          </button>
-        </div>
       </div>
 
       <div className={`space-y-2 overflow-y-auto scroll-smooth ${listMaxClassName}`}>
