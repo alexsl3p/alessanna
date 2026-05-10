@@ -879,13 +879,13 @@ async function websiteBookingToGoogle(sb: ReturnType<typeof createClient>, body:
   const clientName = String(body.clientName ?? "").trim();
   const clientPhone = body.clientPhone != null ? String(body.clientPhone).trim() : "";
   const startTime = String(body.startTime ?? "").trim();
-  const endTime = String(body.endTime ?? "").trim();
+  let endTime = String(body.endTime ?? "").trim();
   const note = body.note != null ? String(body.note).trim() : "";
 
-  if (!staffId || !serviceId || !clientName || !startTime || !endTime) {
+  if (!staffId || !serviceId || !clientName || !startTime) {
     return json(200, {
       ok: false,
-      error: "Missing required fields: staffId, serviceId, clientName, startTime, endTime",
+      error: "Missing required fields: staffId, serviceId, clientName, startTime",
     });
   }
 
@@ -923,12 +923,26 @@ async function websiteBookingToGoogle(sb: ReturnType<typeof createClient>, body:
 
   const { data: svcRow, error: svcErr } = await sb
     .from("service_listings")
-    .select("id,name,duration,is_active")
+    .select("id,name,duration,buffer_after_min,is_active")
     .eq("id", serviceId)
     .maybeSingle();
   if (svcErr) throw new Error(svcErr.message);
   if (!svcRow?.id) return json(200, { ok: false, error: "Service not found" });
   if (svcRow.is_active === false) return json(200, { ok: false, error: "Service is not available" });
+
+  if (!endTime) {
+    const dur =
+      Number((svcRow as { duration?: number }).duration ?? 0) +
+      Number((svcRow as { buffer_after_min?: number }).buffer_after_min ?? 0);
+    if (!Number.isFinite(dur) || dur <= 0) {
+      return json(200, { ok: false, error: "Service duration is missing or invalid" });
+    }
+    const startMs = Date.parse(startTime);
+    if (!Number.isFinite(startMs)) {
+      return json(200, { ok: false, error: "Invalid start time" });
+    }
+    endTime = new Date(startMs + dur * 60 * 1000).toISOString();
+  }
 
   const { data: doesSvc, error: linkErr } = await sb.rpc("public_staff_does_service", {
     p_staff_id: staffId,
