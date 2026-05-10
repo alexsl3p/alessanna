@@ -103,17 +103,8 @@ export function MyHelpPage() {
   const { t } = useTranslation();
   const { staffMember, loading } = useAuth();
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-950 text-zinc-400">
-        {t("common.loading")}
-      </div>
-    );
-  }
-
-  if (!staffMember) {
-    return <GuestHelpPanel />;
-  }
+  /** После «Новое обращение» не подставлять снова первый тред при опросе списка. */
+  const skipAutoSelectRef = useRef(false);
 
   const [threads, setThreads] = useState<ThreadSummary[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -139,9 +130,9 @@ export function MyHelpPage() {
       const arr = Array.isArray(data) ? (data as ThreadSummary[]) : [];
       setThreads(arr);
       setListError(null);
-      /* Если ничего не выбрано — выбираем первый открытый. */
-      if (!selectedId && arr.length > 0) {
-        setSelectedId(arr[0].id);
+      /* Только если пользователь сам не открыл форму нового обращения (selectedId === null). */
+      if (!selectedId && arr.length > 0 && !skipAutoSelectRef.current) {
+        setSelectedId(arr[0]!.id);
       }
     } catch (err) {
       setListError(err instanceof Error ? err.message : String(err));
@@ -175,10 +166,11 @@ export function MyHelpPage() {
   );
 
   useEffect(() => {
+    if (!staffMember) return;
     void loadList();
     const id = window.setInterval(() => void loadList(), POLL_LIST_MS);
     return () => window.clearInterval(id);
-  }, [loadList]);
+  }, [staffMember, loadList]);
 
   useEffect(() => {
     if (!selectedId) {
@@ -186,10 +178,11 @@ export function MyHelpPage() {
       setMessages([]);
       return;
     }
+    if (!staffMember) return;
     void loadThread(selectedId);
     const id = window.setInterval(() => void loadThread(selectedId), POLL_THREAD_MS);
     return () => window.clearInterval(id);
-  }, [selectedId, loadThread]);
+  }, [staffMember, selectedId, loadThread]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -249,6 +242,7 @@ export function MyHelpPage() {
     if (!body && !attachment) return;
     setSending(true);
     setComposerError(null);
+    let threadToRefresh: string | null = selectedId;
     try {
       let att: Awaited<ReturnType<typeof uploadAttachment>> = null;
       if (attachment) {
@@ -277,6 +271,8 @@ export function MyHelpPage() {
         if (error) throw error;
         const payload = data as { thread_id: string } | null;
         if (payload?.thread_id) {
+          skipAutoSelectRef.current = false;
+          threadToRefresh = payload.thread_id;
           setSelectedId(payload.thread_id);
         }
       }
@@ -284,7 +280,7 @@ export function MyHelpPage() {
       setAttachment(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
       await loadList();
-      if (selectedId) await loadThread(selectedId);
+      if (threadToRefresh) await loadThread(threadToRefresh);
     } catch (err) {
       setComposerError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -293,6 +289,7 @@ export function MyHelpPage() {
   };
 
   const startNewThread = () => {
+    skipAutoSelectRef.current = true;
     setSelectedId(null);
     setDetail(null);
     setMessages([]);
@@ -301,6 +298,18 @@ export function MyHelpPage() {
   };
 
   const visibleThreads = useMemo(() => threads, [threads]);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-zinc-950 text-zinc-400">
+        {t("common.loading")}
+      </div>
+    );
+  }
+
+  if (!staffMember) {
+    return <GuestHelpPanel />;
+  }
 
   return (
     <div className="mx-auto flex min-h-screen max-w-[1200px] flex-col gap-3 px-4 py-6 text-zinc-200 md:px-6">
@@ -350,7 +359,10 @@ export function MyHelpPage() {
                   <li key={th.id}>
                     <button
                       type="button"
-                      onClick={() => setSelectedId(th.id)}
+                      onClick={() => {
+                        skipAutoSelectRef.current = false;
+                        setSelectedId(th.id);
+                      }}
                       className={
                         "flex w-full flex-col gap-1 border-b border-zinc-900 px-3 py-2.5 text-left transition " +
                         (active ? "bg-zinc-900/80" : "hover:bg-zinc-900/50")
