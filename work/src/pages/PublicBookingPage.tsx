@@ -93,7 +93,7 @@ function sortMasterDayRows(a: MasterDayRow, b: MasterDayRow): number {
   return 0;
 }
 
-/** Публичная онлайн-запись (`/book`). Ресепшен — `/reception` (календарь CRM). */
+/** Публичная онлайн-запись (`/book`). Рабочий календарь CRM — `/calendar`. */
 export function PublicBookingPage() {
   const { t, i18n } = useTranslation();
   const { staffMember } = useAuth();
@@ -1088,7 +1088,7 @@ export function PublicBookingPage() {
             {t("publicBook.staffLogin")}
           </Link>
           <Link
-            to="/reception"
+            to="/calendar"
             className="inline-block text-sm font-medium text-emerald-300 hover:text-emerald-200"
           >
             {t("publicBook.receptionCalendarLink")}
@@ -1110,7 +1110,7 @@ export function PublicBookingPage() {
               ·
             </span>
             <Link
-              to="/reception"
+              to="/calendar"
               className="font-medium text-emerald-300 transition hover:text-emerald-200"
             >
               {t("publicBook.receptionCalendarLink")}

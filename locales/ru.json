@@ -47,8 +47,8 @@
     "dashboard": "Обзор",
     "calendar": "Календарь",
     "bookings": "Записи",
-    "reception": "Ресепшен",
-    "receptionHint": "Главный экран ресепшена — календарь салона (как в CRM). Публичная запись — на /book.",
+    "reception": "Календарь",
+    "receptionHint": "Единый календарный workflow салона (как в CRM). Публичная запись — на /book.",
     "backToCrm": "Вернуться в CRM",
     "adminStaff": "Персонал",
     "adminServices": "Услуги",
@@ -202,7 +202,7 @@
   "guestHelp": {
     "pageTitle": "Техподдержка",
     "subtitle": "Можно написать без входа в CRM. Ответ придёт в этот же чат на этом устройстве. Если вы сотрудник с логином — войдите, чтобы видеть все обращения в одном месте.",
-    "backReception": "К ресепшену",
+    "backReception": "К календарю",
     "loginCta": "Войти в CRM",
     "firstTitle": "Новое обращение",
     "firstHint": "Опишите проблему или вопрос. Укажите, что вы на ресепшене, если это важно для контекста.",
@@ -280,7 +280,7 @@
     "subtitle": "Выберите услугу, мастера и время.",
     "staffLogin": "Вход для персонала",
     "receptionSupport": "Техподдержка",
-    "receptionCalendarLink": "Ресепшен: календарь",
+    "receptionCalendarLink": "Календарь",
     "layoutEditHint": "Порядок блоков этой страницы настраивается в",
     "receptionSupportLoginCta": "Написать в техподдержку",
     "pickStaff": "Выберите мастера",
@@ -517,7 +517,7 @@
     "manager": "Менеджер",
     "worker": "Мастер",
     "staff": "Мастер",
-    "reception": "Ресепшен"
+    "reception": "Календарь"
   },
   "dashboard": {
     "title": "Обзор",
@@ -620,7 +620,7 @@
     "loadError": "Не удалось загрузить записи. Попробуйте обновить страницу.",
     "source": "Источник",
     "sourceSite": "Сайт",
-    "sourceReception": "Ресепшен",
+    "sourceReception": "Календарь",
     "sourceCrm": "CRM",
     "acceptedBy": "Принял: {{name}}"
   },

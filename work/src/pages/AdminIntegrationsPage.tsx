@@ -596,6 +596,7 @@ export function AdminIntegrationsPage() {
   const [importDryResult, setImportDryResult] = useState<ImportSummary | null>(null);
   const [importApplyResult, setImportApplyResult] = useState<ImportSummary | null>(null);
   const [staffColorsSyncResult, setStaffColorsSyncResult] = useState<StaffColorsSyncResult | null>(null);
+  const [syncEngineResult, setSyncEngineResult] = useState<string | null>(null);
 
   const loadSettings = useCallback(async () => {
     setSettingsError(null);
@@ -885,6 +886,40 @@ export function AdminIntegrationsPage() {
     setActionBusy(null);
   }
 
+  async function runGoogleSyncDrainNow() {
+    setActionBusy("google-sync-drain");
+    setSyncEngineResult(null);
+    const { data, error } = await supabase.functions.invoke("google-calendar-sync", {
+      body: { mode: "drain" },
+    });
+    setActionBusy(null);
+    if (error) {
+      setImportError(error.message);
+      return;
+    }
+    setSyncEngineResult(
+      `Outbox drain: processed ${Number(data?.processed ?? 0)}, failed ${Number(data?.failed ?? 0)}.`,
+    );
+    void loadOutbox();
+  }
+
+  async function startGoogleWebhookChannel(scope: "salon" | `staff:${string}`) {
+    const key = `google-watch-${scope}`;
+    setActionBusy(key);
+    setSyncEngineResult(null);
+    const { data, error } = await supabase.functions.invoke("google-calendar-sync", {
+      body: { mode: "start_watch", scope },
+    });
+    setActionBusy(null);
+    if (error) {
+      setImportError(error.message);
+      return;
+    }
+    setSyncEngineResult(
+      `Webhook channel started for ${scope}: ${String(data?.channelId ?? "ok")}`,
+    );
+  }
+
   const status = settings.google_calendar_status;
   const statusInfo = googleStatusBadge(status);
 
@@ -1053,6 +1088,34 @@ export function AdminIntegrationsPage() {
             projectRef={getSupabaseProjectRef()}
             salonEmail={settings.salon_calendar_email}
           />
+        </div>
+
+        <div className="mt-4 rounded-lg border border-zinc-800 bg-black/30 p-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
+            Two-way sync engine
+          </p>
+          <p className="mt-1 text-xs text-zinc-500">
+            Запуск двусторонней синхронизации: outbox to Google, webhook from Google to CRM.
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => void runGoogleSyncDrainNow()}
+              disabled={actionBusy === "google-sync-drain"}
+              className="rounded-md border border-sky-700/60 bg-sky-950/40 px-3 py-1.5 text-xs font-medium text-sky-200 transition hover:bg-sky-900/50 disabled:opacity-40"
+            >
+              {actionBusy === "google-sync-drain" ? "Sync..." : "Запустить sync сейчас"}
+            </button>
+            <button
+              type="button"
+              onClick={() => void startGoogleWebhookChannel("salon")}
+              disabled={actionBusy === "google-watch-salon"}
+              className="rounded-md border border-emerald-700/60 bg-emerald-950/40 px-3 py-1.5 text-xs font-medium text-emerald-200 transition hover:bg-emerald-900/50 disabled:opacity-40"
+            >
+              {actionBusy === "google-watch-salon" ? "Создаем..." : "Включить webhook (salon)"}
+            </button>
+          </div>
+          {syncEngineResult && <p className="mt-2 text-xs text-emerald-300">{syncEngineResult}</p>}
         </div>
 
         {settingsLoading && (

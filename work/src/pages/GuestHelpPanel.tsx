@@ -197,7 +197,7 @@ export function GuestHelpPanel() {
           </div>
           <div className="flex flex-wrap gap-2">
             <Link
-              to="/reception"
+              to="/calendar"
               className="inline-flex min-h-[44px] items-center rounded-xl border border-zinc-700 bg-zinc-900/60 px-4 text-sm font-medium text-zinc-200 hover:border-zinc-500"
             >
               {t("guestHelp.backReception")}

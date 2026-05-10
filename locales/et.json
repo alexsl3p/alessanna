@@ -47,8 +47,8 @@
     "dashboard": "Töölaud",
     "calendar": "Kalender",
     "bookings": "Broneeringud",
-    "reception": "Vastuvõtt",
-    "receptionHint": "Vastuvõtte põhiekraan — salongi kalender (nagu CRM-is). Avalik broneering — /book.",
+    "reception": "Kalender",
+    "receptionHint": "Salongi ühine kalendri töövoog (nagu CRM-is). Avalik broneering — /book.",
     "backToCrm": "Tagasi CRM-i",
     "adminStaff": "Personal",
     "adminInventory": "Ladu",
@@ -202,7 +202,7 @@
   "guestHelp": {
     "pageTitle": "Tugi",
     "subtitle": "Saad kirjutada ilma CRM-i sisselogimiseta. Vastus tuleb samasse vestlusesse selles seadmes. Kui oled töötaja kontoga — logi sisse, et näha kõiki pöördumisi ühes kohas.",
-    "backReception": "Tagasi vastuvõtule",
+    "backReception": "Tagasi kalendrisse",
     "loginCta": "Logi CRM-i",
     "firstTitle": "Uus pöördumine",
     "firstHint": "Kirjelda probleemi või küsimust. Maini vastuvõttu, kui see aitab konteksti.",
@@ -280,7 +280,7 @@
     "subtitle": "Vali teenus, meister ja aeg.",
     "staffLogin": "Personali sisselogimine",
     "receptionSupport": "Tugi",
-    "receptionCalendarLink": "Vastuvõtt: kalender",
+    "receptionCalendarLink": "Kalender",
     "layoutEditHint": "Selle lehe plokkide järjekord seadistatakse jaotises",
     "receptionSupportLoginCta": "Kirjuta toele",
     "pickStaff": "Vali meister",
@@ -517,7 +517,7 @@
     "manager": "Juht",
     "worker": "Meister",
     "staff": "Meister",
-    "reception": "Vastuvõtt"
+    "reception": "Kalender"
   },
   "dashboard": {
     "title": "Töölaud",
@@ -605,7 +605,7 @@
     "loadError": "Broneeringute laadimine ebaõnnestus.",
     "source": "Allikas",
     "sourceSite": "Veebileht",
-    "sourceReception": "Vastuvõtt",
+    "sourceReception": "Kalender",
     "sourceCrm": "CRM",
     "acceptedBy": "Vastu võttis: {{name}}",
     "when": "Aeg",

@@ -49,15 +49,8 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/help" element={<MyHelpPage />} />
       <Route path="/book" element={<PublicBookingPage />} />
-      <Route
-        path="/reception"
-        element={
-          <EffectiveRoleProvider>
-            <CalendarPage workspace="reception" />
-          </EffectiveRoleProvider>
-        }
-      />
-      <Route path="/quick-booking" element={<Navigate to="/reception" replace />} />
+      <Route path="/reception" element={<Navigate to="/calendar" replace />} />
+      <Route path="/quick-booking" element={<Navigate to="/calendar" replace />} />
       <Route path="/invite/:token" element={<PublicInvitePage />} />
       <Route
         path="/"

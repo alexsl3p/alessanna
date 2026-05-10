@@ -60,22 +60,6 @@
   color-scheme: dark;
 }
 
-/* Локальная светлая палитра (как champagne) только для ветки /reception. */
-.reception-workspace {
-  --c-canvas: 251 250 246;
-  --c-panel: 255 255 255;
-  --c-surface: 244 241 235;
-  --c-fg: 28 26 23;
-  --c-muted: 110 105 98;
-  --c-line: 0 0 0;
-  --c-gold: 163 133 94;
-  --c-gold-soft: 196 165 116;
-  --c-gold-deep: 109 89 63;
-  color: rgb(var(--c-fg));
-  background-color: rgb(var(--c-canvas));
-  color-scheme: light;
-}
-
 html,
 body,
 #root {

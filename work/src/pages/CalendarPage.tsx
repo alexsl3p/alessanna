@@ -15,7 +15,6 @@ import {
   setMinutes,
 } from "date-fns";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useCalendarDataRealtime } from "../hooks/useSalonRealtime";
 import { useAuth } from "../context/AuthContext";
@@ -45,7 +44,6 @@ import { fetchReceptionLayoutFromServer } from "../lib/receptionLayoutRemote";
 import { BookingModal } from "../components/BookingModal";
 import { CalendarSidePanels } from "../components/CalendarSidePanels";
 import { ProCalendar } from "../components/calendar/ProCalendar";
-import { ReceptionBigCalendar } from "../components/calendar/ReceptionBigCalendar";
 import { WeekTimelineGrid } from "../components/calendar/WeekTimelineGrid";
 import { buildStaffHueMap } from "../lib/staffHue";
 import {
@@ -58,18 +56,10 @@ import { generateAvailableSlots } from "../lib/slots";
 
 type View = "day" | "week" | "month";
 
-export type CalendarWorkspace = "crm" | "reception";
-
-export type CalendarPageProps = {
-  /** `reception` — отдельный полноэкранный режим планшета (/reception), без оболочки CRM. */
-  workspace?: CalendarWorkspace;
-};
-
-export function CalendarPage({ workspace = "crm" }: CalendarPageProps) {
+export function CalendarPage() {
   const { t } = useTranslation();
   const { staffMember } = useAuth();
   const { canManage, isWorkerOnlyEffective } = useEffectiveRole();
-  const isReceptionWorkspace = workspace === "reception";
   const [view, setView] = useState<View>("week");
   const [cursor, setCursor] = useState(() => new Date());
   const [staffId, setStaffId] = useState<string | null>(null);
@@ -231,8 +221,7 @@ export function CalendarPage({ workspace = "crm" }: CalendarPageProps) {
     }
   }, [activeStaffForCalendar, staffMember, staffId, isWorkerOnlyEffective]);
 
-  const canUseCalendar =
-    isReceptionWorkspace || (staffMember ? effectiveCanWorkCalendar(staffMember.roles) : false);
+  const canUseCalendar = staffMember ? effectiveCanWorkCalendar(staffMember.roles) : false;
 
   const filteredAppointments = useMemo(() => {
     if (isWorkerOnlyEffective && staffMember) {
@@ -271,23 +260,6 @@ export function CalendarPage({ workspace = "crm" }: CalendarPageProps) {
       }
     }
   }, [canUseCalendar, staffId, schedules, filteredAppointments, timeOff, durationMin]);
-
-  const moveOrResizeBooking = useCallback(
-    async (args: { bookingId: string; start: Date; end: Date; staffId: string }) => {
-      const { error } = await supabase
-        .from("appointments")
-        .update({
-          staff_id: args.staffId,
-          start_time: args.start.toISOString(),
-          end_time: args.end.toISOString(),
-        })
-        .eq("id", args.bookingId);
-      if (!error) {
-        await load();
-      }
-    },
-    [load],
-  );
 
   const weekStart = startOfWeek(cursor, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(cursor, { weekStartsOn: 1 });
@@ -391,10 +363,10 @@ export function CalendarPage({ workspace = "crm" }: CalendarPageProps) {
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-fg">
-            {isReceptionWorkspace ? t("reception.workspaceTitle") : t("calendar.title")}
+            {t("calendar.title")}
           </h1>
           <p className="text-sm text-muted">
-            {isReceptionWorkspace ? t("reception.workspaceSubtitle") : t("calendar.subtitle")}
+            {t("calendar.subtitle")}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -460,7 +432,7 @@ export function CalendarPage({ workspace = "crm" }: CalendarPageProps) {
       </header>
 
       <div className="flex flex-wrap items-center gap-3">
-        {((staffMember && !isWorkerOnlyEffective) || isReceptionWorkspace) && services.length > 0 && (
+        {(staffMember && !isWorkerOnlyEffective) && services.length > 0 && (
           <label className="flex items-center gap-2 text-sm text-muted">
             {t("calendar.bookingService")}
             <select
@@ -480,7 +452,7 @@ export function CalendarPage({ workspace = "crm" }: CalendarPageProps) {
             </select>
           </label>
         )}
-        {((staffMember && !isWorkerOnlyEffective) && !isReceptionWorkspace) &&
+        {((staffMember && !isWorkerOnlyEffective)) &&
           (view === "week" || view === "month") && (
           <label className="flex items-center gap-2 text-sm text-muted">
             {t("calendar.staff")}
@@ -520,19 +492,7 @@ export function CalendarPage({ workspace = "crm" }: CalendarPageProps) {
       ) : (
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
           <div className="min-w-0">
-            {isReceptionWorkspace ? (
-              <ReceptionBigCalendar
-                view={view}
-                cursor={cursor}
-                staff={activeStaffForCalendar}
-                appointments={filteredAppointments}
-                canEdit={canUseCalendar}
-                onNavigate={setCursor}
-                onViewChange={setView}
-                onCreateFromSlot={(start, sid) => setModal({ start, staffId: sid })}
-                onMoveOrResize={moveOrResizeBooking}
-              />
-            ) : view === "day" ? (
+            {view === "day" ? (
               <ProCalendar
                 day={startOfDay(cursor)}
                 appointments={filteredAppointments}
@@ -664,7 +624,7 @@ export function CalendarPage({ workspace = "crm" }: CalendarPageProps) {
         <BookingModal
           open
           variant="pro"
-          layout={isReceptionWorkspace ? "drawer" : "modal"}
+          layout="modal"
           onClose={() => setModal(null)}
           onSaved={load}
           initialStart={modal.start}
@@ -679,38 +639,6 @@ export function CalendarPage({ workspace = "crm" }: CalendarPageProps) {
       )}
     </div>
   );
-
-  if (isReceptionWorkspace) {
-    return (
-      <div className="reception-workspace min-h-screen">
-        <div className="border-b border-line/10 bg-panel/70 px-3 py-3 backdrop-blur-md sm:px-4">
-          <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-2">
-            <Link
-              to="/book"
-              className="min-h-[48px] rounded-xl px-3 py-3 text-base font-medium text-sky-700 hover:text-sky-900"
-            >
-              ← {t("publicBook.title")}
-            </Link>
-            <div className="flex flex-wrap items-center gap-1 sm:gap-2">
-              <Link
-                to="/help"
-                className="min-h-[48px] rounded-xl px-3 py-3 text-sm font-medium text-violet-700 hover:text-violet-900"
-              >
-                {t("publicBook.receptionSupport")}
-              </Link>
-              <Link
-                to={staffMember ? "/" : "/login"}
-                className="min-h-[48px] rounded-xl px-3 py-3 text-sm text-muted hover:text-fg"
-              >
-                CRM
-              </Link>
-            </div>
-          </div>
-        </div>
-        <div className="mx-auto max-w-[1600px] px-3 pb-10 pt-4 sm:px-4">{main}</div>
-      </div>
-    );
-  }
 
   return main;
 }

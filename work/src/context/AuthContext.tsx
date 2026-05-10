@@ -46,7 +46,7 @@ type AuthState = {
   isAdmin: boolean;
   /** True when real (non-preview) role is worker-only. */
   isWorkerOnly: boolean;
-  /** True when the session is a shared salon reception (no staff logged in yet). Currently always false — reception mode is not implemented. Kept here so `AppTopBar`/`StaffLoginModal` can read a defined flag instead of `undefined`. */
+  /** Legacy compatibility flag for shared UI components. Always false in current calendar-only workflow. */
   isReceptionMode: boolean;
 };
 
