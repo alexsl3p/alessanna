@@ -92,7 +92,7 @@ async function pickServiceId(supabase) {
     .from("service_listings")
     .select("id")
     .eq("is_active", true)
-    .order("created_at", { ascending: true })
+    .order("id", { ascending: true })
     .limit(1);
   if (error) throw new Error(`Failed to fetch service_listings: ${error.message}`);
   if (!data?.length) throw new Error("No active service_listings found; set GOOGLE_IMPORT_SERVICE_ID");

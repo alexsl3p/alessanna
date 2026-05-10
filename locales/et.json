@@ -11,7 +11,8 @@
     "min": "min",
     "bookings": "broneeringut",
     "booking": "broneering",
-    "language": "Keel"
+    "language": "Keel",
+    "hShort": "h"
   },
   "lang": { "ru": "RU", "et": "ET", "fi": "FI", "en": "EN" },
   "login": {
@@ -287,7 +288,20 @@
     "to": "Kuni",
     "submitRequest": "Saada taotlus",
     "statusPending": "ootel",
-    "statusApproved": "kinnitatud"
+    "statusApproved": "kinnitatud",
+    "month": "Kuu",
+    "createBooking": "Tee broneering",
+    "upcomingTitle": "Eelseisvad broneeringud",
+    "upcomingEmpty": "Lähimaid broneeringuid pole.",
+    "workloadTitle": "Meistrite koormus",
+    "workloadEmpty": "Meistreid pole.",
+    "workloadOff": "Puhkepäev",
+    "workloadDayOff": "Ei tööta",
+    "workloadFull": "Hõivatud",
+    "workloadFree": "Vaba",
+    "dayClosed": "Päev suletud",
+    "dayOff": "Puhkepäev",
+    "freeMasters": "Vaba: {{free}}/{{total}}"
   },
   "weekday": {
     "0": "P", "1": "E", "2": "T", "3": "K", "4": "N", "5": "R", "6": "L"

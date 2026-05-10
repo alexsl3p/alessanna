@@ -109,24 +109,22 @@ export function PublicBookingPage() {
         }));
       setServices(normalized);
       const firstActive = normalized.find((s) => s.active);
-      if (firstActive && !isReceptionMode) {
+      if (firstActive) {
         setServiceId((prev) => prev ?? firstActive.id);
       }
     }
     if (st.data) {
-      const normalizedStaff = (st.data as Record<string, unknown>[])
-        .filter((row) => !isStaffRowAdmin(row))
-        .map((r) => normalizeStaffMember(r as StaffMember));
       setStaff(
-        isReceptionMode
-          ? normalizedStaff.filter((m) => m.active)
-          : normalizedStaff.filter((m) => isStaffShownOnPublicMarketing(m))
+        (st.data as Record<string, unknown>[])
+          .filter((row) => !isStaffRowAdmin(row))
+          .map((r) => normalizeStaffMember(r as StaffMember))
+          .filter((m) => isStaffShownOnPublicMarketing(m))
       );
     }
     if (lk.data) setLinks(lk.data as StaffServiceRow[]);
     if (sc.data) setSchedules(sc.data as StaffScheduleRow[]);
     setLoading(false);
-  }, [isReceptionMode]);
+  }, []);
 
   useEffect(() => {
     void loadBase();
@@ -148,28 +146,9 @@ export function PublicBookingPage() {
     return applyPublicStaffVisibility(base, links, serviceId);
   }, [staff, links, serviceId]);
 
-  const servicesForSelectedMaster = useMemo(() => {
-    const active = services.filter((s) => s.active);
-    if (!isReceptionMode || !staffId || staffId === ANY_MASTER_ID) return active;
-    const linksForStaff = links.filter((l) => l.staff_id === staffId);
-    if (!linksForStaff.length) return active;
-    const allowed = new Set(linksForStaff.map((l) => String(l.service_id)));
-    return active.filter((s) => allowed.has(String(s.id)));
-  }, [isReceptionMode, links, services, staffId]);
-
-  useEffect(() => {
-    if (isReceptionMode) return;
-    if (!servicesForSelectedMaster.length) return;
-    const hasCurrent = servicesForSelectedMaster.some((s) => String(s.id) === String(serviceId ?? ""));
-    if (!hasCurrent) {
-      setServiceId(servicesForSelectedMaster[0].id);
-      setPickedStart(null);
-    }
-  }, [isReceptionMode, serviceId, servicesForSelectedMaster]);
-
   const loadDayData = useCallback(async () => {
-    if (!isSupabaseConfigured()) return;
-    const eligibleIds = (isReceptionMode ? staff.filter((s) => s.active) : eligibleStaff).map((s) => s.id);
+    if (!isSupabaseConfigured() || serviceId == null) return;
+    const eligibleIds = eligibleStaff.map((s) => s.id);
     if (!eligibleIds.length) {
       setAppointments([]);
       setTimeOff([]);
@@ -204,7 +183,7 @@ export function PublicBookingPage() {
         }))
       );
     }
-  }, [day, eligibleStaff, isReceptionMode, staff]);
+  }, [day, eligibleStaff, serviceId]);
 
   useEffect(() => {
     void loadDayData();
@@ -228,12 +207,12 @@ export function PublicBookingPage() {
   }, [loadUpcomingData]);
 
   const loadMonthCalendarData = useCallback(async () => {
-    if (!isSupabaseConfigured()) {
+    if (!isSupabaseConfigured() || serviceId == null) {
       setMonthAppointments([]);
       setMonthTimeOff([]);
       return;
     }
-    const eligibleIds = (isReceptionMode ? staff.filter((s) => s.active) : eligibleStaff).map((s) => s.id);
+    const eligibleIds = eligibleStaff.map((s) => s.id);
     if (!eligibleIds.length) {
       setMonthAppointments([]);
       setMonthTimeOff([]);
@@ -266,7 +245,7 @@ export function PublicBookingPage() {
         }))
       );
     }
-  }, [eligibleStaff, isReceptionMode, staff, viewMonth]);
+  }, [eligibleStaff, serviceId, viewMonth]);
 
   useEffect(() => {
     void loadMonthCalendarData();
@@ -281,9 +260,9 @@ export function PublicBookingPage() {
   const durationMin = svc ? svc.duration_min + svc.buffer_after_min : 60;
 
   const slotsByStaff = useMemo(() => {
+    if (!svc) return new Map<string, Slot[]>();
     const out = new Map<string, Slot[]>();
-    const staffPool = isReceptionMode ? staff.filter((s) => s.active) : eligibleStaff;
-    for (const member of staffPool) {
+    for (const member of eligibleStaff) {
       const memberSchedule = schedules
         .filter((s) => s.staff_id === member.id)
         .map((s) => ({
@@ -304,7 +283,7 @@ export function PublicBookingPage() {
       out.set(member.id, slots);
     }
     return out;
-  }, [appointments, day, durationMin, eligibleStaff, isReceptionMode, schedules, staff, timeOff, nowTick]);
+  }, [appointments, day, durationMin, eligibleStaff, schedules, svc, timeOff, nowTick]);
 
   const slotCoverage = useMemo(() => {
     const coverage = new Map<string, number>();
@@ -331,38 +310,6 @@ export function PublicBookingPage() {
     }
     return Array.from(byStart.values()).sort((a, b) => a.start.getTime() - b.start.getTime());
   }, [slotsByStaff, staffId, svc]);
-
-  useEffect(() => {
-    if (!isReceptionMode) return;
-    const onKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement | null;
-      const tag = (target?.tagName || "").toLowerCase();
-      if (target?.isContentEditable || tag === "input" || tag === "textarea" || tag === "select") return;
-      if ((e.metaKey || e.ctrlKey || e.altKey) && e.key.toLowerCase() !== "n") return;
-
-      if (e.key.toLowerCase() === "t") {
-        e.preventDefault();
-        const now = new Date();
-        setDayStr(format(now, "yyyy-MM-dd"));
-        setViewMonth(startOfMonth(now));
-        setPickedStart(null);
-        return;
-      }
-      if (e.key.toLowerCase() === "n") {
-        e.preventDefault();
-        if (slots.length > 0) setPickedStart(slots[0].start);
-        return;
-      }
-      if (e.key === "Escape") {
-        e.preventDefault();
-        setPickedStart(null);
-        setClientName("");
-        setClientPhone("");
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [isReceptionMode, slots]);
 
   const dayAvailabilityBadge = useMemo(() => {
     const out = new Map<
@@ -422,9 +369,8 @@ export function PublicBookingPage() {
   ]);
 
   const masterDayLoad = useMemo(() => {
-    const staffPool = isReceptionMode ? staff.filter((s) => s.active) : eligibleStaff;
     const weekday = day.getDay();
-    return staffPool
+    return eligibleStaff
       .map((m) => {
         const daySchedule = schedules
           .filter((s) => s.staff_id === m.id && s.day_of_week === weekday)
@@ -459,7 +405,7 @@ export function PublicBookingPage() {
         if (a.status === "off" && b.status === "busy") return 1;
         return 0;
       });
-  }, [appointments, day, eligibleStaff, isReceptionMode, schedules, slotsByStaff, staff, timeOff]);
+  }, [appointments, day, eligibleStaff, schedules, slotsByStaff, timeOff]);
 
   const receptionUpcoming = useMemo(() => {
     const allowedStaffIds = new Set(staff.map((s) => s.id));
@@ -505,8 +451,6 @@ export function PublicBookingPage() {
       service_id: svc.id,
       client_name: normalizedClientName || "Клиент (ресепшен)",
       client_phone: clientPhone.trim() || null,
-      source: isReceptionMode ? "reception" : "public_site",
-      created_by_staff_id: null,
       start_time: pickedStart.toISOString(),
       end_time: end.toISOString(),
       status: "confirmed",
@@ -551,12 +495,7 @@ export function PublicBookingPage() {
   }
 
   return (
-    <div
-      className={
-        "min-h-screen bg-zinc-950 px-4 py-8 text-zinc-200 md:px-6 md:py-10 " +
-        (isReceptionMode && pickedStart ? "pb-28 md:pb-32" : "")
-      }
-    >
+    <div className="min-h-screen bg-zinc-950 px-4 py-8 text-zinc-200 md:px-6 md:py-10">
       <div className="mx-auto w-full max-w-5xl">
         <h1 className="text-2xl font-semibold text-white md:text-3xl">{t("publicBook.title")}</h1>
         <p className="mt-1 text-sm text-zinc-500">
@@ -569,58 +508,15 @@ export function PublicBookingPage() {
         </Link>
 
         <div className="mt-6 space-y-6 md:mt-8">
-          {isReceptionMode && (
-            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-zinc-800 bg-black/30 p-3 text-xs text-zinc-300 md:text-sm">
-              <button
-                type="button"
-                onClick={() => {
-                  const now = new Date();
-                  setDayStr(format(now, "yyyy-MM-dd"));
-                  setViewMonth(startOfMonth(now));
-                  setPickedStart(null);
-                }}
-                className="rounded-md border border-sky-700/60 bg-sky-900/30 px-3 py-1.5 text-sky-100 hover:bg-sky-900/50"
-              >
-                Сегодня
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
-                  setDayStr(format(tomorrow, "yyyy-MM-dd"));
-                  setViewMonth(startOfMonth(tomorrow));
-                  setPickedStart(null);
-                }}
-                className="rounded-md border border-zinc-700 px-3 py-1.5 text-zinc-200 hover:border-zinc-500 hover:text-white"
-              >
-                Завтра
-              </button>
-              <span className="text-zinc-500">Горячие клавиши: T = сегодня, N = первый слот, Esc = очистить</span>
-            </div>
-          )}
           <div className="grid gap-4 md:grid-cols-[1.45fr_1fr] md:gap-5">
             <section className="rounded-xl border border-zinc-800 bg-black/30 p-4 md:p-5">
             <div className="mb-3 flex items-center justify-between gap-3">
               <p className="text-sm font-medium text-zinc-200">{t("publicBook.day")}</p>
               <div className="flex items-center gap-2">
-                {isReceptionMode && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const now = new Date();
-                      setDayStr(format(now, "yyyy-MM-dd"));
-                      setViewMonth(startOfMonth(now));
-                      setPickedStart(null);
-                    }}
-                    className="rounded-md border border-sky-700/60 bg-sky-900/30 px-2.5 py-1.5 text-xs text-sky-100 hover:bg-sky-900/50 md:px-3 md:py-2 md:text-sm"
-                  >
-                    Сегодня
-                  </button>
-                )}
                 <button
                   type="button"
                   onClick={() => setViewMonth((prev) => addMonths(prev, -1))}
-                  className="rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:border-zinc-500 hover:text-white md:px-3 md:py-2 md:text-sm"
+                  className="rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:border-zinc-500 hover:text-white"
                 >
                   ←
                 </button>
@@ -628,7 +524,7 @@ export function PublicBookingPage() {
                 <button
                   type="button"
                   onClick={() => setViewMonth((prev) => addMonths(prev, 1))}
-                  className="rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:border-zinc-500 hover:text-white md:px-3 md:py-2 md:text-sm"
+                  className="rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:border-zinc-500 hover:text-white"
                 >
                   →
                 </button>
@@ -664,7 +560,7 @@ export function PublicBookingPage() {
                       setPickedStart(null);
                     }}
                     className={
-                      "rounded-md border px-2 py-2 text-xs transition md:min-h-[62px] md:text-sm " +
+                      "rounded-md border px-2 py-2 text-xs transition md:min-h-[54px] md:text-sm " +
                       (selected
                         ? "border-sky-500 bg-sky-950/50 text-white"
                         : inMonth
@@ -719,7 +615,7 @@ export function PublicBookingPage() {
             </section>
           </div>
 
-          {(isReceptionMode || serviceId != null) && (
+          {serviceId != null && (
             <div className="grid gap-4 md:grid-cols-[1.45fr_1fr] md:gap-5">
               <section className="rounded-xl border border-zinc-800 bg-black/30 p-4 md:p-5">
                 <h2 className="text-sm font-semibold text-white">Свободные мастера</h2>
@@ -734,7 +630,6 @@ export function PublicBookingPage() {
                         type="button"
                         onClick={() => {
                           setStaffId(m.id);
-                          if (isReceptionMode) setServiceId(null);
                           setPickedStart(null);
                         }}
                         className="rounded-lg border border-zinc-800 bg-zinc-950/70 px-3 py-2 text-left text-xs text-zinc-300 transition hover:border-sky-700/70 hover:text-white md:px-4 md:py-2.5 md:text-sm"
@@ -760,18 +655,14 @@ export function PublicBookingPage() {
                       </button>
                     ))
                   ) : (
-                    <p className="text-xs text-zinc-600">
-                      {isReceptionMode
-                        ? "Нет доступных мастеров на выбранный день."
-                        : "Нет мастеров для выбранной услуги."}
-                    </p>
+                    <p className="text-xs text-zinc-600">Нет мастеров для выбранной услуги.</p>
                   )}
                 </div>
               </section>
             </div>
           )}
 
-          {(isReceptionMode || serviceId != null) && (
+          {serviceId != null && (
             <>
               <label className="block text-sm">
                 <span className="text-zinc-400">{t("modal.service")}</span>
@@ -779,13 +670,13 @@ export function PublicBookingPage() {
                   value={serviceId ?? ""}
                   onChange={(e) => {
                     setServiceId(e.target.value ? String(e.target.value) : null);
-                    if (!isReceptionMode) setStaffId(ANY_MASTER_ID);
+                    setStaffId(ANY_MASTER_ID);
                     setPickedStart(null);
                   }}
                   className="mt-1 w-full rounded-lg border border-zinc-700 bg-black px-3 py-2 text-white md:py-2.5"
                 >
                   <option value="">{t("modal.pickService")}</option>
-                  {servicesForSelectedMaster.map((s) => (
+                  {services.filter((s) => s.active).map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.name}
                     </option>
@@ -800,7 +691,7 @@ export function PublicBookingPage() {
                     Показаны слоты, где есть хотя бы один свободный мастер.
                   </p>
                 )}
-                <div className="mt-2 flex flex-wrap gap-2 md:gap-2.5">
+                <div className="mt-2 flex flex-wrap gap-2">
                   {slots.map((s) => {
                     const key = s.start.toISOString();
                     const freeCount = slotCoverage.get(key) || 0;
@@ -809,7 +700,7 @@ export function PublicBookingPage() {
                         key={key}
                         type="button"
                         onClick={() => setPickedStart(s.start)}
-                        className={`rounded-lg border px-3 py-2 text-sm md:px-5 md:py-3 md:text-base ${
+                        className={`rounded-lg border px-3 py-2 text-sm md:px-4 md:py-2.5 ${
                           pickedStart?.getTime() === s.start.getTime()
                             ? "border-sky-500 bg-sky-950/50 text-white"
                             : "border-zinc-700 text-zinc-300 hover:border-zinc-500"
@@ -830,7 +721,6 @@ export function PublicBookingPage() {
                   value={staffId ?? ANY_MASTER_ID}
                   onChange={(e) => {
                     setStaffId(e.target.value || ANY_MASTER_ID);
-                    if (isReceptionMode) setServiceId(null);
                     setPickedStart(null);
                   }}
                   className="mt-1 w-full rounded-lg border border-zinc-700 bg-black px-3 py-2 text-white md:py-2.5"
@@ -861,16 +751,14 @@ export function PublicBookingPage() {
                     onChange={(e) => setClientPhone(e.target.value)}
                     className="w-full rounded-lg border border-zinc-700 bg-black px-3 py-2 text-sm"
                   />
-                  {!isReceptionMode && (
-                    <button
-                      type="button"
-                      disabled={booking}
-                      onClick={() => void confirmBook()}
-                      className="w-full rounded-lg bg-sky-600 py-2 text-sm font-medium text-white disabled:opacity-50"
-                    >
-                      {t("publicBook.confirm")}
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    disabled={booking}
+                    onClick={() => void confirmBook()}
+                    className="w-full rounded-lg bg-sky-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+                  >
+                    {t("publicBook.confirm")}
+                  </button>
                 </div>
               )}
             </>
@@ -878,36 +766,6 @@ export function PublicBookingPage() {
 
           {msg && <p className="text-sm text-emerald-400/90">{msg}</p>}
         </div>
-
-        {isReceptionMode && pickedStart && (
-          <div className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-800 bg-zinc-950/95 p-3 backdrop-blur md:p-4">
-            <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-2">
-              <span className="text-xs text-zinc-300 md:text-sm">
-                Выбрано:{" "}
-                {pickedStart.toLocaleString(i18n.language, { dateStyle: "short", timeStyle: "short" })}
-              </span>
-              <button
-                type="button"
-                disabled={booking}
-                onClick={() => void confirmBook()}
-                className="ml-auto rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-              >
-                {t("publicBook.confirm")}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setPickedStart(null);
-                  setClientName("");
-                  setClientPhone("");
-                }}
-                className="rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-300 hover:border-zinc-500 hover:text-white"
-              >
-                Очистить
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

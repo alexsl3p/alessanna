@@ -92,6 +92,80 @@ async function fetchEvents(accessToken: string, calendarId: string, timeMin: str
   return out;
 }
 
+// Heuristic: identify Google "system" calendars that we never want to pull
+// into CRM as client appointments (national holidays, birthdays from contacts,
+// week numbers, etc.). These are usually subscribed read-only feeds.
+function isJunkCalendarId(id: string): boolean {
+  const v = id.toLowerCase();
+  if (!v) return true;
+  // Holiday calendars: "<locale>.<country>#holiday@group.v.calendar.google.com"
+  // (e.g. "en.ee#holiday@...", "et.ee#holiday@...", "en.usa#holiday@...").
+  if (v.includes("#holiday@group.v.calendar.google.com")) return true;
+  // Birthdays from Google Contacts.
+  if (v.includes("#contacts@group.v.calendar.google.com")) return true;
+  if (v === "addressbook#contacts@group.v.calendar.google.com") return true;
+  // Week numbers / other group.v.calendar.google.com feeds.
+  if (v.includes("@group.v.calendar.google.com")) return true;
+  return false;
+}
+
+async function fetchCalendarIds(accessToken: string): Promise<{
+  ids: string[];
+  skippedJunk: string[];
+}> {
+  const ids: string[] = [];
+  const skippedJunk: string[] = [];
+  let pageToken: string | null = null;
+  do {
+    const qs = new URLSearchParams();
+    qs.set("maxResults", "250");
+    if (pageToken) qs.set("pageToken", pageToken);
+    const res = await fetch(`https://www.googleapis.com/calendar/v3/users/me/calendarList?${qs.toString()}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(`Google calendarList fetch failed (${res.status})`);
+    for (const item of (json.items ?? []) as Array<Record<string, unknown>>) {
+      const id = String(item.id || "").trim();
+      if (!id) continue;
+      if (isJunkCalendarId(id)) {
+        skippedJunk.push(id);
+        continue;
+      }
+      ids.push(id);
+    }
+    pageToken = typeof json.nextPageToken === "string" ? json.nextPageToken : null;
+  } while (pageToken);
+  return { ids: Array.from(new Set(ids)), skippedJunk: Array.from(new Set(skippedJunk)) };
+}
+
+// Event types we never want as CRM appointments. "default" stays.
+// Reference: https://developers.google.com/calendar/api/v3/reference/events
+const JUNK_EVENT_TYPES = new Set([
+  "birthday",
+  "fromGmail",
+  "workingLocation",
+  "focusTime",
+  "outOfOffice",
+]);
+
+function detectStaffFromAttendeesOrText(
+  event: Record<string, unknown>,
+  staff: Array<{ id: string; name: string; email: string }>,
+): string {
+  const attendees = Array.isArray(event.attendees)
+    ? (event.attendees as Array<Record<string, unknown>>)
+    : [];
+  for (const a of attendees) {
+    const email = String(a.email || "").trim().toLowerCase();
+    const matched = staff.find((s) => s.email && s.email === email);
+    if (matched) return matched.id;
+  }
+  const haystack = `${String(event.summary || "")} ${String(event.description || "")}`.toLowerCase();
+  const byName = staff.find((s) => s.name && haystack.includes(s.name));
+  return byName?.id || "";
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
@@ -104,70 +178,138 @@ Deno.serve(async (req: Request) => {
       from?: string;
       to?: string;
       calendarId?: string;
+      includeAllSelectedCalendars?: boolean;
     };
 
     const dryRun = payload.dryRun !== false;
     const from = String(payload.from || "2026-01-01");
     const to = String(payload.to || new Date().toISOString().slice(0, 10));
     const calendarId = String(payload.calendarId || DEFAULT_CALENDAR_ID || "primary");
+    const includeAllSelectedCalendars = payload.includeAllSelectedCalendars !== false;
 
     const timeMin = new Date(`${from}T00:00:00.000Z`).toISOString();
     const timeMax = new Date(`${to}T23:59:59.999Z`).toISOString();
 
     const sb = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { persistSession: false } });
     const accessToken = await refreshAccessToken();
-    const events = await fetchEvents(accessToken, calendarId, timeMin, timeMax);
+    let targetCalendars: string[] = [];
+    let skippedJunkCalendars: string[] = [];
+    if (includeAllSelectedCalendars) {
+      const list = await fetchCalendarIds(accessToken);
+      targetCalendars = list.ids;
+      skippedJunkCalendars = list.skippedJunk;
+    } else {
+      // Even if a single calendar is targeted explicitly, still respect the
+      // junk-calendar heuristic so callers can't accidentally pull holidays.
+      if (isJunkCalendarId(calendarId)) {
+        skippedJunkCalendars = [calendarId];
+      } else {
+        targetCalendars = [calendarId];
+      }
+    }
+    if (!targetCalendars.length && !includeAllSelectedCalendars) {
+      targetCalendars.push(calendarId);
+    }
+
+    const events: Array<Record<string, unknown> & { __calendar_id: string }> = [];
+    for (const cid of targetCalendars) {
+      const chunk = await fetchEvents(accessToken, cid, timeMin, timeMax);
+      for (const e of chunk) events.push({ ...(e as Record<string, unknown>), __calendar_id: cid });
+    }
 
     const counters = {
       total: events.length,
       skippedCancelled: 0,
       skippedNoTime: 0,
       skippedAlreadyLinked: 0,
-      skippedNoStaff: 0,
+      skippedEventType: 0,
+      forcedStaffFallback: 0,
       inserted: 0,
       failed: 0,
       mode: dryRun ? "dry-run" : "apply",
       from,
       to,
-      calendarId,
+      calendarId: includeAllSelectedCalendars ? "all-selected" : calendarId,
+      calendarsScanned: targetCalendars.length,
+      skippedJunkCalendars,
     };
 
     const { data: staffRows, error: staffErr } = await sb
       .from("staff")
-      .select("id,calendar_email")
+      .select("id,name,calendar_email")
       .eq("is_active", true);
     if (staffErr) throw new Error(staffErr.message);
     const staff = (staffRows ?? []).map((r) => ({
       id: String(r.id),
+      name: String(r.name || "").trim().toLowerCase(),
       email: r.calendar_email ? String(r.calendar_email).trim().toLowerCase() : "",
     }));
     if (!staff.length) throw new Error("No active staff in DB");
 
+    // Build color->staff mapping from events where staff is explicitly detectable.
+    const colorVotes = new Map<string, Map<string, number>>();
+    for (const event of events) {
+      const colorId = String(event.colorId || "").trim();
+      if (!colorId) continue;
+      const detectedStaffId = detectStaffFromAttendeesOrText(event, staff);
+      if (!detectedStaffId) continue;
+      if (!colorVotes.has(colorId)) colorVotes.set(colorId, new Map<string, number>());
+      const bucket = colorVotes.get(colorId)!;
+      bucket.set(detectedStaffId, (bucket.get(detectedStaffId) ?? 0) + 1);
+    }
+    const colorToStaff = new Map<string, string>();
+    for (const [colorId, bucket] of colorVotes.entries()) {
+      let winnerStaffId = "";
+      let winnerVotes = -1;
+      for (const [staffId, votes] of bucket.entries()) {
+        if (votes > winnerVotes) {
+          winnerVotes = votes;
+          winnerStaffId = staffId;
+        }
+      }
+      if (winnerStaffId) colorToStaff.set(colorId, winnerStaffId);
+    }
+
     let serviceId = FORCED_SERVICE_ID || "";
+    let servicePool: Array<{ id: string; name: string }> = [];
     if (!serviceId) {
       const { data: sRows, error: sErr } = await sb
         .from("service_listings")
-        .select("id")
+        .select("id,name")
         .eq("is_active", true)
-        .order("created_at", { ascending: true })
-        .limit(1);
+        .order("id", { ascending: true })
+        .limit(300);
       if (sErr) throw new Error(sErr.message);
       if (!sRows?.length) throw new Error("No active service_listings");
-      serviceId = String(sRows[0].id);
+      servicePool = sRows.map((r) => ({ id: String(r.id), name: String((r as { name?: string }).name || "") }));
+      serviceId = String(servicePool[0].id);
     }
 
     for (const event of events) {
       try {
         const eventId = String(event.id || "");
+        const eventCalendarId = String(event.__calendar_id || calendarId);
         if (!eventId) continue;
-        if (String(event.status || "").toLowerCase() === "cancelled") {
-          counters.skippedCancelled++;
+        const eventType = String(event.eventType || "").trim();
+        if (eventType && JUNK_EVENT_TYPES.has(eventType)) {
+          counters.skippedEventType++;
           continue;
         }
-        const start = parseGoogleDateTime((event.start as Record<string, unknown>) ?? null);
+        const googleStatus = String(event.status || "").toLowerCase();
+        const startRaw = (event.start as Record<string, unknown>) ?? null;
+        const start = parseGoogleDateTime(startRaw);
         let end = parseGoogleDateTime((event.end as Record<string, unknown>) ?? null);
         if (!start || Number.isNaN(start.getTime())) {
           counters.skippedNoTime++;
+          continue;
+        }
+        // All-day events (date only, no dateTime) are almost never real client
+        // appointments — they are typically holidays, name-days, vacations,
+        // birthdays, etc. Salon bookings always have a concrete time. Skip
+        // them as a safety net even if the calendar itself wasn't filtered.
+        const hasDateTime = !!(startRaw && typeof startRaw.dateTime === "string");
+        if (!hasDateTime) {
+          counters.skippedEventType++;
           continue;
         }
         if (!end || Number.isNaN(end.getTime()) || end <= start) {
@@ -181,7 +323,7 @@ Deno.serve(async (req: Request) => {
           .select("appointment_id")
           .eq("provider", "google")
           .eq("calendar_scope", "salon")
-          .eq("google_calendar_id", calendarId)
+          .eq("google_calendar_id", eventCalendarId)
           .eq("google_event_id", eventId)
           .maybeSingle();
         if (linkErr) throw new Error(linkErr.message);
@@ -190,19 +332,11 @@ Deno.serve(async (req: Request) => {
           continue;
         }
 
-        const attendees = Array.isArray(event.attendees)
-          ? (event.attendees as Array<Record<string, unknown>>)
-          : [];
+        const colorId = String(event.colorId || "").trim();
         let staffId = FORCED_STAFF_ID || "";
-        if (!staffId) {
-          for (const a of attendees) {
-            const email = String(a.email || "").trim().toLowerCase();
-            const matched = staff.find((s) => s.email && s.email === email);
-            if (matched) {
-              staffId = matched.id;
-              break;
-            }
-          }
+        if (!staffId) staffId = detectStaffFromAttendeesOrText(event, staff);
+        if (!staffId && colorId && colorToStaff.has(colorId)) {
+          staffId = colorToStaff.get(colorId) || "";
         }
         if (!staffId) {
           for (const s of staff) {
@@ -221,10 +355,10 @@ Deno.serve(async (req: Request) => {
             }
           }
         }
-        if (!staffId) {
-          counters.skippedNoStaff++;
-          continue;
-        }
+        const wasStaffResolved = !!staffId;
+        if (!staffId) staffId = FORCED_STAFF_ID || staff[0]?.id || "";
+        if (!staffId) throw new Error("No fallback staff id");
+        if (!wasStaffResolved) counters.forcedStaffFallback++;
 
         if (dryRun) {
           counters.inserted++;
@@ -232,8 +366,32 @@ Deno.serve(async (req: Request) => {
         }
 
         const summary = String(event.summary || "").trim() || "Google Calendar client";
+        let resolvedServiceId = serviceId;
+        if (servicePool.length > 0) {
+          const haystack = `${summary} ${String(event.description || "")}`.toLowerCase();
+          const byName = servicePool.find((s) => {
+            const n = s.name.trim().toLowerCase();
+            return n.length >= 4 && haystack.includes(n);
+          });
+          if (byName) resolvedServiceId = byName.id;
+        }
+        const eventDescription = String(event.description || "").trim();
+        const eventLocation = String(event.location || "").trim();
+        const eventColorId = String(event.colorId || "").trim();
+        const attendees = Array.isArray(event.attendees)
+          ? (event.attendees as Array<Record<string, unknown>>)
+          : [];
+        const attendeeEmails = attendees
+          .map((a) => String(a.email || "").trim())
+          .filter(Boolean);
+
         const note = [
           "Imported from Google Calendar (salon mail).",
+          wasStaffResolved ? null : "Master was not detected automatically. Assigned by fallback.",
+          eventColorId ? `Google colorId: ${eventColorId}` : null,
+          eventLocation ? `Location: ${eventLocation}` : null,
+          eventDescription ? `Description: ${eventDescription.slice(0, 1500)}` : null,
+          attendeeEmails.length ? `Attendees: ${attendeeEmails.join(", ")}` : null,
           event.htmlLink ? `Google link: ${String(event.htmlLink)}` : null,
         ].filter(Boolean).join("\n");
 
@@ -241,12 +399,12 @@ Deno.serve(async (req: Request) => {
           .from("appointments")
           .insert({
             staff_id: staffId,
-            service_id: serviceId,
+            service_id: resolvedServiceId,
             client_name: summary,
             client_phone: null,
             start_time: startIso,
             end_time: endIso,
-            status: "confirmed",
+            status: googleStatus === "cancelled" ? "cancelled" : "confirmed",
             source: "crm",
             note,
           })
@@ -258,7 +416,7 @@ Deno.serve(async (req: Request) => {
 
         const { error: lineErr } = await sb.from("appointment_services").insert({
           appointment_id: appointmentId,
-          service_id: serviceId,
+          service_id: resolvedServiceId,
           staff_id: staffId,
           start_time: startIso,
           end_time: endIso,
@@ -271,7 +429,7 @@ Deno.serve(async (req: Request) => {
             {
               provider: "google",
               calendar_scope: "salon",
-              google_calendar_id: calendarId,
+              google_calendar_id: eventCalendarId,
               google_event_id: eventId,
               google_event_status: String(event.status || ""),
               google_event_updated_at: event.updated ? String(event.updated) : null,

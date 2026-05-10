@@ -27,9 +27,6 @@ type ThreadSummary = {
   staff_author_id?: string | null;
   staff_author_name?: string | null;
   is_suspicious?: boolean;
-  archived_at?: string | null;
-  archived_by_staff_id?: string | null;
-  archived_by_staff_name?: string | null;
 };
 
 type ThreadDetail = ThreadSummary & {
@@ -121,23 +118,6 @@ type Message = {
   attachment_mime: string | null;
   attachment_size_bytes: number | null;
 };
-
-function extractErrorMessage(err: unknown): string {
-  if (err instanceof Error) return err.message;
-  if (typeof err === "string") return err;
-  if (err && typeof err === "object") {
-    const anyErr = err as Record<string, unknown>;
-    const msg = anyErr.message;
-    if (typeof msg === "string" && msg.trim()) return msg;
-    const details = anyErr.details;
-    if (typeof details === "string" && details.trim()) return details;
-    const hint = anyErr.hint;
-    if (typeof hint === "string" && hint.trim()) return hint;
-    const code = anyErr.code;
-    if (typeof code === "string" && code.trim()) return `Ошибка: ${code}`;
-  }
-  return "Неизвестная ошибка";
-}
 
 const POLL_LIST_MS = 5000;
 const POLL_THREAD_MS = 3000;
@@ -269,10 +249,8 @@ export function AdminSupportPage() {
    * на клиенте, чтобы не показывать closed). */
   type StatusView = "active" | "all" | "closed";
   const [statusView, setStatusView] = useState<StatusView>("active");
-  const [archiveView, setArchiveView] = useState(false);
-  const statusFilter: "" | Status = archiveView ? "" : statusView === "closed" ? "closed" : "";
+  const statusFilter: "" | Status = statusView === "closed" ? "closed" : "";
   const [topicFilter, setTopicFilter] = useState<"" | Topic>("");
-  const [searchQuery, setSearchQuery] = useState("");
   const [listLoading, setListLoading] = useState(true);
   const [threadLoading, setThreadLoading] = useState(false);
   const [listError, setListError] = useState<string | null>(null);
@@ -297,18 +275,17 @@ export function AdminSupportPage() {
         p_status_filter: statusFilter || null,
         p_topic_filter: topicFilter || null,
         p_limit: 200,
-        p_include_archived: archiveView,
       });
       if (error) throw error;
       const arr = Array.isArray(data) ? (data as ThreadSummary[]) : [];
       setThreads(arr);
       setListError(null);
     } catch (err) {
-      setListError(extractErrorMessage(err));
+      setListError(err instanceof Error ? err.message : String(err));
     } finally {
       setListLoading(false);
     }
-  }, [staffMember, statusFilter, topicFilter, archiveView]);
+  }, [staffMember, statusFilter, topicFilter]);
 
   const loadThread = useCallback(
     async (threadId: string, opts?: { silent?: boolean }) => {
@@ -331,7 +308,7 @@ export function AdminSupportPage() {
         setMessages(Array.isArray(payload.messages) ? payload.messages : []);
         setThreadError(null);
       } catch (err) {
-        setThreadError(extractErrorMessage(err));
+        setThreadError(err instanceof Error ? err.message : String(err));
       } finally {
         if (!opts?.silent) setThreadLoading(false);
       }
@@ -341,10 +318,6 @@ export function AdminSupportPage() {
 
   const loadStats = useCallback(async () => {
     if (!staffMember) return;
-    if (archiveView) {
-      setStats(null);
-      return;
-    }
     try {
       const { data, error } = await supabase.rpc("support_staff_stats", {
         p_staff_id: staffMember.id,
@@ -355,29 +328,17 @@ export function AdminSupportPage() {
     } catch {
       /* статистика — фоновая, без шумных ошибок */
     }
-  }, [staffMember, topicFilter, archiveView]);
+  }, [staffMember, topicFilter]);
 
   useEffect(() => {
     void loadList();
     void loadStats();
     const id = window.setInterval(() => {
-      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
       void loadList();
       void loadStats();
     }, POLL_LIST_MS);
     return () => window.clearInterval(id);
   }, [loadList, loadStats]);
-
-  useEffect(() => {
-    const onVisible = () => {
-      if (document.visibilityState !== "visible") return;
-      void loadList();
-      void loadStats();
-      if (selectedId) void loadThread(selectedId, { silent: true });
-    };
-    document.addEventListener("visibilitychange", onVisible);
-    return () => document.removeEventListener("visibilitychange", onVisible);
-  }, [loadList, loadStats, loadThread, selectedId]);
 
   /* Список активных сотрудников — нужен админу для «передать другому».
      Менеджеру/мастеру не подгружаем. RLS на staff открыт, выбираем минимум. */
@@ -419,10 +380,7 @@ export function AdminSupportPage() {
     }
     void loadThread(selectedId);
     const id = window.setInterval(
-      () => {
-        if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
-        void loadThread(selectedId, { silent: true });
-      },
+      () => void loadThread(selectedId, { silent: true }),
       POLL_THREAD_MS
     );
     return () => window.clearInterval(id);
@@ -444,27 +402,11 @@ export function AdminSupportPage() {
   }, [selectedId, detail?.unread_for_staff, staffMember, loadList]);
 
   const visibleThreads = useMemo(() => {
-    const base = archiveView
-      ? threads
-      : statusView === "active"
-        ? threads.filter((th) => th.status === "open" || th.status === "pending")
-        : threads;
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return base;
-    return base.filter((th) => {
-      const hay = [
-        th.display_id,
-        th.visitor_name,
-        th.visitor_email,
-        th.assigned_staff_name,
-        th.last_message_preview,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      return hay.includes(q);
-    });
-  }, [threads, statusView, archiveView, searchQuery]);
+    if (statusView === "active") {
+      return threads.filter((th) => th.status === "open" || th.status === "pending");
+    }
+    return threads;
+  }, [threads, statusView]);
 
   const uploadAttachment = async (): Promise<{
     url: string;
@@ -504,7 +446,7 @@ export function AdminSupportPage() {
   };
 
   const sendReply = async () => {
-    if (!staffMember || !selectedId || archiveView) return;
+    if (!staffMember || !selectedId) return;
     const body = replyText.trim();
     if (!body && !attachment) return;
     setSending(true);
@@ -530,14 +472,14 @@ export function AdminSupportPage() {
       await loadThread(selectedId, { silent: true });
       await loadList();
     } catch (err) {
-      setSendError(extractErrorMessage(err));
+      setSendError(err instanceof Error ? err.message : String(err));
     } finally {
       setSending(false);
     }
   };
 
   const changeStatus = async (next: Status) => {
-    if (!staffMember || !selectedId || !detail || archiveView) return;
+    if (!staffMember || !selectedId || !detail) return;
     if (detail.status === next) return;
     try {
       const { error } = await supabase.rpc("support_staff_update_thread", {
@@ -549,12 +491,12 @@ export function AdminSupportPage() {
       await loadThread(selectedId, { silent: true });
       await loadList();
     } catch (err) {
-      setThreadError(extractErrorMessage(err));
+      setThreadError(err instanceof Error ? err.message : String(err));
     }
   };
 
   const assignToMe = async () => {
-    if (!staffMember || !selectedId || !detail || archiveView) return;
+    if (!staffMember || !selectedId || !detail) return;
     try {
       const { error } = await supabase.rpc("support_staff_update_thread", {
         p_staff_id: staffMember.id,
@@ -566,12 +508,12 @@ export function AdminSupportPage() {
       await loadList();
       await loadStats();
     } catch (err) {
-      setThreadError(extractErrorMessage(err));
+      setThreadError(err instanceof Error ? err.message : String(err));
     }
   };
 
   const releaseAssignment = async () => {
-    if (!staffMember || !selectedId || !detail || archiveView) return;
+    if (!staffMember || !selectedId || !detail) return;
     try {
       const { error } = await supabase.rpc("support_staff_update_thread", {
         p_staff_id: staffMember.id,
@@ -583,12 +525,12 @@ export function AdminSupportPage() {
       await loadList();
       await loadStats();
     } catch (err) {
-      setThreadError(extractErrorMessage(err));
+      setThreadError(err instanceof Error ? err.message : String(err));
     }
   };
 
   const transferTo = async (targetStaffId: string) => {
-    if (!staffMember || !selectedId || !detail || archiveView) return;
+    if (!staffMember || !selectedId || !detail) return;
     if (!targetStaffId) {
       setTransferOpen(false);
       return;
@@ -605,31 +547,7 @@ export function AdminSupportPage() {
       await loadList();
       await loadStats();
     } catch (err) {
-      setThreadError(extractErrorMessage(err));
-    }
-  };
-
-  const toggleArchiveForThread = async (archive: boolean) => {
-    if (!staffMember || !selectedId || !detail) return;
-    try {
-      const { error } = await supabase.rpc("support_staff_archive_thread", {
-        p_staff_id: staffMember.id,
-        p_thread_id: selectedId,
-        p_archive: archive,
-      });
-      if (error) throw error;
-      setTransferOpen(false);
-      if (archive) {
-        setSelectedId(null);
-        setDetail(null);
-        setMessages([]);
-      } else {
-        await loadThread(selectedId, { silent: true });
-      }
-      await loadList();
-      await loadStats();
-    } catch (err) {
-      setThreadError(extractErrorMessage(err));
+      setThreadError(err instanceof Error ? err.message : String(err));
     }
   };
 
@@ -670,10 +588,7 @@ export function AdminSupportPage() {
                 type="button"
                 role="tab"
                 aria-selected={statusView === s}
-                onClick={() => {
-                  setArchiveView(false);
-                  setStatusView(s);
-                }}
+                onClick={() => setStatusView(s)}
                 className={
                   "rounded-md px-2.5 py-1 text-xs font-medium transition " +
                   (statusView === s
@@ -714,36 +629,6 @@ export function AdminSupportPage() {
               </select>
             </label>
           )}
-          <button
-            type="button"
-            onClick={() => {
-              setArchiveView((v) => !v);
-              setSelectedId(null);
-              setThreadError(null);
-              setSendError(null);
-            }}
-            className={
-              "rounded-lg border px-2.5 py-1 text-xs font-medium transition " +
-              (archiveView
-                ? "border-amber-500/40 bg-amber-900/30 text-amber-100"
-                : "border-zinc-800 bg-black/30 text-zinc-300 hover:bg-zinc-900 hover:text-zinc-100")
-            }
-            title={
-              archiveView
-                ? t("support.archiveExit", { defaultValue: "Вернуться к рабочим чатам" })
-                : t("support.archiveEnter", { defaultValue: "Открыть архив чатов" })
-            }
-          >
-            {archiveView
-              ? t("support.archiveActive", { defaultValue: "Архив: включен" })
-              : t("support.archiveLabel", { defaultValue: "Архив" })}
-          </button>
-          <input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={t("support.searchPlaceholder", { defaultValue: "Поиск по имени, email, ID..." })}
-            className="w-[220px] rounded-lg border border-zinc-800 bg-black/30 px-2.5 py-1 text-xs text-zinc-100 placeholder:text-zinc-500 focus:border-zinc-600 focus:outline-none"
-          />
         </div>
       </header>
 
@@ -757,7 +642,7 @@ export function AdminSupportPage() {
        * мои / средн. время первого ответа). Если есть подозрительные за 24ч —
        * добавляем пунцовую плитку с предупреждением. Здесь нет интерактива:
        * это «градусник», чтобы менеджер с одного взгляда понимал нагрузку. */}
-      {!archiveView && stats && (
+      {stats && (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
           <StatTile label={t("support.statsOpen")} value={stats.open} tone="emerald" />
           <StatTile label={t("support.statsPending")} value={stats.pending} tone="amber" />
@@ -784,20 +669,11 @@ export function AdminSupportPage() {
           )}
         </div>
       )}
-      {archiveView && (
-        <div className="rounded-lg border border-amber-700/40 bg-amber-950/20 px-3 py-2 text-xs text-amber-200">
-          {t("support.archiveHint", {
-            defaultValue: "Режим архива: здесь старые чаты для истории. Новые обращения сюда не попадают.",
-          })}
-        </div>
-      )}
 
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-[340px_1fr]">
         <aside className="flex min-h-0 flex-col overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950">
           <div className="border-b border-zinc-800 px-3 py-2 text-[11px] uppercase tracking-wider text-zinc-500">
-            {(archiveView
-              ? t("support.archiveTitle", { defaultValue: "Архив чатов" })
-              : t("support.threads")) + " · " + visibleThreads.length}
+            {t("support.threads")} · {visibleThreads.length}
           </div>
           <ul className="flex-1 overflow-y-auto">
             {listLoading && threads.length === 0 ? (
@@ -1026,7 +902,7 @@ export function AdminSupportPage() {
                        *   • admin дополнительно  → «Передать другому…» (поповер)
                        * Менеджер не может перетянуть чужой тред — backend
                        * прокинет access_denied, кнопку и не показываем. */}
-                      {!archiveView && detail.assigned_staff_id !== staffMember?.id ? (
+                      {detail.assigned_staff_id !== staffMember?.id ? (
                         <button
                           type="button"
                           onClick={() => void assignToMe()}
@@ -1044,7 +920,7 @@ export function AdminSupportPage() {
                         >
                           {t("support.assignMe")}
                         </button>
-                      ) : !archiveView ? (
+                      ) : (
                         <button
                           type="button"
                           onClick={() => void releaseAssignment()}
@@ -1053,8 +929,8 @@ export function AdminSupportPage() {
                         >
                           {t("support.release")}
                         </button>
-                      ) : null}
-                      {isAdmin && staffOptions.length > 0 && !archiveView && (
+                      )}
+                      {isAdmin && staffOptions.length > 0 && (
                         <div className="relative">
                           <button
                             type="button"
@@ -1146,7 +1022,7 @@ export function AdminSupportPage() {
                        * Теперь — одна явная кнопка «В ожидание» / «Вернуть в работу»,
                        * рядом с главной «Закрыть обращение». Всего 2 действия
                        * вместо 2 кнопок-выбора + 1 кнопки = 3, и логика очевидна. */}
-                      {!archiveView && detail.status === "open" && (
+                      {detail.status === "open" && (
                         <button
                           type="button"
                           onClick={() => void changeStatus("pending")}
@@ -1159,7 +1035,7 @@ export function AdminSupportPage() {
                           {t("support.markPending")}
                         </button>
                       )}
-                      {!archiveView && detail.status === "pending" && (
+                      {detail.status === "pending" && (
                         <button
                           type="button"
                           onClick={() => void changeStatus("open")}
@@ -1176,7 +1052,7 @@ export function AdminSupportPage() {
                       {/* Главная действующая кнопка: «Закрыть обращение».
                           Явная иконка-крестик + жёлтый/зинковый акцент,
                           чтобы её невозможно было пропустить. */}
-                      {!archiveView && detail.status !== "closed" ? (
+                      {detail.status !== "closed" ? (
                         <button
                           type="button"
                           onClick={() => void changeStatus("closed")}
@@ -1198,7 +1074,7 @@ export function AdminSupportPage() {
                           </svg>
                           {t("support.closeThread")}
                         </button>
-                      ) : !archiveView ? (
+                      ) : (
                         <button
                           type="button"
                           onClick={() => void changeStatus("open")}
@@ -1219,30 +1095,6 @@ export function AdminSupportPage() {
                             <path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5" />
                           </svg>
                           {t("support.reopenThread")}
-                        </button>
-                      ) : null}
-                      {!archiveView && (
-                        <button
-                          type="button"
-                          onClick={() => void toggleArchiveForThread(true)}
-                          className="inline-flex items-center gap-1.5 rounded-md border border-amber-700/60 bg-amber-900/30 px-3 py-1.5 text-[11px] font-semibold text-amber-100 transition hover:bg-amber-900/50"
-                          title={t("support.archiveBtnHint", {
-                            defaultValue: "Убрать чат из рабочего списка и сохранить в архиве",
-                          })}
-                        >
-                          {t("support.archiveBtn", { defaultValue: "В архив" })}
-                        </button>
-                      )}
-                      {archiveView && (
-                        <button
-                          type="button"
-                          onClick={() => void toggleArchiveForThread(false)}
-                          className="inline-flex items-center gap-1.5 rounded-md border border-emerald-700/60 bg-emerald-900/30 px-3 py-1.5 text-[11px] font-semibold text-emerald-100 transition hover:bg-emerald-900/60"
-                          title={t("support.unarchiveBtnHint", {
-                            defaultValue: "Вернуть чат обратно в рабочий список",
-                          })}
-                        >
-                          {t("support.unarchiveBtn", { defaultValue: "Вернуть из архива" })}
                         </button>
                       )}
                     </div>
@@ -1400,13 +1252,6 @@ export function AdminSupportPage() {
               </div>
 
               <div className="border-t border-zinc-800 bg-zinc-950/70 p-3">
-                {archiveView && (
-                  <p className="mb-2 rounded-md border border-amber-700/50 bg-amber-950/30 px-2.5 py-1.5 text-xs text-amber-200">
-                    {t("support.archiveReadOnly", {
-                      defaultValue: "Архив только для просмотра. Чтобы ответить, сначала верните чат в работу.",
-                    })}
-                  </p>
-                )}
                 {sendError && (
                   <p className="mb-2 text-xs text-red-300">{sendError}</p>
                 )}
@@ -1429,19 +1274,13 @@ export function AdminSupportPage() {
                 )}
                 <div className="flex items-end gap-2">
                   <label
-                    className={
-                      "shrink-0 rounded-lg border border-zinc-800 px-2.5 py-2 text-xs " +
-                      (archiveView
-                        ? "cursor-not-allowed bg-black/20 text-zinc-600"
-                        : "cursor-pointer bg-black/40 text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200")
-                    }
+                    className="shrink-0 cursor-pointer rounded-lg border border-zinc-800 bg-black/40 px-2.5 py-2 text-xs text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200"
                     title={t("support.attachFile")}
                   >
                     📎
                     <input
                       ref={fileInputRef}
                       type="file"
-                      disabled={archiveView}
                       className="hidden"
                       onChange={(e) => {
                         const f = e.target.files?.[0] ?? null;
@@ -1453,7 +1292,6 @@ export function AdminSupportPage() {
                     value={replyText}
                     onChange={(e) => setReplyText(e.target.value)}
                     onKeyDown={(e) => {
-                      if (archiveView) return;
                       if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
                         e.preventDefault();
                         void sendReply();
@@ -1461,7 +1299,6 @@ export function AdminSupportPage() {
                     }}
                     placeholder={t("support.replyPlaceholder")}
                     rows={2}
-                    disabled={archiveView}
                     className="flex-1 resize-none rounded-lg border border-zinc-800 bg-black px-3 py-2 text-sm text-white placeholder:text-zinc-600 focus:border-emerald-600/60 focus:outline-none"
                   />
                   <button
@@ -1470,7 +1307,6 @@ export function AdminSupportPage() {
                     disabled={
                       sending ||
                       uploading ||
-                      archiveView ||
                       (!replyText.trim() && !attachment)
                     }
                     className="shrink-0 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:opacity-50"

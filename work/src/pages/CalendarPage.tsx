@@ -37,6 +37,7 @@ import { isStaffRowAdmin, staffEligibleForService, hasStaffRole, normalizeStaffM
 import { effectiveCanWorkCalendar } from "../lib/effectiveRole";
 import { loadServicesCatalog } from "../lib/loadServicesCatalog";
 import { BookingModal } from "../components/BookingModal";
+import { CalendarSidePanels } from "../components/CalendarSidePanels";
 import { ProCalendar } from "../components/calendar/ProCalendar";
 import { staffHueFromId } from "../lib/staffHue";
 import { generateAvailableSlots } from "../lib/slots";
@@ -62,22 +63,6 @@ export function CalendarPage() {
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState<{ start: Date; staffId: string } | null>(null);
   const [durationMin, setDurationMin] = useState(60);
-
-  const jumpCursor = useCallback(
-    (mode: "today" | "tomorrow" | "nextWeek") => {
-      const now = new Date();
-      if (mode === "today") {
-        setCursor(now);
-        return;
-      }
-      if (mode === "tomorrow") {
-        setCursor(addDays(now, 1));
-        return;
-      }
-      setCursor(addDays(now, 7));
-    },
-    []
-  );
 
   const load = useCallback(async () => {
     let apQuery = supabase.from("appointments").select("*").neq("status", "cancelled");
@@ -279,59 +264,12 @@ export function CalendarPage() {
     if (!targetStaffId) return;
     const base = startOfDay(cursor);
     const now = new Date();
-    const wd = base.getDay();
-    const existing = appointmentsForStaffOnDay(filteredAppointments, targetStaffId, base);
-    const sched = schedules
-      .filter((s) => s.staff_id === targetStaffId)
-      .map((s) => ({
-        day_of_week: s.day_of_week,
-        start_time: s.start_time,
-        end_time: s.end_time,
-      }));
-    const generated = buildSlotsForDay(base, wd, sched, existing, durationMin, 30);
     const sameDay = isSameDay(base, now);
-    const firstFuture = generated.find((s) => s.start.getTime() >= now.getTime());
-    const firstAny = generated[0];
-    const fallback = setMinutes(setHours(base, sameDay ? now.getHours() : 10), sameDay ? (now.getMinutes() <= 30 ? 30 : 0) : 0);
-    const start = (sameDay ? firstFuture : firstAny)?.start ?? firstAny?.start ?? fallback;
+    const hour = sameDay ? now.getHours() : 10;
+    const mins = sameDay ? (now.getMinutes() <= 30 ? 30 : 0) : 0;
+    const start = setMinutes(setHours(base, hour), mins);
     setModal({ start, staffId: targetStaffId });
   }
-
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.defaultPrevented) return;
-      const target = e.target as HTMLElement | null;
-      const tag = (target?.tagName || "").toLowerCase();
-      if (target?.isContentEditable || tag === "input" || tag === "textarea" || tag === "select") return;
-      if ((e.metaKey || e.ctrlKey || e.altKey) && e.key.toLowerCase() !== "n") return;
-
-      if (e.key === "ArrowLeft") {
-        e.preventDefault();
-        setCursor((prev) =>
-          view === "day" ? addDays(prev, -1) : view === "week" ? addDays(prev, -7) : addMonths(prev, -1)
-        );
-        return;
-      }
-      if (e.key === "ArrowRight") {
-        e.preventDefault();
-        setCursor((prev) =>
-          view === "day" ? addDays(prev, 1) : view === "week" ? addDays(prev, 7) : addMonths(prev, 1)
-        );
-        return;
-      }
-      if (e.key.toLowerCase() === "t") {
-        e.preventDefault();
-        jumpCursor("today");
-        return;
-      }
-      if (e.key.toLowerCase() === "n") {
-        e.preventDefault();
-        openQuickBooking();
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [view, jumpCursor, canUseCalendar, staffId, activeStaffForCalendar, cursor, filteredAppointments, schedules, durationMin]);
 
   return (
     <div className="space-y-6">
@@ -383,24 +321,10 @@ export function CalendarPage() {
           </button>
           <button
             type="button"
-            onClick={() => jumpCursor("today")}
+            onClick={() => setCursor(new Date())}
             className="rounded-lg border border-zinc-700 px-3 py-1.5 text-sm text-zinc-300 hover:bg-zinc-900"
           >
             {t("calendar.today")}
-          </button>
-          <button
-            type="button"
-            onClick={() => jumpCursor("tomorrow")}
-            className="rounded-lg border border-zinc-700 px-3 py-1.5 text-sm text-zinc-300 hover:bg-zinc-900"
-          >
-            {t("calendar.tomorrow", { defaultValue: "Завтра" })}
-          </button>
-          <button
-            type="button"
-            onClick={() => jumpCursor("nextWeek")}
-            className="rounded-lg border border-zinc-700 px-3 py-1.5 text-sm text-zinc-300 hover:bg-zinc-900"
-          >
-            {t("calendar.nextWeek", { defaultValue: "Через 7 дней" })}
           </button>
           <button
             type="button"
@@ -478,7 +402,7 @@ export function CalendarPage() {
           <button
             type="button"
             onClick={openQuickBooking}
-            className="rounded-lg border border-emerald-700/60 bg-emerald-950/40 px-3 py-2 text-sm font-medium text-emerald-200 transition hover:bg-emerald-900/50"
+            className="rounded-lg border border-gold/40 bg-gold/10 px-3 py-2 text-sm font-medium text-gold transition hover:bg-gold/15"
           >
             {t("calendar.createBooking", { defaultValue: "Сделать запись" })}
           </button>
@@ -486,103 +410,135 @@ export function CalendarPage() {
       </div>
 
       {loading ? (
-        <p className="text-zinc-500">{t("common.loading")}</p>
-      ) : view === "day" ? (
-        <ProCalendar
-          day={startOfDay(cursor)}
-          appointments={filteredAppointments}
-          staff={dayViewStaff}
-          services={services}
-          staffServiceLinks={staffServiceLinks}
-          schedules={schedules}
-          timeOff={timeOffForDayView}
-          startHour={9}
-          endHour={18}
-          onRefresh={load}
-          onEmptyClick={(start, sid) => setModal({ start, staffId: sid })}
-          canCreate={canUseCalendar}
-          canDrag={canUseCalendar}
-          lockToStaffId={isWorkerOnlyEffective && staffMember ? staffMember.id : null}
-        />
-      ) : staffId == null ? (
-        <p className="text-zinc-500">{t("common.loading")}</p>
-      ) : view === "month" ? (
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-7">
-          {monthDays.map((day) => {
-            const blocks = appointmentBlocks(day, false);
-            const inCurrentMonth = day >= monthStart && day <= monthEnd;
-            const availability = monthMasterAvailability.get(format(day, "yyyy-MM-dd"));
-            const badgeTone =
-              !availability || availability.working === 0
-                ? "text-zinc-500 border-zinc-700"
-                : availability.fullyClosed
-                  ? "text-rose-300 border-rose-700/50 bg-rose-950/30"
-                  : availability.free >= Math.ceil(availability.working / 2)
-                    ? "text-emerald-300 border-emerald-700/50 bg-emerald-950/30"
-                    : "text-amber-300 border-amber-700/50 bg-amber-950/30";
-            return (
-              <div
-                key={day.toISOString()}
-                className={`min-h-[150px] rounded-xl border p-2 ${
-                  inCurrentMonth
-                    ? "border-zinc-800 bg-zinc-950"
-                    : "border-zinc-900 bg-zinc-950/40 opacity-60"
-                }`}
-              >
-                <div className="mb-2 flex items-center justify-between">
-                  <p className="text-sm font-semibold text-white">{format(day, "d")}</p>
-                  <p className="text-[11px] text-zinc-500">{blocks.length}</p>
-                </div>
-                {availability && (
-                  <p className={`mb-2 inline-flex rounded-full border px-1.5 py-0.5 text-[10px] ${badgeTone}`}>
-                    {availability.working > 0
-                      ? availability.fullyClosed
-                        ? "День закрыт"
-                        : `Свободно мастеров: ${availability.free}/${availability.working}`
-                      : "Выходной"}
-                  </p>
-                )}
-                <div className="space-y-1">
-                  {blocks.slice(0, 4).map((b) => {
-                    const svc = services.find((s) => s.id === b.service_id);
-                    const hue = staffHueMap.get(b.staff_id) ?? 200;
-                    return (
-                      <div
-                        key={b.id}
-                        className="rounded-md border px-2 py-1 text-xs"
-                        style={{
-                          borderColor: `hsl(${hue} 80% 45% / 0.45)`,
-                          backgroundColor: `hsl(${hue} 80% 18% / 0.45)`,
-                          color: `hsl(${hue} 90% 88%)`,
-                        }}
-                      >
-                        <p className="truncate font-medium">{format(parseISO(b.start_time), "HH:mm")} · {b.client_name}</p>
-                        <p className="truncate opacity-85">{svc?.name_et ?? t("common.service")}</p>
-                      </div>
-                    );
-                  })}
-                  {blocks.length > 4 && (
-                    <p className="text-[11px] text-zinc-500">+{blocks.length - 4}</p>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <p className="text-muted">{t("common.loading")}</p>
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-7">
-          {days.map((day) => (
-            <DayColumn
-              key={day.toISOString()}
-              day={day}
-              slots={slotsForDay(day)}
-              blocks={appointmentBlocks(day)}
-              services={services}
-              staffHueMap={staffHueMap}
-              onBookSlot={(start) => setModal({ start, staffId })}
-              canClick={canUseCalendar}
-            />
-          ))}
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="min-w-0">
+            {view === "day" ? (
+              <ProCalendar
+                day={startOfDay(cursor)}
+                appointments={filteredAppointments}
+                staff={dayViewStaff}
+                services={services}
+                staffServiceLinks={staffServiceLinks}
+                schedules={schedules}
+                timeOff={timeOffForDayView}
+                startHour={9}
+                endHour={18}
+                onRefresh={load}
+                onEmptyClick={(start, sid) => setModal({ start, staffId: sid })}
+                canCreate={canUseCalendar}
+                canDrag={canUseCalendar}
+                lockToStaffId={isWorkerOnlyEffective && staffMember ? staffMember.id : null}
+              />
+            ) : staffId == null ? (
+              <p className="text-muted">{t("common.loading")}</p>
+            ) : view === "month" ? (
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-7">
+                {monthDays.map((day) => {
+                  const blocks = appointmentBlocks(day, true);
+                  const inCurrentMonth = day >= monthStart && day <= monthEnd;
+                  const availability = monthMasterAvailability.get(format(day, "yyyy-MM-dd"));
+                  const isToday = isSameDay(day, new Date());
+                  /* Используем токены темы (gold + line/muted), чтобы бейджи выглядели
+                   * единообразно во всех темах onyx/champagne/stone. */
+                  const badgeTone =
+                    !availability || availability.working === 0
+                      ? "border-line/15 text-muted"
+                      : availability.fullyClosed
+                        ? "border-rose-400/30 bg-rose-500/10 text-rose-200"
+                        : availability.free >= Math.ceil(availability.working / 2)
+                          ? "border-gold/40 bg-gold/10 text-gold"
+                          : "border-amber-400/30 bg-amber-500/10 text-amber-200";
+                  return (
+                    <div
+                      key={day.toISOString()}
+                      className={`min-h-[150px] rounded-xl border p-2 transition ${
+                        inCurrentMonth
+                          ? "border-line/10 bg-panel/60"
+                          : "border-line/5 bg-panel/30 opacity-60"
+                      } ${isToday ? "ring-1 ring-gold/60 shadow-gold" : ""}`}
+                    >
+                      <div className="mb-2 flex items-center justify-between">
+                        <p
+                          className={`flex h-6 w-6 items-center justify-center rounded-full text-sm font-semibold ${
+                            isToday ? "bg-gold/15 text-gold" : "text-fg"
+                          }`}
+                        >
+                          {format(day, "d")}
+                        </p>
+                        <p className="text-[11px] text-muted">{blocks.length}</p>
+                      </div>
+                      {availability && (
+                        <p
+                          className={`mb-2 inline-flex rounded-full border px-1.5 py-0.5 text-[10px] ${badgeTone}`}
+                        >
+                          {availability.working > 0
+                            ? availability.fullyClosed
+                              ? t("calendar.dayClosed", { defaultValue: "День закрыт" })
+                              : t("calendar.freeMasters", {
+                                  free: availability.free,
+                                  total: availability.working,
+                                  defaultValue: `Свободно: ${availability.free}/${availability.working}`,
+                                })
+                            : t("calendar.dayOff", { defaultValue: "Выходной" })}
+                        </p>
+                      )}
+                      <div className="space-y-1">
+                        {blocks.slice(0, 4).map((b) => {
+                          const svc = services.find((s) => s.id === b.service_id);
+                          const hue = staffHueMap.get(b.staff_id) ?? 200;
+                          return (
+                            <div
+                              key={b.id}
+                              className="rounded-md border px-2 py-1 text-xs"
+                              style={{
+                                borderColor: `hsl(${hue} 80% 45% / 0.45)`,
+                                backgroundColor: `hsl(${hue} 80% 18% / 0.45)`,
+                                color: `hsl(${hue} 90% 88%)`,
+                              }}
+                            >
+                              <p className="truncate font-medium">
+                                {format(parseISO(b.start_time), "HH:mm")} · {b.client_name}
+                              </p>
+                              <p className="truncate opacity-85">{svc?.name_et ?? t("common.service")}</p>
+                            </div>
+                          );
+                        })}
+                        {blocks.length > 4 && (
+                          <p className="text-[11px] text-muted">+{blocks.length - 4}</p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-7">
+                {days.map((day) => (
+                  <DayColumn
+                    key={day.toISOString()}
+                    day={day}
+                    slots={slotsForDay(day)}
+                    blocks={appointmentBlocks(day)}
+                    services={services}
+                    staffHueMap={staffHueMap}
+                    onBookSlot={(start) => setModal({ start, staffId })}
+                    canClick={canUseCalendar}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+          <CalendarSidePanels
+            cursor={cursor}
+            staff={activeStaffForCalendar}
+            appointments={filteredAppointments}
+            services={services}
+            schedules={schedules}
+            timeOff={timeOff}
+          />
         </div>
       )}
 

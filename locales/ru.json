@@ -11,7 +11,8 @@
     "min": "мин",
     "bookings": "записей",
     "booking": "запись",
-    "language": "Язык"
+    "language": "Язык",
+    "hShort": "ч"
   },
   "lang": { "ru": "RU", "et": "ET", "fi": "FI", "en": "EN" },
   "login": {
@@ -287,7 +288,20 @@
     "to": "До",
     "submitRequest": "Отправить заявку",
     "statusPending": "ожидает",
-    "statusApproved": "одобрено"
+    "statusApproved": "одобрено",
+    "month": "Месяц",
+    "createBooking": "Сделать запись",
+    "upcomingTitle": "Ближайшие записи",
+    "upcomingEmpty": "Нет ближайших записей.",
+    "workloadTitle": "Загрузка мастеров",
+    "workloadEmpty": "Нет мастеров.",
+    "workloadOff": "Выходной",
+    "workloadDayOff": "Не работает",
+    "workloadFull": "Занята",
+    "workloadFree": "Свободна",
+    "dayClosed": "День закрыт",
+    "dayOff": "Выходной",
+    "freeMasters": "Свободно: {{free}}/{{total}}"
   },
   "weekday": {
     "0": "Вс",
