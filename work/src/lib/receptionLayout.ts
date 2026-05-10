@@ -22,6 +22,73 @@ export const DEFAULT_RECEPTION_ROWS: ReceptionRows = [
   ["booking"],
 ];
 
+/** Плотность карточек в блоке «Мастера». */
+export type ReceptionMastersDensity = "comfortable" | "compact" | "dense";
+
+/** Два столбца (зал / маникюр) или один узкий столбец друг под другом. */
+export type ReceptionMastersLayoutMode = "two_columns" | "single_column";
+
+/**
+ * Настройки блока «Мастера» на /book и /reception.
+ * При assignment === "manual" списки id задают, кто в какой колонке (только из публично видимых мастеров).
+ */
+export type ReceptionMastersPanelConfig = {
+  assignment: "auto" | "manual";
+  hairStaffIds: string[];
+  nailsStaffIds: string[];
+  density: ReceptionMastersDensity;
+  mastersLayout: ReceptionMastersLayoutMode;
+};
+
+export const DEFAULT_RECEPTION_MASTERS_PANEL: ReceptionMastersPanelConfig = {
+  assignment: "auto",
+  hairStaffIds: [],
+  nailsStaffIds: [],
+  density: "compact",
+  mastersLayout: "two_columns",
+};
+
+/** Полный JSON в salon_settings.reception_section_order и в localStorage v2. */
+export type ReceptionLayoutFilePayload = {
+  rows: ReceptionRows;
+  masters: ReceptionMastersPanelConfig;
+};
+
+function extractMastersFromParsed(parsed: unknown): unknown {
+  if (parsed != null && typeof parsed === "object" && !Array.isArray(parsed) && "masters" in parsed) {
+    return (parsed as { masters: unknown }).masters;
+  }
+  return undefined;
+}
+
+export function normalizeMastersPanelConfig(raw: unknown): ReceptionMastersPanelConfig {
+  const d = DEFAULT_RECEPTION_MASTERS_PANEL;
+  if (raw == null || typeof raw !== "object" || Array.isArray(raw)) {
+    return { ...d };
+  }
+  const o = raw as Record<string, unknown>;
+  const assignment = o.assignment === "manual" ? "manual" : "auto";
+  const density: ReceptionMastersDensity =
+    o.density === "comfortable" || o.density === "dense" ? o.density : "compact";
+  const mastersLayout: ReceptionMastersLayoutMode =
+    o.mastersLayout === "single_column" ? "single_column" : "two_columns";
+  const hairStaffIds = Array.isArray(o.hairStaffIds)
+    ? o.hairStaffIds.filter((x): x is string => typeof x === "string")
+    : [];
+  const nailsStaffIds = Array.isArray(o.nailsStaffIds)
+    ? o.nailsStaffIds.filter((x): x is string => typeof x === "string")
+    : [];
+  return { assignment, hairStaffIds, nailsStaffIds, density, mastersLayout };
+}
+
+/** Разбор сохранённого JSON (объект с rows + masters или legacy). */
+export function parseReceptionLayoutFile(raw: unknown): ReceptionLayoutFilePayload {
+  return {
+    rows: normalizeReceptionRows(raw),
+    masters: normalizeMastersPanelConfig(extractMastersFromParsed(raw)),
+  };
+}
+
 function isSectionId(s: string): s is ReceptionSectionId {
   return (RECEPTION_SECTION_IDS as readonly string[]).includes(s);
 }
@@ -118,27 +185,59 @@ export function normalizeReceptionSectionOrder(raw: unknown): ReceptionSectionId
   return out;
 }
 
-export function loadReceptionLayoutRows(): ReceptionRows {
+export function loadReceptionLayoutStore(): ReceptionLayoutFilePayload {
   try {
     const v2 = localStorage.getItem(RECEPTION_LAYOUT_STORAGE_KEY_V2);
-    if (v2) return normalizeReceptionRows(JSON.parse(v2) as unknown);
+    if (v2) return parseReceptionLayoutFile(JSON.parse(v2) as unknown);
     const v1 = localStorage.getItem(RECEPTION_LAYOUT_STORAGE_KEY);
     if (v1) {
       const rows = legacyOrderToRows(normalizeReceptionSectionOrder(JSON.parse(v1) as unknown));
-      persistReceptionLayoutRows(rows);
-      return rows;
+      const payload: ReceptionLayoutFilePayload = {
+        rows,
+        masters: { ...DEFAULT_RECEPTION_MASTERS_PANEL },
+      };
+      persistReceptionLayoutStore(payload.rows, payload.masters);
+      return payload;
     }
   } catch {
     /* ignore */
   }
-  return DEFAULT_RECEPTION_ROWS.map((r) => [...r]);
+  return {
+    rows: DEFAULT_RECEPTION_ROWS.map((r) => [...r]),
+    masters: { ...DEFAULT_RECEPTION_MASTERS_PANEL },
+  };
 }
 
-export function persistReceptionLayoutRows(rows: ReceptionRows): void {
+export function loadReceptionLayoutRows(): ReceptionRows {
+  return loadReceptionLayoutStore().rows;
+}
+
+export function persistReceptionLayoutStore(
+  rows: ReceptionRows,
+  masters: ReceptionMastersPanelConfig,
+): void {
   try {
-    localStorage.setItem(RECEPTION_LAYOUT_STORAGE_KEY_V2, JSON.stringify({ rows }));
+    localStorage.setItem(RECEPTION_LAYOUT_STORAGE_KEY_V2, JSON.stringify({ rows, masters }));
   } catch {
     /* quota / private mode */
+  }
+}
+
+/** Сохранить только строки макета, не затирая настройки мастеров. */
+export function persistReceptionLayoutRows(rows: ReceptionRows): void {
+  try {
+    const v2 = localStorage.getItem(RECEPTION_LAYOUT_STORAGE_KEY_V2);
+    let masters: ReceptionMastersPanelConfig = { ...DEFAULT_RECEPTION_MASTERS_PANEL };
+    if (v2) {
+      try {
+        masters = normalizeMastersPanelConfig(extractMastersFromParsed(JSON.parse(v2) as unknown));
+      } catch {
+        /* keep default */
+      }
+    }
+    persistReceptionLayoutStore(rows, masters);
+  } catch {
+    /* ignore */
   }
 }
 

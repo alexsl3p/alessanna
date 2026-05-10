@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
+  addDays,
+  addMonths,
+  addWeeks,
+  addYears,
   eachDayOfInterval,
   endOfDay,
   endOfMonth,
   endOfWeek,
-  endOfYear,
   format,
   isSameDay,
   isSameMonth,
@@ -26,22 +29,27 @@ import {
   normalizeStaffMember,
   staffEligibleForService,
 } from "../lib/roles";
+import { eachDayInDataRange, getCalendarDataRange, type PublicCalendarScope } from "../lib/publicCalendarRange";
 import {
   publicBookableStaffMembers,
   publicServiceIdsForStaff,
   splitStaffIntoHairAndNails,
 } from "../lib/publicMasterPanel";
+import { getStaffCalendarColor } from "../lib/staffCalendarColors";
 import type { AppointmentRow, StaffMember, StaffScheduleRow, StaffServiceRow } from "../types/database";
 import {
+  DEFAULT_RECEPTION_MASTERS_PANEL,
   DEFAULT_RECEPTION_ROWS,
+  type ReceptionMastersPanelConfig,
   type ReceptionRows,
   type ReceptionSectionId,
-  loadReceptionLayoutRows,
-  persistReceptionLayoutRows,
+  loadReceptionLayoutStore,
+  persistReceptionLayoutStore,
 } from "../lib/receptionLayout";
 import { fetchReceptionLayoutFromServer, saveReceptionLayoutToServer } from "../lib/receptionLayoutRemote";
 import { renderReceptionRows } from "../lib/receptionSectionOrderRender";
 import { ReceptionLayoutEditor } from "../components/ReceptionLayoutEditor";
+import { ReceptionMastersPanelEditor } from "../components/ReceptionMastersPanelEditor";
 import {
   PublicBookingBookingSection,
   PublicBookingCalendarSection,
@@ -92,7 +100,7 @@ export function PublicBookingPage() {
   const [staffId, setStaffId] = useState<string | null>(ANY_MASTER_ID);
   const [dayStr, setDayStr] = useState(() => format(new Date(), "yyyy-MM-dd"));
   const [viewMonth, setViewMonth] = useState(() => startOfMonth(new Date()));
-  const [calendarScope, setCalendarScope] = useState<"month" | "year">("month");
+  const [calendarScope, setCalendarScope] = useState<PublicCalendarScope>("month");
   const [clientName, setClientName] = useState("");
   const [clientPhone, setClientPhone] = useState("");
   const [pickedStart, setPickedStart] = useState<Date | null>(null);
@@ -104,8 +112,19 @@ export function PublicBookingPage() {
   const [receptionRows, setReceptionRows] = useState<ReceptionRows>(() =>
     DEFAULT_RECEPTION_ROWS.map((r) => [...r]),
   );
+  const [receptionMastersConfig, setReceptionMastersConfig] = useState<ReceptionMastersPanelConfig>(() => ({
+    ...DEFAULT_RECEPTION_MASTERS_PANEL,
+  }));
   const [receptionLayoutEditing, setReceptionLayoutEditing] = useState(false);
   const [receptionRemoteSaveError, setReceptionRemoteSaveError] = useState<string | null>(null);
+
+  const flushReceptionSave = useCallback((rows: ReceptionRows, masters: ReceptionMastersPanelConfig) => {
+    setReceptionRemoteSaveError(null);
+    persistReceptionLayoutStore(rows, masters);
+    void saveReceptionLayoutToServer({ rows, masters }).then(({ error: saveErr }) => {
+      setReceptionRemoteSaveError(saveErr);
+    });
+  }, []);
 
   useEffect(() => {
     if (!isAdmin) setReceptionLayoutEditing(false);
@@ -189,10 +208,13 @@ export function PublicBookingPage() {
     if (lk.data) setLinks(lk.data as StaffServiceRow[]);
     if (sc.data) setSchedules(sc.data as StaffScheduleRow[]);
     if (remoteLayout) {
-      setReceptionRows(remoteLayout);
-      persistReceptionLayoutRows(remoteLayout);
+      setReceptionRows(remoteLayout.rows);
+      setReceptionMastersConfig(remoteLayout.masters);
+      persistReceptionLayoutStore(remoteLayout.rows, remoteLayout.masters);
     } else {
-      setReceptionRows(loadReceptionLayoutRows());
+      const local = loadReceptionLayoutStore();
+      setReceptionRows(local.rows);
+      setReceptionMastersConfig(local.masters);
     }
     setLoading(false);
   }, []);
@@ -222,10 +244,17 @@ export function PublicBookingPage() {
     [staff, links, services],
   );
 
-  const mastersSplit = useMemo(
-    () => splitStaffIntoHairAndNails(mastersPanelStaff, links, services),
-    [mastersPanelStaff, links, services],
-  );
+  const mastersSplitResolved = useMemo(() => {
+    const auto = splitStaffIntoHairAndNails(mastersPanelStaff, links, services);
+    if (receptionMastersConfig.assignment !== "manual") return auto;
+    const byId = new Map(mastersPanelStaff.map((m) => [m.id, m]));
+    const pick = (ids: string[]) =>
+      ids.map((id) => byId.get(id)).filter((m): m is StaffMember => m != null);
+    return {
+      hair: pick(receptionMastersConfig.hairStaffIds),
+      nails: pick(receptionMastersConfig.nailsStaffIds),
+    };
+  }, [mastersPanelStaff, links, services, receptionMastersConfig]);
 
   const loadDayData = useCallback(async () => {
     if (!isSupabaseConfigured() || serviceId == null) return;
@@ -293,43 +322,41 @@ export function PublicBookingPage() {
       setCalendarRangeTimeOff([]);
       return;
     }
-    const eligibleIds = eligibleStaff.map((s) => s.id);
-    if (!eligibleIds.length) {
+    const panelIds = mastersPanelStaff.map((s) => s.id);
+    if (!panelIds.length) {
       setCalendarRangeAppointments([]);
       setCalendarRangeTimeOff([]);
       return;
     }
-    const rangeFrom =
-      calendarScope === "year" ? startOfYear(viewMonth) : startOfMonth(viewMonth);
-    const rangeTo = calendarScope === "year" ? endOfYear(viewMonth) : endOfMonth(viewMonth);
-    const rangeStartUtc = startOfDay(rangeFrom).toISOString();
-    const rangeEndUtc = endOfDay(rangeTo).toISOString();
-    const [ap, to] = await Promise.all([
+    const { from, to } = getCalendarDataRange(calendarScope, viewMonth, selectedDay);
+    const rangeStartUtc = startOfDay(from).toISOString();
+    const rangeEndUtc = endOfDay(to).toISOString();
+    const [ap, toff] = await Promise.all([
       supabase
         .from("appointments")
         .select("*")
-        .in("staff_id", eligibleIds)
+        .in("staff_id", panelIds)
         .gte("start_time", rangeStartUtc)
         .lte("start_time", rangeEndUtc)
         .neq("status", "cancelled"),
       supabase
         .from("staff_time_off")
         .select("*")
-        .in("staff_id", eligibleIds)
+        .in("staff_id", panelIds)
         .lte("start_time", rangeEndUtc)
         .gte("end_time", rangeStartUtc),
     ]);
     if (ap.data) setCalendarRangeAppointments(ap.data as AppointmentRow[]);
-    if (to.data) {
+    if (toff.data) {
       setCalendarRangeTimeOff(
-        (to.data as Array<{ staff_id: string; start_time: string; end_time: string }>).map((r) => ({
+        (toff.data as Array<{ staff_id: string; start_time: string; end_time: string }>).map((r) => ({
           staff_id: r.staff_id,
           start_time: r.start_time,
           end_time: r.end_time,
         }))
       );
     }
-  }, [calendarScope, eligibleStaff, serviceId, viewMonth]);
+  }, [calendarScope, mastersPanelStaff, serviceId, selectedDay, viewMonth]);
 
   useEffect(() => {
     void loadCalendarRangeData();
@@ -405,9 +432,7 @@ export function PublicBookingPage() {
     >();
     if (!svc || !eligibleStaff.length) return out;
 
-    const intervalStart = calendarScope === "year" ? startOfYear(viewMonth) : startOfMonth(viewMonth);
-    const intervalEnd = calendarScope === "year" ? endOfYear(viewMonth) : endOfMonth(viewMonth);
-    const daysInRange = eachDayOfInterval({ start: intervalStart, end: intervalEnd });
+    const daysInRange = eachDayInDataRange(calendarScope, viewMonth, selectedDay);
     for (const d of daysInRange) {
       const weekday = d.getDay();
       const key = format(d, "yyyy-MM-dd");
@@ -445,6 +470,7 @@ export function PublicBookingPage() {
   }, [
     calendarScope,
     viewMonth,
+    selectedDay,
     durationMin,
     eligibleStaff,
     calendarRangeAppointments,
@@ -453,6 +479,78 @@ export function PublicBookingPage() {
     svc,
     nowTick,
   ]);
+
+  const appointmentsByDateKey = useMemo(() => {
+    const m = new Map<string, AppointmentRow[]>();
+    for (const ap of calendarRangeAppointments) {
+      if (ap.status === "cancelled") continue;
+      const k = format(new Date(ap.start_time), "yyyy-MM-dd");
+      const arr = m.get(k) ?? [];
+      arr.push(ap);
+      m.set(k, arr);
+    }
+    return m;
+  }, [calendarRangeAppointments]);
+
+  const staffById = useMemo(() => new Map(staff.map((s) => [s.id, s])), [staff]);
+
+  const calendarWeekDays = useMemo(() => {
+    const a = startOfWeek(selectedDay, { weekStartsOn: 1 });
+    const b = endOfWeek(selectedDay, { weekStartsOn: 1 });
+    return eachDayOfInterval({ start: a, end: b });
+  }, [selectedDay]);
+
+  const calendarRangeTitle = useMemo(() => {
+    switch (calendarScope) {
+      case "day":
+        return format(selectedDay, "d MMMM yyyy");
+      case "week": {
+        const a = startOfWeek(selectedDay, { weekStartsOn: 1 });
+        const b = endOfWeek(selectedDay, { weekStartsOn: 1 });
+        return `${format(a, "d MMM")} – ${format(b, "d MMM yyyy")}`;
+      }
+      case "month":
+        return monthLabel;
+      case "quarter":
+        return `Q${Math.floor(viewMonth.getMonth() / 3) + 1} ${format(viewMonth, "yyyy")}`;
+      case "year":
+        return format(startOfYear(viewMonth), "yyyy");
+    }
+  }, [calendarScope, selectedDay, monthLabel, viewMonth]);
+
+  const navigateCalendar = useCallback(
+    (dir: -1 | 1) => {
+      const d = dir;
+      if (calendarScope === "day") {
+        const next = addDays(selectedDay, d);
+        setDayStr(format(next, "yyyy-MM-dd"));
+        setViewMonth(startOfMonth(next));
+        return;
+      }
+      if (calendarScope === "week") {
+        const next = addWeeks(selectedDay, d);
+        setDayStr(format(next, "yyyy-MM-dd"));
+        setViewMonth(startOfMonth(next));
+        return;
+      }
+      if (calendarScope === "month") {
+        setViewMonth((v) => addMonths(v, d));
+        return;
+      }
+      if (calendarScope === "quarter") {
+        setViewMonth((v) => addMonths(v, d * 3));
+        return;
+      }
+      setViewMonth((v) => addYears(v, d));
+    },
+    [calendarScope, selectedDay],
+  );
+
+  const onSelectCalendarDay = useCallback((d: Date) => {
+    setDayStr(format(d, "yyyy-MM-dd"));
+    setViewMonth(startOfMonth(d));
+    setPickedStart(null);
+  }, []);
 
   const mastersByColumn = useMemo(() => {
     const weekday = day.getDay();
@@ -483,10 +581,10 @@ export function PublicBookingPage() {
       };
     };
     return {
-      hair: mastersSplit.hair.map(mapRow).sort(sortMasterDayRows),
-      nails: mastersSplit.nails.map(mapRow).sort(sortMasterDayRows),
+      hair: mastersSplitResolved.hair.map(mapRow).sort(sortMasterDayRows),
+      nails: mastersSplitResolved.nails.map(mapRow).sort(sortMasterDayRows),
     };
-  }, [appointments, day, mastersSplit, schedules, slotsByStaff, timeOff]);
+  }, [appointments, day, mastersSplitResolved, schedules, slotsByStaff, timeOff]);
 
   const highlightServiceIds = useMemo(() => {
     if (!staffId || staffId === ANY_MASTER_ID) return new Set<string>();
@@ -619,11 +717,7 @@ export function PublicBookingPage() {
           type="button"
           aria-current={today ? "date" : undefined}
           title={today ? t("publicBook.todayMarker") : undefined}
-          onClick={() => {
-            setDayStr(format(d, "yyyy-MM-dd"));
-            setViewMonth(startOfMonth(d));
-            setPickedStart(null);
-          }}
+          onClick={() => onSelectCalendarDay(d)}
           className={`rounded-md border transition ${sizeClass} ${stateClass}`}
         >
           <span className="block">{format(d, "d")}</span>
@@ -632,17 +726,31 @@ export function PublicBookingPage() {
               {cov.working > 0 ? `${cov.free}/${cov.working}` : "—"}
             </span>
           )}
+          {(() => {
+            const dk = format(d, "yyyy-MM-dd");
+            const apList = appointmentsByDateKey.get(dk) ?? [];
+            const staffIds = [...new Set(apList.map((a) => a.staff_id))].slice(0, 6);
+            if (staffIds.length === 0) return null;
+            return (
+              <div className="mt-0.5 flex flex-wrap justify-center gap-0.5">
+                {staffIds.map((id) => (
+                  <span
+                    key={id}
+                    className={`h-1.5 w-1.5 shrink-0 rounded-full ${getStaffCalendarColor(id).dot}`}
+                    title={staffById.get(id)?.name ?? ""}
+                  />
+                ))}
+              </div>
+            );
+          })()}
         </button>
       );
     });
   }
 
   function persistReceptionLayoutFromReception(next: ReceptionRows) {
-    setReceptionRemoteSaveError(null);
-    persistReceptionLayoutRows(next);
-    void saveReceptionLayoutToServer(next).then(({ error: saveErr }) => {
-      setReceptionRemoteSaveError(saveErr);
-    });
+    setReceptionRows(next);
+    flushReceptionSave(next, receptionMastersConfig);
   }
 
   if (!isSupabaseConfigured()) {
@@ -668,14 +776,23 @@ export function PublicBookingPage() {
     calendar: (
       <PublicBookingCalendarSection
         t={t}
+        i18n={i18n}
         calendarScope={calendarScope}
         setCalendarScope={setCalendarScope}
         viewMonth={viewMonth}
         setViewMonth={setViewMonth}
-        monthLabel={monthLabel}
+        selectedDay={selectedDay}
+        onSelectCalendarDay={onSelectCalendarDay}
         monthStart={monthStart}
         calendarDays={calendarDays}
+        weekDays={calendarWeekDays}
+        rangeTitle={calendarRangeTitle}
+        onNavigatePrev={() => navigateCalendar(-1)}
+        onNavigateNext={() => navigateCalendar(1)}
         renderDayButtons={renderDayButtons}
+        calendarRangeAppointments={calendarRangeAppointments}
+        staffById={staffById}
+        services={services}
       />
     ),
     upcoming: (
@@ -694,6 +811,8 @@ export function PublicBookingPage() {
           nailMasters={mastersByColumn.nails}
           selectedStaffId={staffId !== ANY_MASTER_ID ? staffId : null}
           onPickMaster={pickMaster}
+          density={receptionMastersConfig.density}
+          mastersLayout={receptionMastersConfig.mastersLayout}
         />
       ) : null,
     booking:
@@ -768,9 +887,11 @@ export function PublicBookingPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    const next = DEFAULT_RECEPTION_ROWS.map((r) => [...r]);
-                    setReceptionRows(next);
-                    if (isAdmin) persistReceptionLayoutFromReception(next);
+                    const nextRows = DEFAULT_RECEPTION_ROWS.map((r) => [...r]);
+                    const nextMasters = { ...DEFAULT_RECEPTION_MASTERS_PANEL };
+                    setReceptionRows(nextRows);
+                    setReceptionMastersConfig(nextMasters);
+                    if (isAdmin) flushReceptionSave(nextRows, nextMasters);
                   }}
                   className="rounded-lg border border-zinc-600 px-3 py-1.5 text-sm text-zinc-300 hover:bg-zinc-800"
                 >
@@ -787,13 +908,22 @@ export function PublicBookingPage() {
               </p>
             )}
             {receptionLayoutEditing && (
-              <div className="mt-3">
+              <div className="mt-3 space-y-4">
                 <ReceptionLayoutEditor
                   variant="compact"
                   rows={receptionRows}
                   onChange={(next) => {
-                    setReceptionRows(next);
                     if (isReceptionMode && isAdmin) persistReceptionLayoutFromReception(next);
+                    else setReceptionRows(next);
+                  }}
+                />
+                <ReceptionMastersPanelEditor
+                  staff={mastersPanelStaff}
+                  config={receptionMastersConfig}
+                  disabled={!isReceptionMode || !isAdmin}
+                  onChange={(next) => {
+                    setReceptionMastersConfig(next);
+                    if (isReceptionMode && isAdmin) flushReceptionSave(receptionRows, next);
                   }}
                 />
               </div>

@@ -6,9 +6,12 @@ export type PublicServiceCatalogEntry = {
   id: string;
   active: boolean;
   categoryName: string | null;
+  /** Для эвристики зала, если в CRM не заполнена категория. */
+  name?: string;
 };
 
-const NAIL_CATEGORY_RE = /маник|педик|ногт|гель|покрыт|nail|pedicu|manic|lakk|geel/i;
+const NAIL_CATEGORY_RE =
+  /маник|педик|ногт|гель|покрыт|nail|pedicu|manic|manik|pedik|lakk|geel/i;
 
 /** По названию категории из CRM — относится к маникюру/педикюру. */
 export function isNailServiceCategory(categoryName: string | null | undefined): boolean {
@@ -60,6 +63,50 @@ export function publicServiceIdsForStaff(
   return ids;
 }
 
+/** Только услуги с явной публичной привязкой (без расширения «все услуги» для менеджера). */
+function linkedPublicServiceIds(
+  member: StaffMember,
+  links: StaffServiceRow[],
+  services: PublicServiceCatalogEntry[],
+): Set<string> {
+  const activeIds = new Set(services.filter((s) => s.active).map((s) => s.id));
+  return new Set(
+    links
+      .filter((l) => l.staff_id === member.id && l.show_on_site !== false)
+      .map((l) => String(l.service_id))
+      .filter((id) => activeIds.has(id)),
+  );
+}
+
+/**
+ * Набор услуг для деления на колонки «парикмахерский зал» / «маникюр».
+ * Если у мастера есть хотя бы одна публичная привязка — смотрим **только** её,
+ * иначе мастер не оказывается одновременно в обоих залах из‑за полного каталога
+ * (так было у менеджеров с `publicServiceIdsForStaff` = все услуги).
+ */
+function serviceIdsForHallSplit(
+  member: StaffMember,
+  links: StaffServiceRow[],
+  services: PublicServiceCatalogEntry[],
+): Set<string> {
+  const linked = linkedPublicServiceIds(member, links, services);
+  if (linked.size > 0) return linked;
+  return publicServiceIdsForStaff(member, links, services);
+}
+
+function classifyServiceHall(entry: PublicServiceCatalogEntry | undefined): "hair" | "nail" | null {
+  if (!entry) return null;
+  const cat = String(entry.categoryName ?? "").trim();
+  const svcName = String(entry.name ?? "").trim();
+  if (cat && isNailServiceCategory(cat)) return "nail";
+  if (cat && !isNailServiceCategory(cat)) return "hair";
+  if (!cat && svcName) {
+    if (isNailServiceCategory(svcName)) return "nail";
+    return "hair";
+  }
+  return null;
+}
+
 export function splitStaffIntoHairAndNails(
   members: StaffMember[],
   links: StaffServiceRow[],
@@ -72,13 +119,13 @@ export function splitStaffIntoHairAndNails(
   const seenN = new Set<string>();
 
   for (const m of members) {
-    const svcIds = publicServiceIdsForStaff(m, links, services);
+    const svcIds = serviceIdsForHallSplit(m, links, services);
     let inHair = false;
     let inNails = false;
     for (const sid of svcIds) {
-      const cat = byId.get(sid)?.categoryName ?? null;
-      if (isNailServiceCategory(cat)) inNails = true;
-      else inHair = true;
+      const kind = classifyServiceHall(byId.get(sid));
+      if (kind === "nail") inNails = true;
+      if (kind === "hair") inHair = true;
     }
     if (!inHair && !inNails) inHair = true;
     if (inHair && !seenH.has(m.id)) {

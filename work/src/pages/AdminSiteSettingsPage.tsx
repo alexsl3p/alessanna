@@ -3,9 +3,11 @@ import { useTranslation } from "react-i18next";
 import { ReceptionLayoutEditor } from "../components/ReceptionLayoutEditor";
 import { useAuth } from "../context/AuthContext";
 import {
+  DEFAULT_RECEPTION_MASTERS_PANEL,
   DEFAULT_RECEPTION_ROWS,
+  type ReceptionMastersPanelConfig,
   type ReceptionRows,
-  normalizeReceptionRows,
+  parseReceptionLayoutFile,
 } from "../lib/receptionLayout";
 import { saveReceptionLayoutToServer } from "../lib/receptionLayoutRemote";
 import { supabase } from "../lib/supabase";
@@ -29,6 +31,9 @@ export function AdminSiteSettingsPage() {
   const [receptionRows, setReceptionRows] = useState<ReceptionRows>(() =>
     DEFAULT_RECEPTION_ROWS.map((r) => [...r]),
   );
+  const [receptionMasters, setReceptionMasters] = useState<ReceptionMastersPanelConfig>(() => ({
+    ...DEFAULT_RECEPTION_MASTERS_PANEL,
+  }));
   const [receptionDirty, setReceptionDirty] = useState(false);
   const [receptionSaving, setReceptionSaving] = useState(false);
   const [receptionFeedback, setReceptionFeedback] = useState<{
@@ -54,12 +59,16 @@ export function AdminSiteSettingsPage() {
     setSiteBookingCartEnabled(parseBoolSetting(cartRow?.value, true));
     if (recvRow?.value) {
       try {
-        setReceptionRows(normalizeReceptionRows(JSON.parse(recvRow.value)));
+        const { rows, masters } = parseReceptionLayoutFile(JSON.parse(recvRow.value) as unknown);
+        setReceptionRows(rows);
+        setReceptionMasters(masters);
       } catch {
         setReceptionRows(DEFAULT_RECEPTION_ROWS.map((r) => [...r]));
+        setReceptionMasters({ ...DEFAULT_RECEPTION_MASTERS_PANEL });
       }
     } else {
       setReceptionRows(DEFAULT_RECEPTION_ROWS.map((r) => [...r]));
+      setReceptionMasters({ ...DEFAULT_RECEPTION_MASTERS_PANEL });
     }
     setReceptionDirty(false);
     setReceptionFeedback(null);
@@ -88,7 +97,10 @@ export function AdminSiteSettingsPage() {
     setReceptionSaving(true);
     setReceptionFeedback(null);
     setError(null);
-    const { error: saveErr } = await saveReceptionLayoutToServer(receptionRows);
+    const { error: saveErr } = await saveReceptionLayoutToServer({
+      rows: receptionRows,
+      masters: receptionMasters,
+    });
     setReceptionSaving(false);
     if (saveErr) {
       setReceptionFeedback({
@@ -103,6 +115,7 @@ export function AdminSiteSettingsPage() {
 
   function resetReceptionLayoutLocal() {
     setReceptionRows(DEFAULT_RECEPTION_ROWS.map((r) => [...r]));
+    setReceptionMasters({ ...DEFAULT_RECEPTION_MASTERS_PANEL });
     setReceptionDirty(true);
     setReceptionFeedback(null);
   }
@@ -163,6 +176,8 @@ export function AdminSiteSettingsPage() {
               {receptionFeedback.msg}
             </p>
           )}
+
+          <p className="mt-3 text-xs text-zinc-500">{t("siteSettings.receptionMastersHint")}</p>
 
           <div className="mt-4">
             <ReceptionLayoutEditor

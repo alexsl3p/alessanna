@@ -1,21 +1,31 @@
 import {
-  addMonths,
-  addYears,
   eachDayOfInterval,
   eachMonthOfInterval,
   endOfMonth,
+  endOfQuarter,
   endOfWeek,
   endOfYear,
   format,
   startOfMonth,
+  startOfQuarter,
   startOfWeek,
   startOfYear,
 } from "date-fns";
 import type { TFunction } from "i18next";
 import type { i18n } from "i18next";
 import type { Dispatch, ReactNode, SetStateAction } from "react";
+import type {
+  ReceptionMastersDensity,
+  ReceptionMastersLayoutMode,
+} from "../lib/receptionLayout";
+import type { PublicCalendarScope } from "../lib/publicCalendarRange";
 import { formatSlotRange, type Slot } from "../lib/slots";
 import type { AppointmentRow, StaffMember } from "../types/database";
+import {
+  CalendarStaffLegend,
+  PublicCalendarDayAgenda,
+  PublicCalendarWeekAgenda,
+} from "./PublicCalendarAgendaViews";
 
 type PublicServiceMini = { id: string; name: string; active: boolean };
 
@@ -33,102 +43,168 @@ export type MasterDayRow = {
 
 type CalendarProps = {
   t: TFunction;
-  calendarScope: "month" | "year";
-  setCalendarScope: Dispatch<SetStateAction<"month" | "year">>;
+  i18n: i18n;
+  calendarScope: PublicCalendarScope;
+  setCalendarScope: Dispatch<SetStateAction<PublicCalendarScope>>;
   viewMonth: Date;
   setViewMonth: Dispatch<SetStateAction<Date>>;
-  monthLabel: string;
+  selectedDay: Date;
+  onSelectCalendarDay: (d: Date) => void;
   monthStart: Date;
   calendarDays: Date[];
+  weekDays: Date[];
+  rangeTitle: string;
+  onNavigatePrev: () => void;
+  onNavigateNext: () => void;
   renderDayButtons: (gridDays: Date[], anchorMonth: Date, compact: boolean) => ReactNode;
+  calendarRangeAppointments: AppointmentRow[];
+  staffById: Map<string, StaffMember>;
+  services: PublicServiceMini[];
 };
+
+function scopeButtonClass(active: boolean): string {
+  return `rounded-md px-2 py-1 text-[11px] md:px-2.5 md:text-xs ${
+    active ? "bg-zinc-800 text-white" : "text-zinc-500 hover:text-zinc-300"
+  }`;
+}
 
 export function PublicBookingCalendarSection({
   t,
+  i18n,
   calendarScope,
   setCalendarScope,
   viewMonth,
   setViewMonth,
-  monthLabel,
+  selectedDay,
+  onSelectCalendarDay,
   monthStart,
   calendarDays,
+  weekDays,
+  rangeTitle,
+  onNavigatePrev,
+  onNavigateNext,
   renderDayButtons,
+  calendarRangeAppointments,
+  staffById,
+  services,
 }: CalendarProps) {
+  const appointmentStaffIds = [
+    ...new Set(
+      calendarRangeAppointments.filter((a) => a.status !== "cancelled").map((a) => a.staff_id),
+    ),
+  ];
+
+  function setScope(next: PublicCalendarScope) {
+    setCalendarScope(next);
+    if (next === "year") setViewMonth((v) => startOfYear(v));
+    else if (next === "quarter") setViewMonth((v) => startOfQuarter(v));
+  }
+
+  const miniMonthGrid = (fromMonth: Date, toMonth: Date, compact: boolean) => (
+    <div
+      className={
+        compact
+          ? "grid max-h-[min(70vh,52rem)] gap-5 overflow-y-auto pr-1 sm:grid-cols-2 xl:grid-cols-3"
+          : "grid gap-4 sm:grid-cols-3"
+      }
+    >
+      {eachMonthOfInterval({ start: fromMonth, end: toMonth }).map((mStart) => {
+        const mAnchor = startOfMonth(mStart);
+        const from = startOfWeek(mAnchor, { weekStartsOn: 1 });
+        const to = endOfWeek(endOfMonth(mAnchor), { weekStartsOn: 1 });
+        const days = eachDayOfInterval({ start: from, end: to });
+        return (
+          <div
+            key={mAnchor.toISOString()}
+            className="rounded-lg border border-zinc-800/80 bg-black/25 p-2.5 md:p-3"
+          >
+            <p className="mb-2 text-center text-xs font-semibold capitalize text-zinc-200">
+              {format(mAnchor, "LLLL yyyy")}
+            </p>
+            <div className="mb-1.5 grid grid-cols-7 gap-0.5 text-center text-[9px] text-zinc-600 md:gap-1 md:text-[10px]">
+              {WEEKDAY_MON_FIRST.map((wd) => (
+                <span key={wd}>{t(`weekday.${wd}`)}</span>
+              ))}
+            </div>
+            <div className="grid grid-cols-7 gap-0.5 md:gap-1">{renderDayButtons(days, mAnchor, true)}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+
   return (
     <section className="rounded-xl border border-zinc-800 bg-black/30 p-4 md:p-5">
-      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <p className="text-sm font-medium text-zinc-200">{t("publicBook.day")}</p>
-          {calendarScope === "year" && (
-            <p className="mt-1 text-xs text-zinc-500">{t("publicBook.yearHint")}</p>
-          )}
+          <p className="text-sm font-medium text-zinc-200">{t("publicBook.calendarTitle")}</p>
+          <p className="mt-1 text-xs text-zinc-500">
+            {calendarScope === "year" || calendarScope === "quarter"
+              ? t("publicBook.yearHint")
+              : t("publicBook.calendarColorHint")}
+          </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex rounded-lg border border-zinc-800 p-0.5">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+          <div className="flex max-w-full flex-wrap rounded-lg border border-zinc-800 p-0.5">
+            {(
+              [
+                ["day", t("publicBook.dayView")] as const,
+                ["week", t("publicBook.weekView")] as const,
+                ["month", t("publicBook.monthView")] as const,
+                ["quarter", t("publicBook.quarterView")] as const,
+                ["year", t("publicBook.yearView")] as const,
+              ] as const
+            ).map(([key, label]) => (
+              <button key={key} type="button" onClick={() => setScope(key)} className={scopeButtonClass(calendarScope === key)}>
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setCalendarScope("month")}
-              className={`rounded-md px-2.5 py-1 text-xs ${
-                calendarScope === "month" ? "bg-zinc-800 text-white" : "text-zinc-500 hover:text-zinc-300"
-              }`}
+              onClick={onNavigatePrev}
+              className="rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:border-zinc-500 hover:text-white"
             >
-              {t("publicBook.monthView")}
+              ←
             </button>
+            <span className="min-w-[100px] max-w-[14rem] text-center text-xs text-zinc-400 md:min-w-[160px]">
+              {rangeTitle}
+            </span>
             <button
               type="button"
-              onClick={() => {
-                setCalendarScope("year");
-                setViewMonth((v) => startOfYear(v));
-              }}
-              className={`rounded-md px-2.5 py-1 text-xs ${
-                calendarScope === "year" ? "bg-zinc-800 text-white" : "text-zinc-500 hover:text-zinc-300"
-              }`}
+              onClick={onNavigateNext}
+              className="rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:border-zinc-500 hover:text-white"
             >
-              {t("publicBook.yearView")}
+              →
             </button>
           </div>
-          {calendarScope === "month" ? (
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setViewMonth((prev) => addMonths(prev, -1))}
-                className="rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:border-zinc-500 hover:text-white"
-              >
-                ←
-              </button>
-              <span className="min-w-[120px] text-center text-xs text-zinc-400">{monthLabel}</span>
-              <button
-                type="button"
-                onClick={() => setViewMonth((prev) => addMonths(prev, 1))}
-                className="rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:border-zinc-500 hover:text-white"
-              >
-                →
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setViewMonth((prev) => addYears(prev, -1))}
-                className="rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:border-zinc-500 hover:text-white"
-              >
-                ←
-              </button>
-              <span className="min-w-[4rem] text-center text-xs font-medium text-zinc-300">
-                {format(startOfYear(viewMonth), "yyyy")}
-              </span>
-              <button
-                type="button"
-                onClick={() => setViewMonth((prev) => addYears(prev, 1))}
-                className="rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:border-zinc-500 hover:text-white"
-              >
-                →
-              </button>
-            </div>
-          )}
         </div>
       </div>
-      {calendarScope === "month" ? (
+
+      {calendarScope === "day" && (
+        <PublicCalendarDayAgenda
+          day={selectedDay}
+          appointments={calendarRangeAppointments}
+          staffById={staffById}
+          services={services}
+          i18n={i18n}
+        />
+      )}
+
+      {calendarScope === "week" && (
+        <PublicCalendarWeekAgenda
+          weekDays={weekDays}
+          appointments={calendarRangeAppointments}
+          staffById={staffById}
+          services={services}
+          i18n={i18n}
+          selectedDay={selectedDay}
+          onSelectDay={onSelectCalendarDay}
+        />
+      )}
+
+      {calendarScope === "month" && (
         <>
           <div className="mb-2 grid grid-cols-7 gap-1.5 text-center text-[10px] uppercase tracking-wide text-zinc-600 md:gap-2 md:text-xs">
             {WEEKDAY_MON_FIRST.map((wd) => (
@@ -137,35 +213,14 @@ export function PublicBookingCalendarSection({
           </div>
           <div className="grid grid-cols-7 gap-1.5 md:gap-2">{renderDayButtons(calendarDays, monthStart, false)}</div>
         </>
-      ) : (
-        <div className="grid max-h-[min(70vh,52rem)] gap-5 overflow-y-auto pr-1 sm:grid-cols-2 xl:grid-cols-3">
-          {eachMonthOfInterval({
-            start: startOfYear(viewMonth),
-            end: endOfYear(viewMonth),
-          }).map((mStart) => {
-            const mAnchor = startOfMonth(mStart);
-            const from = startOfWeek(mAnchor, { weekStartsOn: 1 });
-            const to = endOfWeek(endOfMonth(mAnchor), { weekStartsOn: 1 });
-            const days = eachDayOfInterval({ start: from, end: to });
-            return (
-              <div
-                key={mAnchor.toISOString()}
-                className="rounded-lg border border-zinc-800/80 bg-black/25 p-2.5 md:p-3"
-              >
-                <p className="mb-2 text-center text-xs font-semibold capitalize text-zinc-200">
-                  {format(mAnchor, "LLLL")}
-                </p>
-                <div className="mb-1.5 grid grid-cols-7 gap-0.5 text-center text-[9px] text-zinc-600 md:gap-1 md:text-[10px]">
-                  {WEEKDAY_MON_FIRST.map((wd) => (
-                    <span key={wd}>{t(`weekday.${wd}`)}</span>
-                  ))}
-                </div>
-                <div className="grid grid-cols-7 gap-0.5 md:gap-1">{renderDayButtons(days, mAnchor, true)}</div>
-              </div>
-            );
-          })}
-        </div>
       )}
+
+      {calendarScope === "quarter" &&
+        miniMonthGrid(startOfQuarter(viewMonth), endOfQuarter(viewMonth), true)}
+
+      {calendarScope === "year" && miniMonthGrid(startOfYear(viewMonth), endOfYear(viewMonth), true)}
+
+      <CalendarStaffLegend appointmentStaffIds={appointmentStaffIds} staffById={staffById} />
     </section>
   );
 }
@@ -221,33 +276,65 @@ type MastersProps = {
   nailMasters: MasterDayRow[];
   selectedStaffId: string | null;
   onPickMaster: (staffId: string) => void;
+  density?: ReceptionMastersDensity;
+  mastersLayout?: ReceptionMastersLayoutMode;
 };
+
+function cardDensityClass(d: ReceptionMastersDensity | undefined): {
+  btn: string;
+  badge: string;
+  meta: string;
+} {
+  switch (d) {
+    case "comfortable":
+      return {
+        btn: "px-3 py-2.5 text-sm md:px-4 md:py-3 md:text-[15px]",
+        badge: "px-2 py-0.5 text-[10px] md:text-[11px]",
+        meta: "mt-1.5 text-xs md:text-sm text-zinc-500",
+      };
+    case "dense":
+      return {
+        btn: "px-2 py-1 text-[11px] md:px-2.5 md:py-1.5 md:text-xs",
+        badge: "px-1.5 py-px text-[9px]",
+        meta: "mt-0.5 text-[10px] md:text-[11px] text-zinc-500",
+      };
+    default:
+      return {
+        btn: "px-3 py-2 text-xs md:px-4 md:py-2.5 md:text-sm",
+        badge: "px-2 py-0.5 text-[10px]",
+        meta: "mt-1 text-xs text-zinc-500",
+      };
+  }
+}
 
 function MasterDayCard({
   m,
   selected,
   onPick,
+  density,
 }: {
   m: MasterDayRow;
   selected: boolean;
   onPick: () => void;
+  density?: ReceptionMastersDensity;
 }) {
+  const dc = cardDensityClass(density);
   return (
     <button
       type="button"
       onClick={onPick}
       className={
-        `w-full rounded-lg border px-3 py-2 text-left text-xs text-zinc-300 transition md:px-4 md:py-2.5 md:text-sm ` +
+        `w-full rounded-lg border text-left text-zinc-300 transition ${dc.btn} ` +
         (selected
           ? "border-sky-500/80 bg-sky-950/35 text-white ring-1 ring-sky-500/40"
           : "border-zinc-800 bg-zinc-950/70 hover:border-sky-700/70 hover:text-white")
       }
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="font-medium text-zinc-100">{m.name}</span>
+        <span className="truncate font-medium text-zinc-100">{m.name}</span>
         <span
           className={
-            "shrink-0 rounded-full border px-2 py-0.5 text-[10px] " +
+            `shrink-0 rounded-full border ${dc.badge} ` +
             (m.status === "free"
               ? "border-emerald-700/60 bg-emerald-950/40 text-emerald-200"
               : m.status === "off"
@@ -258,7 +345,7 @@ function MasterDayCard({
           {m.status === "free" ? "Есть окна" : m.status === "off" ? "Выходной" : "Занят"}
         </span>
       </div>
-      <div className="mt-1 text-zinc-500">
+      <div className={dc.meta}>
         {m.workTime} · свободных: {m.freeSlots}
       </div>
     </button>
@@ -271,21 +358,36 @@ export function PublicBookingMastersSection({
   nailMasters,
   selectedStaffId,
   onPickMaster,
+  density = "compact",
+  mastersLayout = "two_columns",
 }: MastersProps) {
   const emptyBoth = hairMasters.length === 0 && nailMasters.length === 0;
+  const sectionPad =
+    density === "comfortable"
+      ? "p-4 md:p-6"
+      : density === "dense"
+        ? "p-3 md:p-4"
+        : "p-4 md:p-5";
+  const gridGap = density === "dense" ? "gap-3 md:gap-4" : "gap-4 md:gap-5";
+  const colGap = density === "dense" ? "space-y-1.5" : "space-y-2";
+  const gridClass =
+    mastersLayout === "single_column"
+      ? `mt-4 grid ${gridGap} md:mx-auto md:max-w-xl md:grid-cols-1`
+      : `mt-4 grid ${gridGap} md:grid-cols-2`;
+
   return (
-    <section className="rounded-xl border border-zinc-800 bg-black/30 p-4 md:p-5">
+    <section className={`rounded-xl border border-zinc-800 bg-black/30 ${sectionPad}`}>
       <h2 className="text-sm font-semibold text-white">{t("publicBook.mastersTitle")}</h2>
       <p className="mt-1 text-xs text-zinc-500">{t("publicBook.mastersHint")}</p>
       {emptyBoth ? (
         <p className="mt-3 text-xs text-zinc-600">{t("publicBook.mastersEmpty")}</p>
       ) : (
-        <div className="mt-4 grid gap-4 md:grid-cols-2 md:gap-5">
+        <div className={gridClass}>
           <div>
             <h3 className="text-xs font-medium uppercase tracking-wide text-zinc-500">
               {t("publicBook.mastersHair")}
             </h3>
-            <div className="mt-2 space-y-2">
+            <div className={`mt-2 ${colGap}`}>
               {hairMasters.length > 0 ? (
                 hairMasters.map((m) => (
                   <MasterDayCard
@@ -293,6 +395,7 @@ export function PublicBookingMastersSection({
                     m={m}
                     selected={selectedStaffId === m.id}
                     onPick={() => onPickMaster(m.id)}
+                    density={density}
                   />
                 ))
               ) : (
@@ -304,7 +407,7 @@ export function PublicBookingMastersSection({
             <h3 className="text-xs font-medium uppercase tracking-wide text-zinc-500">
               {t("publicBook.mastersNails")}
             </h3>
-            <div className="mt-2 space-y-2">
+            <div className={`mt-2 ${colGap}`}>
               {nailMasters.length > 0 ? (
                 nailMasters.map((m) => (
                   <MasterDayCard
@@ -312,6 +415,7 @@ export function PublicBookingMastersSection({
                     m={m}
                     selected={selectedStaffId === m.id}
                     onPick={() => onPickMaster(m.id)}
+                    density={density}
                   />
                 ))
               ) : (

@@ -1,9 +1,12 @@
-import { type ReceptionRows, normalizeReceptionRows } from "./receptionLayout";
+import {
+  type ReceptionLayoutFilePayload,
+  parseReceptionLayoutFile,
+} from "./receptionLayout";
 import { supabase } from "./supabase";
 
 export const RECEPTION_SECTION_ORDER_SETTING_KEY = "reception_section_order";
 
-export async function fetchReceptionLayoutFromServer(): Promise<ReceptionRows | null> {
+export async function fetchReceptionLayoutFromServer(): Promise<ReceptionLayoutFilePayload | null> {
   const { data, error } = await supabase
     .from("salon_settings")
     .select("value")
@@ -11,18 +14,18 @@ export async function fetchReceptionLayoutFromServer(): Promise<ReceptionRows | 
     .maybeSingle();
   if (error || !data || data.value == null || String(data.value).trim() === "") return null;
   try {
-    return normalizeReceptionRows(JSON.parse(String(data.value)) as unknown);
+    return parseReceptionLayoutFile(JSON.parse(String(data.value)) as unknown);
   } catch {
     return null;
   }
 }
 
 export async function saveReceptionLayoutToServer(
-  rows: ReceptionRows,
+  payload: ReceptionLayoutFilePayload,
 ): Promise<{ error: string | null }> {
-  const payload = { rows };
+  const value = JSON.stringify({ rows: payload.rows, masters: payload.masters });
   const { error } = await supabase.from("salon_settings").upsert(
-    { key: RECEPTION_SECTION_ORDER_SETTING_KEY, value: JSON.stringify(payload) },
+    { key: RECEPTION_SECTION_ORDER_SETTING_KEY, value },
     { onConflict: "key" },
   );
   return { error: error?.message ?? null };

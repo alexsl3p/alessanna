@@ -38,6 +38,7 @@
   "siteSettings": {
     "receptionLayoutTitle": "Broneeringu plokkide järjekord",
     "receptionLayoutSubtitle": "Read üksteise all; reas üks või kaks blokki (laias ekraanis veerud). Broneeringu leht ja /reception. Salvestatakse serverisse.",
+    "receptionMastersHint": "Veergude koosseisu «Juuksur / maniküür», kaartide suurust ja laiust saab mugavam seadistada lehel «Vastuvõtt» (redigeerimisrežiim). Siin salvestamisel läheb sama JSON — seaded ei kao.",
     "saveReceptionLayout": "Salvesta serverisse",
     "receptionLayoutSaved": "Järjekord salvestatud",
     "receptionLayoutSaveError": "Salvestamine ebaõnnestus: {{message}}"
@@ -254,9 +255,14 @@
     "subtitle": "Vali teenus, meister ja aeg.",
     "staffLogin": "Personali sisselogimine",
     "pickStaff": "Vali meister",
+    "calendarTitle": "Kalender",
+    "dayView": "Päev",
+    "weekView": "Nädal",
     "monthView": "Kuu",
+    "quarterView": "Kvartal",
     "yearView": "Aasta",
     "yearHint": "Kogu aasta kuud: roheline — palju vabu meistreid, kollane — vähe, punane — vabu aegu pole. Klõpsa päeval ja vali aeg allpool.",
+    "calendarColorHint": "Punktid kuupäeva all — meistrid, kellel sel päeval on broneering (värv on meistrile fikseeritud). Vaated «Päev» ja «Nädal» näitavad kellaaega ja teenust.",
     "day": "Kuupäev",
     "todayMarker": "Täna",
     "mastersTitle": "Meistrid",
@@ -285,7 +291,7 @@
       "edit": "Kohanda blokke",
       "done": "Valmis",
       "reset": "Vaikimisi",
-      "hint": "Ainult administraatoritele. Redaktor: ridade lohistamine, plokkide ühendamine ja lahutamine. Järjekord serveris; koopia «Saidi seaded».",
+      "hint": "Ainult administraatoritele. Allpool — ridade järjekord ja plokk «Meistrid»: kes millises veerus, kaartide suurus, kitsas või lai vaade. Järjekord serveris; koopia «Saidi seaded».",
       "moveUp": "Üles",
       "moveDown": "Alla",
       "editor": {
@@ -300,6 +306,20 @@
         "upcoming": "Tulevased broneeringud",
         "masters": "Vabad meistrid",
         "booking": "Teenus, ajad ja broneering"
+      },
+      "masters": {
+        "title": "Plokk «Meistrid»",
+        "subtitle": "Kes millises veerus, kaartide suurus ja üks või kaks veergu. Salvestatakse serverisse koos plokkide järjekorraga.",
+        "assignment": "Jaotus veergude vahel",
+        "assignmentAuto": "Automaatne teenuste järgi",
+        "assignmentManual": "Käsitsi",
+        "density": "Kaartide suurus",
+        "densityComfortable": "Rohkem ruumi",
+        "densityCompact": "Tavaline",
+        "densityDense": "Kompaktne",
+        "columns": "Ploki laius",
+        "columnsTwo": "Kaks veergu",
+        "columnsOne": "Ahtane veerg"
       }
     }
   },
