@@ -93,6 +93,14 @@ export function sanitizeRolesForSave(
   return attachWorkerForManagers(out.length ? out : ["worker"]);
 }
 
+/**
+ * Кто из списка может делать услугу. Логика как у `public_staff_does_service` в БД:
+ * у мастера нет ни одной строки в `staff_services` → неявно все услуги салона;
+ * есть строки → только те `service_id`, что привязаны к нему. Менеджер/админ — всегда.
+ *
+ * Раньше при «ни у кого нет строки на эту услугу» возвращались все мастера — из‑за этого
+ * в списке оказывались, например, только маникюрщики при выборе детской стрижки.
+ */
 export function staffEligibleForService(
   staffList: StaffMember[],
   links: StaffServiceRow[],
@@ -101,13 +109,16 @@ export function staffEligibleForService(
   const active = staffList.filter((s) => s.active);
   if (serviceId == null) return active;
   const wantedId = String(serviceId);
-  const forSvc = links.filter((l) => String(l.service_id) === wantedId);
-  if (forSvc.length === 0) return active;
-  const ids = new Set(forSvc.map((l) => l.staff_id));
+
   return active.filter((e) => {
-    if (ids.has(e.id)) return true;
     const r = normalizeRoles(e.roles);
-    return r.includes("manager") || r.includes("admin");
+    if (r.includes("manager") || r.includes("admin")) return true;
+
+    const forStaff = links.filter((l) => l.staff_id === e.id);
+    if (forStaff.length === 0) {
+      return true;
+    }
+    return forStaff.some((l) => String(l.service_id) === wantedId);
   });
 }
 
@@ -133,14 +144,17 @@ export function staffCanPerformService(
   serviceId: string | number,
   staffList?: StaffMember[]
 ): boolean {
-  const wantedId = String(serviceId);
-  const forSvc = links.filter((l) => String(l.service_id) === wantedId);
-  if (forSvc.length === 0) return true;
-  if (forSvc.some((l) => l.staff_id === staffId)) return true;
   const st = staffList?.find((e) => e.id === staffId);
   if (!st?.active) return false;
   const r = normalizeRoles(st.roles);
-  return r.includes("manager") || r.includes("admin");
+  if (r.includes("manager") || r.includes("admin")) return true;
+
+  const wantedId = String(serviceId);
+  const forStaff = links.filter((l) => l.staff_id === staffId);
+  if (forStaff.length === 0) {
+    return true;
+  }
+  return forStaff.some((l) => String(l.service_id) === wantedId);
 }
 
 export function servicesEligibleForStaff(
