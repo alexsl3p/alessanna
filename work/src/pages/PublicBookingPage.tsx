@@ -30,6 +30,7 @@ import {
   SALON_TIME_ZONE,
 } from "../lib/bookingSalonTz";
 import { generateAvailableSlots, type Slot } from "../lib/slots";
+import { quickBookMergedFreeMinutes } from "../lib/quickBookingSchedule";
 import {
   applyPublicStaffVisibility,
   isStaffRowAdmin,
@@ -89,7 +90,7 @@ type PublicService = {
 const ANY_MASTER_ID = "any";
 
 function sortMasterDayRows(a: MasterDayRow, b: MasterDayRow): number {
-  if (a.status === b.status) return b.freeSlots - a.freeSlots;
+  if (a.status === b.status) return b.freeMinutesUnion - a.freeMinutesUnion;
   if (a.status === "free") return -1;
   if (b.status === "free") return 1;
   if (a.status === "busy" && b.status === "off") return -1;
@@ -761,9 +762,10 @@ export function PublicBookingPage() {
               daySchedule[daySchedule.length - 1].end_time || ""
             ).slice(0, 5)}`
           : "выходной";
-      const staffSlots = slotsByStaff.get(m.id);
-      const freeSlots = staffSlots?.length ?? 0;
-      const earliest = staffSlots?.[0]?.start ?? null;
+      const staffSlots = slotsByStaff.get(m.id) ?? [];
+      const freeSlots = staffSlots.length;
+      const freeMinutesUnion = quickBookMergedFreeMinutes(staffSlots, nowTick);
+      const earliest = staffSlots[0]?.start ?? null;
       const earliestFreeLabel = earliest ? format(earliest, "HH:mm") : null;
       const busyItems = appointments.filter((a) => a.staff_id === m.id).length;
       const timeOffItems = timeOff.filter((t) => t.staff_id === m.id).length;
@@ -775,6 +777,7 @@ export function PublicBookingPage() {
         name: m.name,
         workTime,
         freeSlots,
+        freeMinutesUnion,
         busyItems,
         timeOffItems,
         status,
@@ -796,6 +799,7 @@ export function PublicBookingPage() {
     schedules,
     slotsByStaff,
     timeOff,
+    nowTick,
   ]);
 
   const highlightServiceIds = useMemo(() => {
@@ -968,7 +972,10 @@ export function PublicBookingPage() {
             const staffIds = [...new Set(apList.map((a) => a.staff_id))].slice(0, 6);
             if (staffIds.length === 0) return null;
             return (
-              <div className="mt-0.5 flex flex-wrap justify-center gap-0.5">
+              <div
+                className="mt-0.5 flex flex-wrap justify-center gap-0.5"
+                title={t("publicBook.calendarStaffDotsTitle")}
+              >
                 {staffIds.map((id) => {
                   const look = resolveStaffPublicCalendarLook(id, staffById, staffColorAssignments);
                   return (

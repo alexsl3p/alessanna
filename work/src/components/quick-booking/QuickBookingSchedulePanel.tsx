@@ -67,13 +67,23 @@ type CellTone = "off" | "full" | "low" | "ok";
 
 function cellTone(stats: {
   freeFuture: number;
+  freeMinutesUnion: number;
   isClosed: boolean;
   workingSlots: number;
 }): CellTone {
   if (stats.isClosed || stats.workingSlots === 0) return "off";
   if (stats.freeFuture === 0) return "full";
-  if (stats.freeFuture <= 2) return "low";
+  if (stats.freeFuture <= 2 || stats.freeMinutesUnion < 60) return "low";
   return "ok";
+}
+
+function formatApproxFreeMinutes(totalMin: number, t: TFunction): string {
+  if (totalMin <= 0) return "—";
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (h === 0) return t("quickBook.panelApproxMinutes", { n: m });
+  if (m === 0) return t("quickBook.panelApproxHours", { n: h });
+  return t("quickBook.panelApproxHoursMinutes", { h, m });
 }
 
 const toneCls: Record<CellTone, string> = {
@@ -493,10 +503,18 @@ export function QuickBookingSchedulePanel({
                     anyMasterToken: ANY_TOKEN,
                   });
                   const tone = cellTone(stats);
-                  const label =
+                  const timeLabel =
                     stats.isClosed || stats.workingSlots === 0
                       ? "—"
-                      : String(stats.freeFuture);
+                      : formatApproxFreeMinutes(stats.freeMinutesUnion, t);
+                  const titleDetail =
+                    stats.isClosed || stats.workingSlots === 0
+                      ? t("quickBook.panelCellDetailOff")
+                      : stats.freeFuture === 0
+                        ? t("quickBook.panelCellDetailFull")
+                        : t("quickBook.panelCellDetailFree", {
+                            time: formatApproxFreeMinutes(stats.freeMinutesUnion, t),
+                          });
                   return (
                     <td key={ymd} className="p-1 align-middle">
                       <button
@@ -505,22 +523,17 @@ export function QuickBookingSchedulePanel({
                         onClick={() => onMasterCellClick(ymd, m)}
                         title={t("quickBook.panelCellTitle", {
                           name: m.name,
-                          free: stats.freeFuture,
+                          detail: titleDetail,
                         })}
                         className={[
-                          "flex min-h-[64px] w-full flex-col items-center justify-center rounded-2xl border-2 px-2 py-3 text-xl font-bold transition",
+                          "flex min-h-[64px] w-full flex-col items-center justify-center rounded-2xl border-2 px-1.5 py-2 text-center text-sm font-bold leading-snug transition sm:px-2 sm:text-base",
                           toneCls[tone],
                           stats.freeFuture > 0 && canApplySlot
                             ? "cursor-pointer hover:brightness-110 active:scale-[0.98]"
                             : "cursor-default",
                         ].join(" ")}
                       >
-                        {label}
-                        {stats.freeFuture > 0 && canApplySlot ? (
-                          <span className="mt-0.5 text-xs font-normal opacity-90">
-                            {t("quickBook.panelWindows")}
-                          </span>
-                        ) : null}
+                        {timeLabel}
                       </button>
                     </td>
                   );

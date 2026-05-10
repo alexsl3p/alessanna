@@ -137,6 +137,29 @@ export function firstFreeSlotOnDay(
   return null;
 }
 
+/** Суммарные минуты на временной шкале, покрытые хотя бы одним свободным слотом (слоты с шагом могут пересекаться). */
+export function quickBookMergedFreeMinutes(slots: Slot[], nowTick: number): number {
+  const parts = slots
+    .filter((s) => s.available && s.start.getTime() >= nowTick)
+    .map((s) => [s.start.getTime(), s.end.getTime()] as const)
+    .sort((a, b) => a[0] - b[0]);
+  if (parts.length === 0) return 0;
+  let accMs = 0;
+  let s0 = parts[0][0];
+  let e0 = parts[0][1];
+  for (let i = 1; i < parts.length; i++) {
+    const [a, b] = parts[i];
+    if (a <= e0) e0 = Math.max(e0, b);
+    else {
+      accMs += e0 - s0;
+      s0 = a;
+      e0 = b;
+    }
+  }
+  accMs += e0 - s0;
+  return Math.max(0, Math.floor(accMs / 60000));
+}
+
 /** Статистика слотов одного мастера за день (для панели расписания Quick Booking). */
 export function quickBookSlotStatsForMasterDay(params: {
   ymd: string;
@@ -147,7 +170,7 @@ export function quickBookSlotStatsForMasterDay(params: {
   durationMin: number;
   nowTick: number;
   anyMasterToken: string;
-}): { workingSlots: number; freeFuture: number; isClosed: boolean } {
+}): { workingSlots: number; freeFuture: number; freeMinutesUnion: number; isClosed: boolean } {
   const slots = slotsForQuickBookSalonDay({
     ymd: params.ymd,
     eligibleStaff: [params.master],
@@ -159,12 +182,13 @@ export function quickBookSlotStatsForMasterDay(params: {
     anyMasterToken: params.anyMasterToken,
   });
   if (slots.length === 0) {
-    return { workingSlots: 0, freeFuture: 0, isClosed: true };
+    return { workingSlots: 0, freeFuture: 0, freeMinutesUnion: 0, isClosed: true };
   }
   const freeFuture = slots.filter(
     (s) => s.available && s.start.getTime() >= params.nowTick,
   ).length;
-  return { workingSlots: slots.length, freeFuture, isClosed: false };
+  const freeMinutesUnion = quickBookMergedFreeMinutes(slots, params.nowTick);
+  return { workingSlots: slots.length, freeFuture, freeMinutesUnion, isClosed: false };
 }
 
 /** Сканировать ymd подряд от firstBookable, максимум maxDays. */

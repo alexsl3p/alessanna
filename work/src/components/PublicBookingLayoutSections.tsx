@@ -57,6 +57,8 @@ export type MasterDayRow = {
   name: string;
   workTime: string;
   freeSlots: number;
+  /** Суммарные минуты свободного времени (объединение окон), с учётом «сейчас». */
+  freeMinutesUnion: number;
   busyItems: number;
   timeOffItems: number;
   status: "free" | "busy" | "off";
@@ -643,6 +645,15 @@ type MastersProps = {
   staffColorAssignments: ReadonlyMap<string, StaffCalendarColor>;
 };
 
+function formatMasterCardApproxFreeMinutes(totalMin: number, t: TFunction): string {
+  if (totalMin <= 0) return "—";
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (h === 0) return t("publicBook.masterApproxMinutes", { n: m });
+  if (m === 0) return t("publicBook.masterApproxHours", { n: h });
+  return t("publicBook.masterApproxHoursMinutes", { h, m });
+}
+
 function cardDensityClass(d: ReceptionMastersDensity | undefined): {
   btn: string;
   badge: string;
@@ -728,7 +739,9 @@ function MasterDayCard({
               {t("publicBook.masterEarliestSlot", { time: m.earliestFreeLabel })}
             </span>
             {" · "}
-            {t("publicBook.masterFreeSlotsCount", { count: m.freeSlots })}
+            <span className="text-emerald-200/90">
+              {formatMasterCardApproxFreeMinutes(m.freeMinutesUnion, t)}
+            </span>
           </>
         )}
         {m.status === "busy" && (
