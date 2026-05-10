@@ -1,21 +1,23 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
-  addMonths,
   eachDayOfInterval,
   endOfDay,
   endOfMonth,
   endOfWeek,
+  endOfYear,
   format,
   isSameDay,
   isSameMonth,
   startOfDay,
   startOfMonth,
   startOfWeek,
+  startOfYear,
 } from "date-fns";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
-import { generateAvailableSlots, formatSlotRange, type Slot } from "../lib/slots";
+import { generateAvailableSlots, type Slot } from "../lib/slots";
 import {
   applyPublicStaffVisibility,
   isStaffRowAdmin,
@@ -24,6 +26,19 @@ import {
   staffEligibleForService,
 } from "../lib/roles";
 import type { AppointmentRow, StaffMember, StaffScheduleRow, StaffServiceRow } from "../types/database";
+import {
+  DEFAULT_RECEPTION_SECTION_ORDER,
+  type ReceptionSectionId,
+  loadReceptionSectionOrder,
+  persistReceptionSectionOrder,
+} from "../lib/receptionLayout";
+import { renderReceptionSectionOrder } from "../lib/receptionSectionOrderRender";
+import {
+  PublicBookingBookingSection,
+  PublicBookingCalendarSection,
+  PublicBookingMastersSection,
+  PublicBookingUpcomingSection,
+} from "../components/PublicBookingLayoutSections";
 
 type PublicService = {
   id: string;
@@ -38,14 +53,15 @@ const ANY_MASTER_ID = "any";
 export function PublicBookingPage() {
   const { t, i18n } = useTranslation();
   const location = useLocation();
+  const { isAdmin, staffMember } = useAuth();
   const [services, setServices] = useState<PublicService[]>([]);
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [links, setLinks] = useState<StaffServiceRow[]>([]);
   const [schedules, setSchedules] = useState<StaffScheduleRow[]>([]);
   const [appointments, setAppointments] = useState<AppointmentRow[]>([]);
   const [upcomingAppointments, setUpcomingAppointments] = useState<AppointmentRow[]>([]);
-  const [monthAppointments, setMonthAppointments] = useState<AppointmentRow[]>([]);
-  const [monthTimeOff, setMonthTimeOff] = useState<
+  const [calendarRangeAppointments, setCalendarRangeAppointments] = useState<AppointmentRow[]>([]);
+  const [calendarRangeTimeOff, setCalendarRangeTimeOff] = useState<
     Array<{ staff_id: string; start_time: string; end_time: string }>
   >([]);
   const [timeOff, setTimeOff] = useState<
@@ -56,6 +72,7 @@ export function PublicBookingPage() {
   const [staffId, setStaffId] = useState<string | null>(ANY_MASTER_ID);
   const [dayStr, setDayStr] = useState(() => format(new Date(), "yyyy-MM-dd"));
   const [viewMonth, setViewMonth] = useState(() => startOfMonth(new Date()));
+  const [calendarScope, setCalendarScope] = useState<"month" | "year">("month");
   const [clientName, setClientName] = useState("");
   const [clientPhone, setClientPhone] = useState("");
   const [pickedStart, setPickedStart] = useState<Date | null>(null);
@@ -64,6 +81,19 @@ export function PublicBookingPage() {
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState(false);
   const isReceptionMode = location.pathname === "/reception";
+  const [receptionSectionOrder, setReceptionSectionOrder] = useState<ReceptionSectionId[]>([
+    ...DEFAULT_RECEPTION_SECTION_ORDER,
+  ]);
+  const [receptionLayoutEditing, setReceptionLayoutEditing] = useState(false);
+
+  useEffect(() => {
+    if (location.pathname !== "/reception") return;
+    setReceptionSectionOrder(loadReceptionSectionOrder());
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!isAdmin) setReceptionLayoutEditing(false);
+  }, [isAdmin]);
 
   const loadBase = useCallback(async () => {
     if (!isSupabaseConfigured()) {
@@ -206,38 +236,41 @@ export function PublicBookingPage() {
     void loadUpcomingData();
   }, [loadUpcomingData]);
 
-  const loadMonthCalendarData = useCallback(async () => {
+  const loadCalendarRangeData = useCallback(async () => {
     if (!isSupabaseConfigured() || serviceId == null) {
-      setMonthAppointments([]);
-      setMonthTimeOff([]);
+      setCalendarRangeAppointments([]);
+      setCalendarRangeTimeOff([]);
       return;
     }
     const eligibleIds = eligibleStaff.map((s) => s.id);
     if (!eligibleIds.length) {
-      setMonthAppointments([]);
-      setMonthTimeOff([]);
+      setCalendarRangeAppointments([]);
+      setCalendarRangeTimeOff([]);
       return;
     }
-    const monthStartUtc = startOfDay(startOfMonth(viewMonth)).toISOString();
-    const monthEndUtc = endOfDay(endOfMonth(viewMonth)).toISOString();
+    const rangeFrom =
+      calendarScope === "year" ? startOfYear(viewMonth) : startOfMonth(viewMonth);
+    const rangeTo = calendarScope === "year" ? endOfYear(viewMonth) : endOfMonth(viewMonth);
+    const rangeStartUtc = startOfDay(rangeFrom).toISOString();
+    const rangeEndUtc = endOfDay(rangeTo).toISOString();
     const [ap, to] = await Promise.all([
       supabase
         .from("appointments")
         .select("*")
         .in("staff_id", eligibleIds)
-        .gte("start_time", monthStartUtc)
-        .lte("start_time", monthEndUtc)
+        .gte("start_time", rangeStartUtc)
+        .lte("start_time", rangeEndUtc)
         .neq("status", "cancelled"),
       supabase
         .from("staff_time_off")
         .select("*")
         .in("staff_id", eligibleIds)
-        .lte("start_time", monthEndUtc)
-        .gte("end_time", monthStartUtc),
+        .lte("start_time", rangeEndUtc)
+        .gte("end_time", rangeStartUtc),
     ]);
-    if (ap.data) setMonthAppointments(ap.data as AppointmentRow[]);
+    if (ap.data) setCalendarRangeAppointments(ap.data as AppointmentRow[]);
     if (to.data) {
-      setMonthTimeOff(
+      setCalendarRangeTimeOff(
         (to.data as Array<{ staff_id: string; start_time: string; end_time: string }>).map((r) => ({
           staff_id: r.staff_id,
           start_time: r.start_time,
@@ -245,11 +278,11 @@ export function PublicBookingPage() {
         }))
       );
     }
-  }, [eligibleStaff, serviceId, viewMonth]);
+  }, [calendarScope, eligibleStaff, serviceId, viewMonth]);
 
   useEffect(() => {
-    void loadMonthCalendarData();
-  }, [loadMonthCalendarData]);
+    void loadCalendarRangeData();
+  }, [loadCalendarRangeData]);
 
   useEffect(() => {
     const id = window.setInterval(() => setNowTick(Date.now()), 30_000);
@@ -321,8 +354,10 @@ export function PublicBookingPage() {
     >();
     if (!svc || !eligibleStaff.length) return out;
 
-    const monthDaysOnly = calendarDays.filter((d) => isSameMonth(d, monthStart));
-    for (const d of monthDaysOnly) {
+    const intervalStart = calendarScope === "year" ? startOfYear(viewMonth) : startOfMonth(viewMonth);
+    const intervalEnd = calendarScope === "year" ? endOfYear(viewMonth) : endOfMonth(viewMonth);
+    const daysInRange = eachDayOfInterval({ start: intervalStart, end: intervalEnd });
+    for (const d of daysInRange) {
       const weekday = d.getDay();
       const key = format(d, "yyyy-MM-dd");
       let working = 0;
@@ -340,8 +375,8 @@ export function PublicBookingPage() {
         working++;
         const rawSlotsForDay = generateAvailableSlots({
           schedule: memberSchedule,
-          appointments: monthAppointments,
-          timeOff: monthTimeOff,
+          appointments: calendarRangeAppointments,
+          timeOff: calendarRangeTimeOff,
           duration: durationMin,
           day: d,
           stepMinutes: 15,
@@ -357,12 +392,12 @@ export function PublicBookingPage() {
     }
     return out;
   }, [
-    calendarDays,
+    calendarScope,
+    viewMonth,
     durationMin,
     eligibleStaff,
-    monthAppointments,
-    monthStart,
-    monthTimeOff,
+    calendarRangeAppointments,
+    calendarRangeTimeOff,
     schedules,
     svc,
     nowTick,
@@ -460,7 +495,7 @@ export function PublicBookingPage() {
       if (error.code === "23P01" || /overlap|занят/i.test(String(error.message || ""))) {
         setMsg("Это время уже занято. Выберите другой слот.");
         void loadDayData();
-        void loadMonthCalendarData();
+        void loadCalendarRangeData();
         return;
       }
       setMsg(error.message);
@@ -471,8 +506,69 @@ export function PublicBookingPage() {
     setClientName("");
     setClientPhone("");
     void loadDayData();
-    void loadMonthCalendarData();
+    void loadCalendarRangeData();
     void loadUpcomingData();
+  }
+
+  function renderDayButtons(gridDays: Date[], anchorMonth: Date, compact: boolean) {
+    return gridDays.map((d) => {
+      const selected = isSameDay(d, selectedDay);
+      const inMonth = isSameMonth(d, anchorMonth);
+      const cov = dayAvailabilityBadge.get(format(d, "yyyy-MM-dd"));
+      const isWorkingDay = !!(cov && cov.working > 0);
+      const ratio = cov && cov.working > 0 ? cov.free / cov.working : 0;
+      const tone =
+        !isWorkingDay
+          ? "text-zinc-600"
+          : ratio >= 0.6
+            ? "text-emerald-300"
+            : ratio > 0
+              ? "text-amber-300"
+              : "text-red-300";
+      const sizeClass = compact
+        ? "min-h-[2.25rem] px-0.5 py-0.5 text-[10px] sm:min-h-10 sm:text-[11px]"
+        : "px-2 py-2 text-xs md:min-h-[54px] md:text-sm";
+      return (
+        <button
+          key={d.toISOString()}
+          type="button"
+          onClick={() => {
+            setDayStr(format(d, "yyyy-MM-dd"));
+            setViewMonth(startOfMonth(d));
+            setPickedStart(null);
+          }}
+          className={
+            `rounded-md border transition ${sizeClass} ` +
+            (selected
+              ? "border-sky-500 bg-sky-950/50 text-white"
+              : inMonth
+                ? "border-zinc-800 text-zinc-300 hover:border-zinc-600 hover:text-white"
+                : "border-zinc-900 text-zinc-600 hover:border-zinc-800")
+          }
+        >
+          <span className="block">{format(d, "d")}</span>
+          {inMonth && cov && (
+            <span className={`mt-0.5 block ${compact ? "text-[9px] leading-tight" : "text-[10px]"} ${tone}`}>
+              {cov.working > 0 ? `${cov.free}/${cov.working}` : "—"}
+            </span>
+          )}
+        </button>
+      );
+    });
+  }
+
+  function moveReceptionSection(index: number, delta: number) {
+    setReceptionSectionOrder((prev) => {
+      const j = index + delta;
+      if (j < 0 || j >= prev.length) return prev;
+      const next = [...prev];
+      const a = next[index]!;
+      const b = next[j]!;
+      next[index] = b;
+      next[j] = a;
+      if (location.pathname === "/reception" && isAdmin) persistReceptionSectionOrder(next);
+      return next;
+    });
   }
 
   if (!isSupabaseConfigured()) {
@@ -494,9 +590,71 @@ export function PublicBookingPage() {
     );
   }
 
+  const receptionSections: Record<ReceptionSectionId, ReactNode | null> = {
+    calendar: (
+      <PublicBookingCalendarSection
+        t={t}
+        calendarScope={calendarScope}
+        setCalendarScope={setCalendarScope}
+        viewMonth={viewMonth}
+        setViewMonth={setViewMonth}
+        monthLabel={monthLabel}
+        monthStart={monthStart}
+        calendarDays={calendarDays}
+        renderDayButtons={renderDayButtons}
+      />
+    ),
+    upcoming: (
+      <PublicBookingUpcomingSection
+        receptionUpcoming={receptionUpcoming}
+        staff={staff}
+        services={services}
+        i18n={i18n}
+      />
+    ),
+    masters:
+      serviceId != null ? (
+        <PublicBookingMastersSection
+          masterDayLoad={masterDayLoad}
+          setStaffId={setStaffId}
+          setPickedStart={setPickedStart}
+        />
+      ) : null,
+    booking:
+      serviceId != null ? (
+        <PublicBookingBookingSection
+          t={t}
+          i18n={i18n}
+          isReceptionMode={isReceptionMode}
+          serviceId={serviceId}
+          setServiceId={setServiceId}
+          setStaffId={setStaffId}
+          services={services}
+          staffId={staffId}
+          ANY_MASTER_ID={ANY_MASTER_ID}
+          slots={slots}
+          slotCoverage={slotCoverage}
+          pickedStart={pickedStart}
+          setPickedStart={setPickedStart}
+          clientName={clientName}
+          setClientName={setClientName}
+          clientPhone={clientPhone}
+          setClientPhone={setClientPhone}
+          booking={booking}
+          confirmBook={confirmBook}
+          eligibleStaff={eligibleStaff}
+        />
+      ) : null,
+  };
+
+  const mainContent = renderReceptionSectionOrder(
+    isReceptionMode ? receptionSectionOrder : DEFAULT_RECEPTION_SECTION_ORDER,
+    receptionSections,
+  );
+
   return (
     <div className="min-h-screen bg-zinc-950 px-4 py-8 text-zinc-200 md:px-6 md:py-10">
-      <div className="mx-auto w-full max-w-5xl">
+      <div className="mx-auto w-full max-w-6xl">
         <h1 className="text-2xl font-semibold text-white md:text-3xl">{t("publicBook.title")}</h1>
         <p className="mt-1 text-sm text-zinc-500">
           {isReceptionMode
@@ -507,262 +665,82 @@ export function PublicBookingPage() {
           {t("publicBook.staffLogin")}
         </Link>
 
-        <div className="mt-6 space-y-6 md:mt-8">
-          <div className="grid gap-4 md:grid-cols-[1.45fr_1fr] md:gap-5">
-            <section className="rounded-xl border border-zinc-800 bg-black/30 p-4 md:p-5">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <p className="text-sm font-medium text-zinc-200">{t("publicBook.day")}</p>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setViewMonth((prev) => addMonths(prev, -1))}
-                  className="rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:border-zinc-500 hover:text-white"
-                >
-                  ←
-                </button>
-                <span className="min-w-[120px] text-center text-xs text-zinc-400">{monthLabel}</span>
-                <button
-                  type="button"
-                  onClick={() => setViewMonth((prev) => addMonths(prev, 1))}
-                  className="rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:border-zinc-500 hover:text-white"
-                >
-                  →
-                </button>
-              </div>
-            </div>
-            <div className="mb-2 grid grid-cols-7 gap-1.5 text-center text-[10px] uppercase tracking-wide text-zinc-600 md:gap-2 md:text-xs">
-              {["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"].map((w) => (
-                <span key={w}>{w}</span>
-              ))}
-            </div>
-            <div className="grid grid-cols-7 gap-1.5 md:gap-2">
-              {calendarDays.map((d) => {
-                const selected = isSameDay(d, selectedDay);
-                const inMonth = isSameMonth(d, monthStart);
-                const cov = dayAvailabilityBadge.get(format(d, "yyyy-MM-dd"));
-                const isWorkingDay = !!(cov && cov.working > 0);
-                const ratio = cov && cov.working > 0 ? cov.free / cov.working : 0;
-                const tone =
-                  !isWorkingDay
-                    ? "text-zinc-600"
-                    : ratio >= 0.6
-                      ? "text-emerald-300"
-                      : ratio > 0
-                        ? "text-amber-300"
-                        : "text-red-300";
-                return (
-                  <button
-                    key={d.toISOString()}
-                    type="button"
-                    onClick={() => {
-                      setDayStr(format(d, "yyyy-MM-dd"));
-                      setViewMonth(startOfMonth(d));
-                      setPickedStart(null);
-                    }}
-                    className={
-                      "rounded-md border px-2 py-2 text-xs transition md:min-h-[54px] md:text-sm " +
-                      (selected
-                        ? "border-sky-500 bg-sky-950/50 text-white"
-                        : inMonth
-                          ? "border-zinc-800 text-zinc-300 hover:border-zinc-600 hover:text-white"
-                          : "border-zinc-900 text-zinc-600 hover:border-zinc-800")
-                    }
-                  >
-                    <span className="block">{format(d, "d")}</span>
-                    {inMonth && cov && (
-                      <span className={`mt-0.5 block text-[10px] ${tone}`}>
-                        {cov.working > 0 ? `${cov.free}/${cov.working}` : "—"}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-            </section>
-
-            <section className="rounded-xl border border-zinc-800 bg-black/30 p-4 md:p-5">
-              <h2 className="text-sm font-semibold text-white">Ближайшие работы</h2>
-              <p className="mt-1 text-xs text-zinc-500">Следующие записи по салону.</p>
-              <div className="mt-3 space-y-2">
-                {receptionUpcoming.length > 0 ? (
-                  receptionUpcoming.map((ap) => {
-                    const master = staff.find((s) => s.id === ap.staff_id);
-                    const svcName = services.find((s) => String(s.id) === String(ap.service_id))?.name || "—";
-                    return (
-                      <div
-                        key={ap.id}
-                        className="rounded-lg border border-zinc-800 bg-zinc-950/70 px-3 py-2 text-xs text-zinc-300"
-                      >
-                        <div className="font-medium text-zinc-100">
-                          {ap.start_time
-                            ? new Date(ap.start_time).toLocaleString(i18n.language, {
-                                dateStyle: "short",
-                                timeStyle: "short",
-                              })
-                            : "—"}
-                        </div>
-                        <div className="mt-0.5 text-zinc-400">
-                          {master?.name || "—"} · {svcName}
-                        </div>
-                        <div className="mt-0.5 text-zinc-500">{ap.client_name || "—"}</div>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <p className="text-xs text-zinc-600">Ближайших записей пока нет.</p>
-                )}
-              </div>
-            </section>
+        {isReceptionMode && staffMember && (
+          <div className="mt-4 flex flex-wrap items-center gap-2 rounded-lg border border-zinc-700/80 bg-zinc-900/60 px-3 py-2.5 text-sm">
+            <Link
+              to="/"
+              className="font-medium text-sky-400 transition hover:text-sky-300"
+            >
+              ← {t("nav.backToCrm")}
+            </Link>
+            <span className="hidden text-zinc-600 sm:inline" aria-hidden="true">
+              ·
+            </span>
+            <span className="text-xs text-zinc-500">{t("nav.receptionHint")}</span>
           </div>
+        )}
 
-          {serviceId != null && (
-            <div className="grid gap-4 md:grid-cols-[1.45fr_1fr] md:gap-5">
-              <section className="rounded-xl border border-zinc-800 bg-black/30 p-4 md:p-5">
-                <h2 className="text-sm font-semibold text-white">Свободные мастера</h2>
-                <p className="mt-1 text-xs text-zinc-500">
-                  Нажмите на мастера, чтобы сразу смотреть его доступные слоты.
-                </p>
-                <div className="mt-3 space-y-2">
-                  {masterDayLoad.length > 0 ? (
-                    masterDayLoad.map((m) => (
-                      <button
-                        key={m.id}
-                        type="button"
-                        onClick={() => {
-                          setStaffId(m.id);
-                          setPickedStart(null);
-                        }}
-                        className="rounded-lg border border-zinc-800 bg-zinc-950/70 px-3 py-2 text-left text-xs text-zinc-300 transition hover:border-sky-700/70 hover:text-white md:px-4 md:py-2.5 md:text-sm"
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="font-medium text-zinc-100">{m.name}</span>
-                          <span
-                            className={
-                              "rounded-full border px-2 py-0.5 text-[10px] " +
-                              (m.status === "free"
-                                ? "border-emerald-700/60 bg-emerald-950/40 text-emerald-200"
-                                : m.status === "off"
-                                  ? "border-zinc-700 bg-zinc-900 text-zinc-400"
-                                  : "border-amber-700/60 bg-amber-950/40 text-amber-200")
-                            }
-                          >
-                            {m.status === "free" ? "Есть окна" : m.status === "off" ? "Выходной" : "Занят"}
-                          </span>
-                        </div>
-                        <div className="mt-1 text-zinc-500">
-                          {m.workTime} · свободных: {m.freeSlots}
-                        </div>
-                      </button>
-                    ))
-                  ) : (
-                    <p className="text-xs text-zinc-600">Нет мастеров для выбранной услуги.</p>
-                  )}
-                </div>
-              </section>
-            </div>
-          )}
-
-          {serviceId != null && (
-            <>
-              <label className="block text-sm">
-                <span className="text-zinc-400">{t("modal.service")}</span>
-                <select
-                  value={serviceId ?? ""}
-                  onChange={(e) => {
-                    setServiceId(e.target.value ? String(e.target.value) : null);
-                    setStaffId(ANY_MASTER_ID);
-                    setPickedStart(null);
+        {isReceptionMode && isAdmin && (
+          <div className="mt-4 rounded-xl border border-amber-500/25 bg-amber-950/15 p-3 md:p-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setReceptionLayoutEditing((v) => !v)}
+                className="rounded-lg border border-amber-500/40 bg-amber-950/30 px-3 py-1.5 text-sm text-amber-100 hover:bg-amber-950/45"
+              >
+                {receptionLayoutEditing ? t("reception.layout.done") : t("reception.layout.edit")}
+              </button>
+              {receptionLayoutEditing && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = [...DEFAULT_RECEPTION_SECTION_ORDER];
+                    setReceptionSectionOrder(next);
+                    if (isAdmin) persistReceptionSectionOrder(next);
                   }}
-                  className="mt-1 w-full rounded-lg border border-zinc-700 bg-black px-3 py-2 text-white md:py-2.5"
+                  className="rounded-lg border border-zinc-600 px-3 py-1.5 text-sm text-zinc-300 hover:bg-zinc-800"
                 >
-                  <option value="">{t("modal.pickService")}</option>
-                  {services.filter((s) => s.active).map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <div>
-                <p className="text-sm text-zinc-400">{t("publicBook.slots")}</p>
-                {staffId === ANY_MASTER_ID && (
-                  <p className="mt-1 text-xs text-zinc-500">
-                    Показаны слоты, где есть хотя бы один свободный мастер.
-                  </p>
-                )}
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {slots.map((s) => {
-                    const key = s.start.toISOString();
-                    const freeCount = slotCoverage.get(key) || 0;
-                    return (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => setPickedStart(s.start)}
-                        className={`rounded-lg border px-3 py-2 text-sm md:px-4 md:py-2.5 ${
-                          pickedStart?.getTime() === s.start.getTime()
-                            ? "border-sky-500 bg-sky-950/50 text-white"
-                            : "border-zinc-700 text-zinc-300 hover:border-zinc-500"
-                        }`}
-                      >
-                        {formatSlotRange(s)}
-                        {staffId === ANY_MASTER_ID && freeCount > 0 ? ` · свободно: ${freeCount}` : ""}
-                      </button>
-                    );
-                  })}
-                </div>
-                {slots.length === 0 && <p className="mt-2 text-xs text-zinc-600">{t("publicBook.noSlots")}</p>}
-              </div>
-
-              <label className="block text-sm">
-                <span className="text-zinc-400">Мастер (по желанию)</span>
-                <select
-                  value={staffId ?? ANY_MASTER_ID}
-                  onChange={(e) => {
-                    setStaffId(e.target.value || ANY_MASTER_ID);
-                    setPickedStart(null);
-                  }}
-                  className="mt-1 w-full rounded-lg border border-zinc-700 bg-black px-3 py-2 text-white md:py-2.5"
-                >
-                  <option value={ANY_MASTER_ID}>Любой свободный мастер</option>
-                  {eligibleStaff.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              {pickedStart && (
-                <div className="space-y-3 rounded-xl border border-zinc-800 bg-black/40 p-4">
-                  <p className="text-sm text-zinc-400">
-                    {pickedStart.toLocaleString(i18n.language, { dateStyle: "medium", timeStyle: "short" })}
-                  </p>
-                  <input
-                    placeholder={isReceptionMode ? "Имя клиента (необязательно)" : (t("modal.client") as string)}
-                    value={clientName}
-                    onChange={(e) => setClientName(e.target.value)}
-                    className="w-full rounded-lg border border-zinc-700 bg-black px-3 py-2 text-sm"
-                  />
-                  <input
-                    placeholder={isReceptionMode ? "Телефон (необязательно)" : (t("modal.phone") as string)}
-                    value={clientPhone}
-                    onChange={(e) => setClientPhone(e.target.value)}
-                    className="w-full rounded-lg border border-zinc-700 bg-black px-3 py-2 text-sm"
-                  />
-                  <button
-                    type="button"
-                    disabled={booking}
-                    onClick={() => void confirmBook()}
-                    className="w-full rounded-lg bg-sky-600 py-2 text-sm font-medium text-white disabled:opacity-50"
-                  >
-                    {t("publicBook.confirm")}
-                  </button>
-                </div>
+                  {t("reception.layout.reset")}
+                </button>
               )}
-            </>
-          )}
+            </div>
+            {receptionLayoutEditing && (
+              <p className="mt-2 text-xs text-zinc-500">{t("reception.layout.hint")}</p>
+            )}
+            {receptionLayoutEditing && (
+              <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-zinc-300">
+                {receptionSectionOrder.map((sid, idx) => (
+                  <li key={sid} className="marker:text-zinc-500">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span>{t(`reception.layout.block.${sid}`)}</span>
+                      <button
+                        type="button"
+                        disabled={idx === 0}
+                        onClick={() => moveReceptionSection(idx, -1)}
+                        className="rounded border border-zinc-600 px-2 py-0.5 text-xs text-zinc-400 hover:bg-zinc-800 disabled:opacity-30"
+                        aria-label={t("reception.layout.moveUp")}
+                      >
+                        ↑
+                      </button>
+                      <button
+                        type="button"
+                        disabled={idx === receptionSectionOrder.length - 1}
+                        onClick={() => moveReceptionSection(idx, 1)}
+                        className="rounded border border-zinc-600 px-2 py-0.5 text-xs text-zinc-400 hover:bg-zinc-800 disabled:opacity-30"
+                        aria-label={t("reception.layout.moveDown")}
+                      >
+                        ↓
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </div>
+        )}
+
+        <div className="mt-6 space-y-6 md:mt-8">
+          {mainContent}
 
           {msg && <p className="text-sm text-emerald-400/90">{msg}</p>}
         </div>

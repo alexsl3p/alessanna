@@ -39,6 +39,9 @@
     "dashboard": "Töölaud",
     "calendar": "Kalender",
     "bookings": "Broneeringud",
+    "reception": "Vastuvõtt",
+    "receptionHint": "Tahvelarvuti broneeringuekraan; plokkide seadistus — administraatorile CRM-ist avades",
+    "backToCrm": "Tagasi CRM-i",
     "adminStaff": "Personal",
     "adminInventory": "Ladu",
     "adminCommunications": "Kirjad",
@@ -243,6 +246,9 @@
     "subtitle": "Vali teenus, meister ja aeg.",
     "staffLogin": "Personali sisselogimine",
     "pickStaff": "Vali meister",
+    "monthView": "Kuu",
+    "yearView": "Aasta",
+    "yearHint": "Kogu aasta kuud: roheline — palju vabu meistreid, kollane — vähe, punane — vabu aegu pole. Klõpsa päeval ja vali aeg allpool.",
     "day": "Kuupäev",
     "slots": "Vabad ajad",
     "noSlots": "Sellel päeval vabu aegu pole.",
@@ -250,12 +256,37 @@
     "fillAll": "Lisa nimi ja vali aeg.",
     "success": "Broneering loodud!"
   },
+  "reception": {
+    "loginTitle": "Töötaja sisselogimine",
+    "sessionRole": "Seanss",
+    "quickStaff": "Meister vahetuses",
+    "switchToCrmMode": "Täielik CRM",
+    "switchToReceptionMode": "Vastuvõtu režiim",
+    "loginSwitch": "Logi teisega",
+    "switchUser": "Vaheta kasutajat",
+    "logoutToReception": "Välju vastuvõtu ekraanile",
+    "layout": {
+      "edit": "Kohanda blokke",
+      "done": "Valmis",
+      "reset": "Vaikimisi",
+      "hint": "Paneel on nähtav ainult administraatoritele (vaja CRM seanssi selles brauseris). Nooled muudavad järjekorda ülevalt alla. Järjestikused «Kalender» ja «Tulekul» jäävad laias ekraanil ühte ritta. Seaded salvestuvad seadmes kohapeal.",
+      "moveUp": "Üles",
+      "moveDown": "Alla",
+      "block": {
+        "calendar": "Kalender (kuupäev)",
+        "upcoming": "Tulevased broneeringud",
+        "masters": "Vabad meistrid",
+        "booking": "Teenus, ajad ja broneering"
+      }
+    }
+  },
   "role": {
     "label": "Roll",
     "admin": "Admin",
     "manager": "Juht",
     "worker": "Meister",
-    "staff": "Meister"
+    "staff": "Meister",
+    "reception": "Vastuvõtt"
   },
   "dashboard": {
     "title": "Töölaud",
