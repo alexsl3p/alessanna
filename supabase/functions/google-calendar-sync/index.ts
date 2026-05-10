@@ -46,6 +46,80 @@ function json(status: number, body: unknown): Response {
   });
 }
 
+const GOOGLE_EVENT_TZ = "Europe/Tallinn";
+
+/**
+ * When `timeZone` is set on the event, Google expects a *local* wall time in that zone,
+ * not an ISO string with `Z` (UTC). Mixing Z + timeZone causes wrong instants or API errors.
+ */
+function toGoogleCalendarDateTime(utcIsoOrAny: string): string {
+  const d = new Date(utcIsoOrAny);
+  if (!Number.isFinite(d.getTime())) {
+    return String(utcIsoOrAny).replace(/Z$/i, "").replace(/[+-]\d{2}:?\d{2}$/, "");
+  }
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: GOOGLE_EVENT_TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).formatToParts(d);
+  const p = (t: string) => parts.find((x) => x.type === t)?.value ?? "00";
+  return `${p("year")}-${p("month")}-${p("day")}T${p("hour")}:${p("minute")}:${p("second")}`;
+}
+
+function googleApiErrorPayload(
+  httpStatus: number,
+  gJson: unknown,
+): { errorLine: string; google: { httpStatus: number; body: unknown } } {
+  const err =
+    gJson && typeof gJson === "object" && "error" in gJson
+      ? (gJson as { error: { message?: string; status?: string; errors?: unknown } }).error
+      : null;
+  const bits = [
+    `HTTP ${httpStatus}`,
+    err && typeof err.message === "string" ? err.message : null,
+    err && typeof err.status === "string" ? `reason=${err.status}` : null,
+  ].filter(Boolean);
+  const errorLine =
+    bits.length > 0
+      ? bits.join(" — ")
+      : (typeof gJson === "string" ? gJson : JSON.stringify(gJson ?? {})).slice(0, 1200);
+  return { errorLine, google: { httpStatus, body: gJson } };
+}
+
+async function verifyWritableGoogleCalendar(
+  accessToken: string,
+  calendarId: string,
+): Promise<
+  { ok: true; summary: string } | { ok: false; errorLine: string; google: { httpStatus: number; body: unknown } }
+> {
+  const metaRes = await fetch(
+    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}`,
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+  const metaJson = await metaRes.json().catch(() => ({}));
+  if (!metaRes.ok) {
+    const { errorLine, google } = googleApiErrorPayload(metaRes.status, metaJson);
+    return { ok: false, errorLine: `Calendar metadata: ${errorLine}`, google };
+  }
+  const accessRole = String((metaJson as { accessRole?: string }).accessRole ?? "");
+  if (accessRole === "reader" || accessRole === "freeBusyReader") {
+    return {
+      ok: false,
+      errorLine:
+        `Calendar "${calendarId}" is read-only (accessRole=${accessRole}). ` +
+        `In Integrations, set google_calendar_id to a calendar you can edit (e.g. primary or explicit id).`,
+      google: { httpStatus: metaRes.status, body: metaJson },
+    };
+  }
+  const summary = String((metaJson as { summary?: string }).summary ?? "");
+  return { ok: true, summary };
+}
+
 function parsePhone(input: string): string | null {
   const m = input.match(/\+?[0-9][0-9\s\-()]{5,}/);
   return m ? m[0].trim() : null;
@@ -235,8 +309,8 @@ async function upsertGoogleEvent(
     ]
       .filter(Boolean)
       .join("\n"),
-    start: { dateTime: start, timeZone: "Europe/Tallinn" },
-    end: { dateTime: end, timeZone: "Europe/Tallinn" },
+    start: { dateTime: toGoogleCalendarDateTime(start), timeZone: GOOGLE_EVENT_TZ },
+    end: { dateTime: toGoogleCalendarDateTime(end), timeZone: GOOGLE_EVENT_TZ },
     extendedProperties: {
       private: {
         assigned_master_name: staffName || "",
@@ -261,7 +335,13 @@ async function upsertGoogleEvent(
       calendar_id: calendarId,
       event_id: existingEventId ?? null,
       summary_preview: title.slice(0, 120),
-      time_range: { start, end, timeZone: "Europe/Tallinn" },
+      time_range: {
+        start_utc: start,
+        end_utc: end,
+        start_local: toGoogleCalendarDateTime(start),
+        end_local: toGoogleCalendarDateTime(end),
+        timeZone: GOOGLE_EVENT_TZ,
+      },
     }),
   );
   const res = await fetch(url, {
@@ -293,9 +373,8 @@ async function upsertGoogleEvent(
     }),
   );
   if (!res.ok || !jsonBody?.id) {
-    throw new Error(
-      errMsg ? `Google upsert failed (${res.status}): ${errMsg}` : `Google upsert failed (${res.status})`,
-    );
+    const { errorLine } = googleApiErrorPayload(res.status, jsonBody);
+    throw new Error(`Google upsert failed: ${errorLine}`);
   }
   return {
     eventId: String(jsonBody.id),
@@ -965,6 +1044,24 @@ async function websiteBookingToGoogle(sb: ReturnType<typeof createClient>, body:
 
   const accessToken = await getScopeTokens(sb, scopeKey);
 
+  const calMeta = await verifyWritableGoogleCalendar(accessToken, calendarId);
+  if (!calMeta.ok) {
+    console.log(
+      JSON.stringify({
+        msg: "website_booking_calendar_verify_failed",
+        calendar_id: calendarId,
+        staff_google_calendar_id_raw: staffRow.google_calendar_id,
+        error: calMeta.errorLine,
+        google: calMeta.google,
+      }),
+    );
+    return json(200, {
+      ok: false,
+      error: calMeta.errorLine,
+      google: calMeta.google,
+    });
+  }
+
   const staffName = String(staffRow.name ?? "").trim();
   const serviceName = String(svcRow.name ?? "").trim();
   const title = `${clientName} — ${serviceName}`;
@@ -979,11 +1076,13 @@ async function websiteBookingToGoogle(sb: ReturnType<typeof createClient>, body:
     .filter(Boolean)
     .join("\n");
 
+  const startLocal = toGoogleCalendarDateTime(startTime);
+  const endLocal = toGoogleCalendarDateTime(endTime);
   const eventPayload: Record<string, unknown> = {
     summary: title,
     description,
-    start: { dateTime: startTime, timeZone: "Europe/Tallinn" },
-    end: { dateTime: endTime, timeZone: "Europe/Tallinn" },
+    start: { dateTime: startLocal, timeZone: GOOGLE_EVENT_TZ },
+    end: { dateTime: endLocal, timeZone: GOOGLE_EVENT_TZ },
   };
   const staffEmail = String(
     (staffRow.calendar_email as string | null) ?? (staffRow.google_calendar_account_email as string | null) ?? "",
@@ -994,11 +1093,19 @@ async function websiteBookingToGoogle(sb: ReturnType<typeof createClient>, body:
 
   console.log(
     JSON.stringify({
-      msg: "website_booking_google_insert_start",
+      msg: "website_booking_google_request_full",
       staff_id: staffId,
+      scope_key: scopeKey,
       calendar_id: calendarId,
-      start_time: startTime,
-      end_time: endTime,
+      staff_google_calendar_id_raw: staffRow.google_calendar_id,
+      calendar_list_summary: calMeta.summary,
+      start_time_utc: startTime,
+      end_time_utc: endTime,
+      start_dateTime_local: startLocal,
+      end_dateTime_local: endLocal,
+      time_zone: GOOGLE_EVENT_TZ,
+      event_title: title,
+      event_payload: eventPayload,
     }),
   );
 
@@ -1012,23 +1119,23 @@ async function websiteBookingToGoogle(sb: ReturnType<typeof createClient>, body:
     body: JSON.stringify(eventPayload),
   });
   const gJson = await gRes.json().catch(() => ({}));
-  const gErr = gJson && typeof gJson === "object" && "error" in gJson
-    ? (gJson as { error?: { message?: string } }).error
-    : undefined;
   console.log(
     JSON.stringify({
       msg: "website_booking_google_insert_response",
       ok: gRes.ok,
       http_status: gRes.status,
+      response_body: gJson,
       event_id: (gJson as { id?: string })?.id ?? null,
-      error: gErr ?? null,
     }),
   );
 
   if (!gRes.ok || !(gJson as { id?: string })?.id) {
-    const msg =
-      typeof gErr?.message === "string" ? gErr.message : JSON.stringify(gJson).slice(0, 600);
-    return json(200, { ok: false, error: `Google Calendar: ${msg}` });
+    const { errorLine, google } = googleApiErrorPayload(gRes.status, gJson);
+    return json(200, {
+      ok: false,
+      error: errorLine,
+      google,
+    });
   }
 
   const eventId = String((gJson as { id: string }).id);
@@ -1110,7 +1217,7 @@ async function websiteBookingToGoogle(sb: ReturnType<typeof createClient>, body:
 
 async function testEvent(sb: ReturnType<typeof createClient>, body: Record<string, unknown>) {
   const scope = String(body.scope ?? "salon");
-  const title = String(body.title ?? "CRM test event");
+  const title = String(body.title ?? "TEST BOOKING");
   const scopeKey = scope === "salon" ? "salon" : scope;
   const accessToken = await getScopeTokens(sb, scopeKey);
   const { data: settingsRows } = await sb
@@ -1126,9 +1233,51 @@ async function testEvent(sb: ReturnType<typeof createClient>, body: Record<strin
     const { data: staffRow } = await sb.from("staff").select("google_calendar_id").eq("id", sid).maybeSingle();
     staffCalendarId = (staffRow?.google_calendar_id as string | null) ?? null;
   }
-  const calendarId = calendarIdForScope(scope, staffCalendarId, salonCalendarId);
-  const start = new Date(Date.now() + 10 * 60 * 1000);
-  const end = new Date(start.getTime() + 30 * 60 * 1000);
+  let calendarId: string;
+  try {
+    calendarId = calendarIdForScope(scope, staffCalendarId, salonCalendarId);
+  } catch (e) {
+    return json(200, { ok: false, error: e instanceof Error ? e.message : String(e) });
+  }
+
+  const customStart = String(body.startTime ?? "").trim();
+  const customEnd = String(body.endTime ?? "").trim();
+  let start: Date;
+  let end: Date;
+  if (customStart && customEnd) {
+    start = new Date(customStart);
+    end = new Date(customEnd);
+    if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())) {
+      return json(200, { ok: false, error: "Invalid startTime/endTime (use ISO 8601)" });
+    }
+  } else {
+    start = new Date(Date.now() + 10 * 60 * 1000);
+    end = new Date(start.getTime() + 60 * 60 * 1000);
+  }
+
+  const calMeta = await verifyWritableGoogleCalendar(accessToken, calendarId);
+  if (!calMeta.ok) {
+    return json(200, { ok: false, error: calMeta.errorLine, google: calMeta.google });
+  }
+
+  const startLocal = toGoogleCalendarDateTime(start.toISOString());
+  const endLocal = toGoogleCalendarDateTime(end.toISOString());
+  const eventPayload = {
+    summary: title,
+    description: String(body.description ?? "Created by google-calendar-sync test_event"),
+    start: { dateTime: startLocal, timeZone: GOOGLE_EVENT_TZ },
+    end: { dateTime: endLocal, timeZone: GOOGLE_EVENT_TZ },
+  };
+  console.log(
+    JSON.stringify({
+      msg: "test_event_full",
+      scope,
+      calendar_id: calendarId,
+      calendar_summary: calMeta.summary,
+      event_payload: eventPayload,
+    }),
+  );
+
   const res = await fetch(
     `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`,
     {
@@ -1137,17 +1286,30 @@ async function testEvent(sb: ReturnType<typeof createClient>, body: Record<strin
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        summary: title,
-        description: "Created by google-calendar-sync test_event",
-        start: { dateTime: start.toISOString(), timeZone: "Europe/Tallinn" },
-        end: { dateTime: end.toISOString(), timeZone: "Europe/Tallinn" },
-      }),
+      body: JSON.stringify(eventPayload),
     },
   );
   const bodyJson = await res.json().catch(() => ({}));
-  if (!res.ok || !bodyJson?.id) throw new Error(`Google test event failed (${res.status})`);
-  return json(200, { ok: true, scope, calendarId, eventId: String(bodyJson.id) });
+  console.log(
+    JSON.stringify({
+      msg: "test_event_response",
+      http_status: res.status,
+      response_body: bodyJson,
+    }),
+  );
+  if (!res.ok || !bodyJson?.id) {
+    const { errorLine, google } = googleApiErrorPayload(res.status, bodyJson);
+    return json(200, { ok: false, error: errorLine, google });
+  }
+  return json(200, {
+    ok: true,
+    scope,
+    calendarId,
+    calendarSummary: calMeta.summary,
+    eventId: String(bodyJson.id),
+    startLocal,
+    endLocal,
+  });
 }
 
 Deno.serve(async (req: Request) => {

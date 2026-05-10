@@ -374,6 +374,16 @@ export function BookingsPage() {
     if (src === "public_site" && row.google_event_id) {
       return { label: "synced", tone: "border-emerald-800/60 bg-emerald-950/40 text-emerald-200" };
     }
+    if (src === "public_site" && !row.google_event_id) {
+      return {
+        label: t("bookings.googleMissing", { defaultValue: "Нет в Google" }),
+        tone: "border-amber-800/60 bg-amber-950/40 text-amber-200",
+        error: t("bookings.googleMissingHint", {
+          defaultValue:
+            "Запись с сайта без google_event_id — событие в Google не создано или не привязано. Проверьте Integrations и логи Edge Function.",
+        }),
+      };
+    }
     return null;
   }
 

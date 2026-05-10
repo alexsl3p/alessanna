@@ -17,6 +17,7 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
+import { formatGoogleCalendarFnError } from "../lib/formatGoogleCalendarFnError";
 import {
   compareSalonYmd,
   gregorianAddDays,
@@ -861,9 +862,9 @@ export function PublicBookingPage() {
         setMsg(fnError.message || "Не удалось связаться с сервером записи.");
         return;
       }
-      const payload = (data ?? {}) as { ok?: boolean; error?: string };
-      if (payload.ok !== true) {
-        const errText = String(payload.error ?? "Запись не создана.");
+      const payload = data ?? {};
+      if ((payload as { ok?: boolean }).ok !== true) {
+        const errText = formatGoogleCalendarFnError(payload);
         setMsg(errText);
         if (/slot|занят|no longer available/i.test(errText)) {
           void loadDayData();
@@ -1158,7 +1159,15 @@ export function PublicBookingPage() {
                   : "border-amber-500/35 bg-amber-950/20 text-amber-100"
               }`}
             >
-              <p className={msg === t("publicBook.success") ? "font-medium text-emerald-200" : ""}>{msg}</p>
+              <p
+                className={
+                  msg === t("publicBook.success")
+                    ? "font-medium text-emerald-200"
+                    : "whitespace-pre-wrap break-words"
+                }
+              >
+                {msg}
+              </p>
               {msg === t("publicBook.success") ? (
                 <p className="mt-2 border-t border-emerald-500/20 pt-2 text-xs leading-relaxed text-emerald-100/85">
                   {t("publicBook.successPriceDisclaimer")}

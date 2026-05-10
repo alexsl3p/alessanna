@@ -3,6 +3,7 @@ import { format } from "date-fns";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
+import { formatGoogleCalendarFnError } from "../lib/formatGoogleCalendarFnError";
 import {
   compareSalonYmd,
   normalizePublicBookingDayStr,
@@ -233,11 +234,12 @@ export function SimplePublicBookingPage() {
         setMsg(fnError.message || "Ошибка сервера");
         return;
       }
-      const payload = (data ?? {}) as { ok?: boolean; error?: string };
-      if (payload.ok !== true) {
+      const payload = data ?? {};
+      if ((payload as { ok?: boolean }).ok !== true) {
         setMsgIsSuccess(false);
-        setMsg(String(payload.error ?? "Запись не создана."));
-        if (/slot|занят|no longer available/i.test(String(payload.error))) void loadDayData();
+        const errText = formatGoogleCalendarFnError(payload);
+        setMsg(errText);
+        if (/slot|занят|no longer available/i.test(errText)) void loadDayData();
         return;
       }
       setMsgIsSuccess(true);
@@ -299,7 +301,7 @@ export function SimplePublicBookingPage() {
                 : "border-rose-800/50 bg-rose-950/30 text-rose-100")
             }
           >
-            {msg}
+            <p className={msgIsSuccess ? "" : "whitespace-pre-wrap break-words"}>{msg}</p>
           </div>
         )}
 

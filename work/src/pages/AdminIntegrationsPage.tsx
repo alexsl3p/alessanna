@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { supabase } from "../lib/supabase";
+import { gregorianAddDays, SALON_TIME_ZONE, salonCalendarYmd, salonDayStartUtc } from "../lib/bookingSalonTz";
 
 /**
  * /admin/integrations — управление внешними интеграциями салона.
@@ -598,6 +599,8 @@ export function AdminIntegrationsPage() {
   const [importApplyResult, setImportApplyResult] = useState<ImportSummary | null>(null);
   const [staffColorsSyncResult, setStaffColorsSyncResult] = useState<StaffColorsSyncResult | null>(null);
   const [syncEngineResult, setSyncEngineResult] = useState<string | null>(null);
+  const [googleCalendarWriteTestResult, setGoogleCalendarWriteTestResult] = useState<string | null>(null);
+  const [googleWriteTestStaffId, setGoogleWriteTestStaffId] = useState<string>("");
 
   const loadSettings = useCallback(async () => {
     setSettingsError(null);
@@ -721,6 +724,27 @@ export function AdminIntegrationsPage() {
     for (const s of staff) m.set(s.id, s.name);
     return m;
   }, [staff]);
+
+  const staffForGoogleWriteTest = useMemo(() => {
+    return staff.filter((s) => {
+      const cid = s.google_calendar_id != null ? String(s.google_calendar_id).trim() : "";
+      return (
+        s.google_calendar_status === "connected" &&
+        cid !== "" &&
+        cid.toLowerCase() !== "primary"
+      );
+    });
+  }, [staff]);
+
+  useEffect(() => {
+    if (staffForGoogleWriteTest.length === 0) {
+      setGoogleWriteTestStaffId("");
+      return;
+    }
+    if (!googleWriteTestStaffId || !staffForGoogleWriteTest.some((s) => s.id === googleWriteTestStaffId)) {
+      setGoogleWriteTestStaffId(staffForGoogleWriteTest[0].id);
+    }
+  }, [staffForGoogleWriteTest, googleWriteTestStaffId]);
 
   /* ----- email-сохранения ------------------------------------------------ */
 
@@ -940,6 +964,75 @@ export function AdminIntegrationsPage() {
     );
   }
 
+  type GoogleWriteTestPayload = {
+    ok?: boolean;
+    error?: string;
+    google?: { httpStatus: number; body: unknown };
+    eventId?: string;
+    calendarId?: string;
+    calendarSummary?: string;
+    startLocal?: string;
+    endLocal?: string;
+  };
+
+  async function runGoogleCalendarWriteTest(which: "salon" | "staff") {
+    const busyKey =
+      which === "salon" ? "google-write-test-salon" : `google-write-test-staff-${googleWriteTestStaffId}`;
+    setActionBusy(busyKey);
+    setImportError(null);
+    setGoogleCalendarWriteTestResult(null);
+    const ymd = gregorianAddDays(salonCalendarYmd(new Date()), 1);
+    const start = new Date(salonDayStartUtc(ymd).getTime() + 15 * 60 * 60 * 1000);
+    const end = new Date(start.getTime() + 60 * 60 * 1000);
+    const scope = which === "salon" ? "salon" : `staff:${googleWriteTestStaffId}`;
+    if (which === "staff" && !googleWriteTestStaffId) {
+      setActionBusy(null);
+      setImportError("Выберите мастера с подключённым Google и явным calendar ID (не primary).");
+      return;
+    }
+    const { data, error } = await supabase.functions.invoke("google-calendar-sync", {
+      body: {
+        mode: "test_event",
+        scope,
+        title: "TEST BOOKING",
+        startTime: start.toISOString(),
+        endTime: end.toISOString(),
+      },
+    });
+    setActionBusy(null);
+    if (error) {
+      setImportError(error.message);
+      return;
+    }
+    const d = (data ?? {}) as GoogleWriteTestPayload;
+    if (!d.ok) {
+      const parts = [d.error ?? "Тест не прошёл"];
+      if (d.google != null) {
+        parts.push(`HTTP ${d.google.httpStatus}`);
+        parts.push(
+          typeof d.google.body === "string"
+            ? d.google.body
+            : JSON.stringify(d.google.body, null, 2),
+        );
+      }
+      setGoogleCalendarWriteTestResult(parts.join("\n\n"));
+      setImportError(d.error ?? "Google Calendar test failed");
+      return;
+    }
+    setImportError(null);
+    setGoogleCalendarWriteTestResult(
+      [
+        "OK — событие создано в Google.",
+        `eventId: ${d.eventId}`,
+        `calendarId: ${d.calendarId}`,
+        d.calendarSummary ? `календарь: ${d.calendarSummary}` : null,
+        d.startLocal && d.endLocal ? `локальное время: ${d.startLocal} → ${d.endLocal} (${SALON_TIME_ZONE})` : null,
+      ]
+        .filter(Boolean)
+        .join("\n"),
+    );
+  }
+
   const status = settings.google_calendar_status;
   const statusInfo = googleStatusBadge(status);
 
@@ -1136,6 +1229,72 @@ export function AdminIntegrationsPage() {
             </button>
           </div>
           {syncEngineResult && <p className="mt-2 text-xs text-emerald-300">{syncEngineResult}</p>}
+        </div>
+
+        <div className="mt-4 rounded-lg border border-amber-900/40 bg-amber-950/15 p-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-amber-200/90">
+            Проверка записи в Google (TEST BOOKING)
+          </p>
+          <p className="mt-1 text-xs text-zinc-500">
+            Создаёт реальное событие «TEST BOOKING» <strong>завтра 15:00–16:00</strong> (
+            {SALON_TIME_ZONE}). Если события нет в календаре — ниже будет полный ответ API.
+          </p>
+          <div className="mt-2 flex flex-wrap items-end gap-2">
+            <label className="flex flex-col text-[11px] text-zinc-400">
+              Мастер (OAuth + calendar ID)
+              <select
+                value={googleWriteTestStaffId}
+                onChange={(e) => setGoogleWriteTestStaffId(e.target.value)}
+                disabled={staffForGoogleWriteTest.length === 0}
+                className="mt-1 min-w-[220px] rounded-md border border-zinc-700 bg-black/40 px-2 py-1.5 text-sm text-zinc-100 focus:border-amber-700/60 focus:outline-none"
+              >
+                {staffForGoogleWriteTest.length === 0 ? (
+                  <option value="">Нет мастеров с calendar ID</option>
+                ) : (
+                  staffForGoogleWriteTest.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} — {s.google_calendar_id}
+                    </option>
+                  ))
+                )}
+              </select>
+            </label>
+            <button
+              type="button"
+              onClick={() => void runGoogleCalendarWriteTest("staff")}
+              disabled={
+                !!actionBusy?.startsWith("google-write-test") ||
+                staffForGoogleWriteTest.length === 0 ||
+                !googleWriteTestStaffId
+              }
+              className="rounded-md border border-amber-700/60 bg-amber-950/40 px-3 py-1.5 text-xs font-medium text-amber-100 transition hover:bg-amber-900/50 disabled:opacity-40"
+            >
+              {actionBusy?.startsWith("google-write-test-staff") ? "Создаём…" : "В календарь мастера"}
+            </button>
+            <button
+              type="button"
+              onClick={() => void runGoogleCalendarWriteTest("salon")}
+              disabled={
+                !!actionBusy?.startsWith("google-write-test") ||
+                status !== "connected" ||
+                !settings.google_calendar_id ||
+                String(settings.google_calendar_id).trim().toLowerCase() === "primary"
+              }
+              className="rounded-md border border-zinc-600 bg-zinc-900/60 px-3 py-1.5 text-xs font-medium text-zinc-200 transition hover:bg-zinc-800/80 disabled:opacity-40"
+              title={
+                String(settings.google_calendar_id ?? "").trim().toLowerCase() === "primary"
+                  ? "Укажите явный salon google_calendar_id (не primary) для этой проверки."
+                  : undefined
+              }
+            >
+              {actionBusy === "google-write-test-salon" ? "Создаём…" : "В салонный календарь"}
+            </button>
+          </div>
+          {googleCalendarWriteTestResult ? (
+            <pre className="mt-2 max-h-56 overflow-auto whitespace-pre-wrap break-words rounded border border-zinc-800 bg-black/50 p-2 text-[11px] text-zinc-300">
+              {googleCalendarWriteTestResult}
+            </pre>
+          ) : null}
         </div>
 
         {settingsLoading && (
