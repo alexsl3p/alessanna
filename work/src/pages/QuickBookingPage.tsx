@@ -29,9 +29,17 @@ export function QuickBookingPage() {
           >
             ← {t("quickBook.backToReception")}
           </Link>
-          <Link to="/" className="min-h-[48px] rounded-xl px-3 py-3 text-sm text-zinc-500 hover:text-zinc-300">
-            CRM
-          </Link>
+          <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+            <Link
+              to="/help"
+              className="min-h-[48px] rounded-xl px-3 py-3 text-sm font-medium text-violet-300 hover:text-violet-200"
+            >
+              {t("publicBook.receptionSupport")}
+            </Link>
+            <Link to="/" className="min-h-[48px] rounded-xl px-3 py-3 text-sm text-zinc-500 hover:text-zinc-300">
+              CRM
+            </Link>
+          </div>
         </div>
       </div>
       <QuickBookingWizard createdByStaffId={staffMember.id} />

@@ -254,6 +254,8 @@
     "title": "Online broneering",
     "subtitle": "Vali teenus, meister ja aeg.",
     "staffLogin": "Personali sisselogimine",
+    "receptionSupport": "Tugi",
+    "receptionSupportLoginCta": "Logi sisse ja kirjuta toele",
     "pickStaff": "Vali meister",
     "calendarTitle": "Kalender",
     "dayView": "Päev",

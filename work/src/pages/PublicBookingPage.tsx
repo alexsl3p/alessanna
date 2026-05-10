@@ -1105,9 +1105,19 @@ export function PublicBookingPage() {
             ? "Режим ресепшен: быстрая запись клиента без входа в CRM."
             : t("publicBook.subtitle")}
         </p>
-        <Link to="/login" className="mt-2 inline-block text-sm text-sky-400">
-          {t("publicBook.staffLogin")}
-        </Link>
+        <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4 sm:gap-y-1">
+          <Link to="/login" className="inline-block text-sm text-sky-400">
+            {t("publicBook.staffLogin")}
+          </Link>
+          {isReceptionMode && !staffMember && (
+            <Link
+              to="/login?next=/help"
+              className="inline-block text-sm font-medium text-violet-300 hover:text-violet-200"
+            >
+              {t("publicBook.receptionSupportLoginCta")}
+            </Link>
+          )}
+        </div>
 
         {isReceptionMode && staffMember && (
           <div className="mt-4 flex flex-wrap items-center gap-2 rounded-lg border border-zinc-700/80 bg-zinc-900/60 px-3 py-2.5 text-sm">
@@ -1121,6 +1131,12 @@ export function PublicBookingPage() {
               ·
             </span>
             <span className="min-w-0 flex-1 text-xs text-zinc-500">{t("nav.receptionHint")}</span>
+            <Link
+              to="/help"
+              className="inline-flex min-h-[44px] shrink-0 items-center justify-center rounded-xl border border-violet-500/45 bg-violet-950/40 px-4 text-sm font-semibold text-violet-100 shadow-[0_6px_22px_rgba(139,92,246,0.12)] transition hover:border-violet-400/55 hover:bg-violet-950/55"
+            >
+              {t("publicBook.receptionSupport")}
+            </Link>
             {!isAdmin && (
               <Link
                 to="/quick-booking"
@@ -1143,12 +1159,20 @@ export function PublicBookingPage() {
                 {receptionLayoutEditing ? t("reception.layout.done") : t("reception.layout.edit")}
               </button>
               {staffMember && (
-                <Link
-                  to="/quick-booking"
-                  className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-emerald-500/45 bg-emerald-950/45 px-4 text-sm font-semibold text-emerald-50 shadow-[0_8px_28px_rgba(16,185,129,0.18)] transition hover:border-emerald-400/65 hover:bg-emerald-950/60"
-                >
-                  ⚡ {t("quickBook.openTabletFlow")}
-                </Link>
+                <>
+                  <Link
+                    to="/help"
+                    className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-violet-500/45 bg-violet-950/40 px-4 text-sm font-semibold text-violet-100 transition hover:border-violet-400/55 hover:bg-violet-950/55"
+                  >
+                    {t("publicBook.receptionSupport")}
+                  </Link>
+                  <Link
+                    to="/quick-booking"
+                    className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-emerald-500/45 bg-emerald-950/45 px-4 text-sm font-semibold text-emerald-50 shadow-[0_8px_28px_rgba(16,185,129,0.18)] transition hover:border-emerald-400/65 hover:bg-emerald-950/60"
+                  >
+                    ⚡ {t("quickBook.openTabletFlow")}
+                  </Link>
+                </>
               )}
               {receptionLayoutEditing && (
                 <button

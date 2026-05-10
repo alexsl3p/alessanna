@@ -1,5 +1,5 @@
 import { FormEvent, useState } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Link, Navigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth, type LoginResult } from "../context/AuthContext";
 import { isSupabaseConfigured } from "../lib/supabase";
@@ -13,8 +13,21 @@ function publicSiteUrl(): string {
   return (fromEnv || "https://alessannailu.com").replace(/\/+$/, "");
 }
 
+/** Разрешаем только относительные пути приложения (без open-redirect). */
+function safePostLoginPath(nextParam: string | null): string {
+  if (!nextParam) return "/";
+  const raw = nextParam.trim();
+  if (!raw.startsWith("/") || raw.startsWith("//")) return "/";
+  const pathOnly = raw.split(/[?#]/)[0] ?? "";
+  if (!pathOnly.startsWith("/") || pathOnly.startsWith("//")) return "/";
+  if (/[\s\\]/.test(pathOnly)) return "/";
+  return raw;
+}
+
 export function LoginPage() {
   const { t } = useTranslation();
+  const [searchParams] = useSearchParams();
+  const nextAfterLogin = safePostLoginPath(searchParams.get("next"));
   const { staffMember, login, hasDeviceToken, loading } = useAuth();
   const [phone, setPhone] = useState("");
   const [pin, setPin] = useState("");
@@ -25,7 +38,7 @@ export function LoginPage() {
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
 
-  if (staffMember) return <Navigate to="/" replace />;
+  if (staffMember) return <Navigate to={nextAfterLogin} replace />;
   /* Пока AuthContext пробует автологин по device_token — не показываем форму,
    * чтобы не моргала. Успешный автологин сам редиректнет выше по условию. */
   if (loading) {
