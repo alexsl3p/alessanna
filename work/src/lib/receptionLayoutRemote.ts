@@ -23,7 +23,11 @@ export async function fetchReceptionLayoutFromServer(): Promise<ReceptionLayoutF
 export async function saveReceptionLayoutToServer(
   payload: ReceptionLayoutFilePayload,
 ): Promise<{ error: string | null }> {
-  const value = JSON.stringify({ rows: payload.rows, masters: payload.masters });
+  const value = JSON.stringify({
+    rows: payload.rows,
+    masters: payload.masters,
+    upcoming: payload.upcoming,
+  });
   const { error } = await supabase.from("salon_settings").upsert(
     { key: RECEPTION_SECTION_ORDER_SETTING_KEY, value },
     { onConflict: "key" },

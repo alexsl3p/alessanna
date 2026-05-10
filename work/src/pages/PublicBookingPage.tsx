@@ -41,9 +41,12 @@ import type { AppointmentRow, StaffMember, StaffScheduleRow, StaffServiceRow } f
 import {
   DEFAULT_RECEPTION_MASTERS_PANEL,
   DEFAULT_RECEPTION_ROWS,
+  DEFAULT_RECEPTION_UPCOMING_PANEL,
+  type ReceptionLayoutFilePayload,
   type ReceptionMastersPanelConfig,
   type ReceptionRows,
   type ReceptionSectionId,
+  type ReceptionUpcomingPanelConfig,
   loadReceptionLayoutStore,
   persistReceptionLayoutStore,
 } from "../lib/receptionLayout";
@@ -51,6 +54,7 @@ import { fetchReceptionLayoutFromServer, saveReceptionLayoutToServer } from "../
 import { renderReceptionRows } from "../lib/receptionSectionOrderRender";
 import { ReceptionLayoutEditor } from "../components/ReceptionLayoutEditor";
 import { ReceptionMastersPanelEditor } from "../components/ReceptionMastersPanelEditor";
+import { ReceptionUpcomingPanelEditor } from "../components/ReceptionUpcomingPanelEditor";
 import {
   PublicBookingBookingSection,
   PublicBookingCalendarSection,
@@ -119,13 +123,16 @@ export function PublicBookingPage() {
   const [receptionMastersConfig, setReceptionMastersConfig] = useState<ReceptionMastersPanelConfig>(() => ({
     ...DEFAULT_RECEPTION_MASTERS_PANEL,
   }));
+  const [receptionUpcomingConfig, setReceptionUpcomingConfig] = useState<ReceptionUpcomingPanelConfig>(() => ({
+    ...DEFAULT_RECEPTION_UPCOMING_PANEL,
+  }));
   const [receptionLayoutEditing, setReceptionLayoutEditing] = useState(false);
   const [receptionRemoteSaveError, setReceptionRemoteSaveError] = useState<string | null>(null);
 
-  const flushReceptionSave = useCallback((rows: ReceptionRows, masters: ReceptionMastersPanelConfig) => {
+  const pushReceptionPayload = useCallback((payload: ReceptionLayoutFilePayload) => {
     setReceptionRemoteSaveError(null);
-    persistReceptionLayoutStore(rows, masters);
-    void saveReceptionLayoutToServer({ rows, masters }).then(({ error: saveErr }) => {
+    persistReceptionLayoutStore(payload);
+    void saveReceptionLayoutToServer(payload).then(({ error: saveErr }) => {
       setReceptionRemoteSaveError(saveErr);
     });
   }, []);
@@ -213,11 +220,13 @@ export function PublicBookingPage() {
     if (remoteLayout) {
       setReceptionRows(remoteLayout.rows);
       setReceptionMastersConfig(remoteLayout.masters);
-      persistReceptionLayoutStore(remoteLayout.rows, remoteLayout.masters);
+      setReceptionUpcomingConfig(remoteLayout.upcoming);
+      persistReceptionLayoutStore(remoteLayout);
     } else {
       const local = loadReceptionLayoutStore();
       setReceptionRows(local.rows);
       setReceptionMastersConfig(local.masters);
+      setReceptionUpcomingConfig(local.upcoming);
     }
     setLoading(false);
   }, []);
@@ -780,7 +789,11 @@ export function PublicBookingPage() {
 
   function persistReceptionLayoutFromReception(next: ReceptionRows) {
     setReceptionRows(next);
-    flushReceptionSave(next, receptionMastersConfig);
+    pushReceptionPayload({
+      rows: next,
+      masters: receptionMastersConfig,
+      upcoming: receptionUpcomingConfig,
+    });
   }
 
   if (!isSupabaseConfigured()) {
@@ -831,6 +844,9 @@ export function PublicBookingPage() {
         staff={staffDirectory}
         services={services}
         i18n={i18n}
+        t={t}
+        density={receptionUpcomingConfig.density}
+        contentWidth={receptionUpcomingConfig.pairColumn}
       />
     ),
     masters:
@@ -873,7 +889,9 @@ export function PublicBookingPage() {
       ) : null,
   };
 
-  const mainContent = renderReceptionRows(receptionRows, receptionSections);
+  const mainContent = renderReceptionRows(receptionRows, receptionSections, {
+    upcoming: receptionUpcomingConfig,
+  });
 
   return (
     <div className="min-h-screen bg-zinc-950 px-4 py-8 text-zinc-200 md:px-6 md:py-10">
@@ -919,9 +937,17 @@ export function PublicBookingPage() {
                   onClick={() => {
                     const nextRows = DEFAULT_RECEPTION_ROWS.map((r) => [...r]);
                     const nextMasters = { ...DEFAULT_RECEPTION_MASTERS_PANEL };
+                    const nextUpcoming = { ...DEFAULT_RECEPTION_UPCOMING_PANEL };
                     setReceptionRows(nextRows);
                     setReceptionMastersConfig(nextMasters);
-                    if (isAdmin) flushReceptionSave(nextRows, nextMasters);
+                    setReceptionUpcomingConfig(nextUpcoming);
+                    if (isAdmin) {
+                      pushReceptionPayload({
+                        rows: nextRows,
+                        masters: nextMasters,
+                        upcoming: nextUpcoming,
+                      });
+                    }
                   }}
                   className="rounded-lg border border-zinc-600 px-3 py-1.5 text-sm text-zinc-300 hover:bg-zinc-800"
                 >
@@ -953,7 +979,27 @@ export function PublicBookingPage() {
                   disabled={!isReceptionMode || !isAdmin}
                   onChange={(next) => {
                     setReceptionMastersConfig(next);
-                    if (isReceptionMode && isAdmin) flushReceptionSave(receptionRows, next);
+                    if (isReceptionMode && isAdmin) {
+                      pushReceptionPayload({
+                        rows: receptionRows,
+                        masters: next,
+                        upcoming: receptionUpcomingConfig,
+                      });
+                    }
+                  }}
+                />
+                <ReceptionUpcomingPanelEditor
+                  config={receptionUpcomingConfig}
+                  disabled={!isReceptionMode || !isAdmin}
+                  onChange={(next) => {
+                    setReceptionUpcomingConfig(next);
+                    if (isReceptionMode && isAdmin) {
+                      pushReceptionPayload({
+                        rows: receptionRows,
+                        masters: receptionMastersConfig,
+                        upcoming: next,
+                      });
+                    }
                   }}
                 />
               </div>

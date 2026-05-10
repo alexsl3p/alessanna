@@ -48,10 +48,31 @@ export const DEFAULT_RECEPTION_MASTERS_PANEL: ReceptionMastersPanelConfig = {
   mastersLayout: "two_columns",
 };
 
+/** Плотность карточек в блоке «Ближайшие записи». */
+export type ReceptionUpcomingDensity = "comfortable" | "compact" | "dense";
+
+/**
+ * Узкая колонка рядом с «Мастерами» — список не растягивается на половину экрана.
+ * full — как раньше, две равные колонки.
+ */
+export type ReceptionUpcomingContentWidth = "narrow" | "medium" | "full";
+
+export type ReceptionUpcomingPanelConfig = {
+  density: ReceptionUpcomingDensity;
+  /** Ширина колонки «ближайшие» в паре с другим блоком (md+). */
+  pairColumn: ReceptionUpcomingContentWidth;
+};
+
+export const DEFAULT_RECEPTION_UPCOMING_PANEL: ReceptionUpcomingPanelConfig = {
+  density: "compact",
+  pairColumn: "narrow",
+};
+
 /** Полный JSON в salon_settings.reception_section_order и в localStorage v2. */
 export type ReceptionLayoutFilePayload = {
   rows: ReceptionRows;
   masters: ReceptionMastersPanelConfig;
+  upcoming: ReceptionUpcomingPanelConfig;
 };
 
 function extractMastersFromParsed(parsed: unknown): unknown {
@@ -59,6 +80,26 @@ function extractMastersFromParsed(parsed: unknown): unknown {
     return (parsed as { masters: unknown }).masters;
   }
   return undefined;
+}
+
+function extractUpcomingFromParsed(parsed: unknown): unknown {
+  if (parsed != null && typeof parsed === "object" && !Array.isArray(parsed) && "upcoming" in parsed) {
+    return (parsed as { upcoming: unknown }).upcoming;
+  }
+  return undefined;
+}
+
+export function normalizeUpcomingPanelConfig(raw: unknown): ReceptionUpcomingPanelConfig {
+  const d = DEFAULT_RECEPTION_UPCOMING_PANEL;
+  if (raw == null || typeof raw !== "object" || Array.isArray(raw)) {
+    return { ...d };
+  }
+  const o = raw as Record<string, unknown>;
+  const density: ReceptionUpcomingDensity =
+    o.density === "comfortable" || o.density === "dense" ? o.density : "compact";
+  const pairColumn: ReceptionUpcomingContentWidth =
+    o.pairColumn === "medium" || o.pairColumn === "full" ? o.pairColumn : "narrow";
+  return { density, pairColumn };
 }
 
 export function normalizeMastersPanelConfig(raw: unknown): ReceptionMastersPanelConfig {
@@ -86,6 +127,7 @@ export function parseReceptionLayoutFile(raw: unknown): ReceptionLayoutFilePaylo
   return {
     rows: normalizeReceptionRows(raw),
     masters: normalizeMastersPanelConfig(extractMastersFromParsed(raw)),
+    upcoming: normalizeUpcomingPanelConfig(extractUpcomingFromParsed(raw)),
   };
 }
 
@@ -195,8 +237,9 @@ export function loadReceptionLayoutStore(): ReceptionLayoutFilePayload {
       const payload: ReceptionLayoutFilePayload = {
         rows,
         masters: { ...DEFAULT_RECEPTION_MASTERS_PANEL },
+        upcoming: { ...DEFAULT_RECEPTION_UPCOMING_PANEL },
       };
-      persistReceptionLayoutStore(payload.rows, payload.masters);
+      persistReceptionLayoutStore(payload);
       return payload;
     }
   } catch {
@@ -205,6 +248,7 @@ export function loadReceptionLayoutStore(): ReceptionLayoutFilePayload {
   return {
     rows: DEFAULT_RECEPTION_ROWS.map((r) => [...r]),
     masters: { ...DEFAULT_RECEPTION_MASTERS_PANEL },
+    upcoming: { ...DEFAULT_RECEPTION_UPCOMING_PANEL },
   };
 }
 
@@ -212,32 +256,25 @@ export function loadReceptionLayoutRows(): ReceptionRows {
   return loadReceptionLayoutStore().rows;
 }
 
-export function persistReceptionLayoutStore(
-  rows: ReceptionRows,
-  masters: ReceptionMastersPanelConfig,
-): void {
+export function persistReceptionLayoutStore(payload: ReceptionLayoutFilePayload): void {
   try {
-    localStorage.setItem(RECEPTION_LAYOUT_STORAGE_KEY_V2, JSON.stringify({ rows, masters }));
+    localStorage.setItem(RECEPTION_LAYOUT_STORAGE_KEY_V2, JSON.stringify(payload));
   } catch {
     /* quota / private mode */
   }
 }
 
-/** Сохранить только строки макета, не затирая настройки мастеров. */
+/** Сохранить только строки макета, не затирая остальные настройки. */
 export function persistReceptionLayoutRows(rows: ReceptionRows): void {
   try {
-    const v2 = localStorage.getItem(RECEPTION_LAYOUT_STORAGE_KEY_V2);
-    let masters: ReceptionMastersPanelConfig = { ...DEFAULT_RECEPTION_MASTERS_PANEL };
-    if (v2) {
-      try {
-        masters = normalizeMastersPanelConfig(extractMastersFromParsed(JSON.parse(v2) as unknown));
-      } catch {
-        /* keep default */
-      }
-    }
-    persistReceptionLayoutStore(rows, masters);
+    const cur = loadReceptionLayoutStore();
+    persistReceptionLayoutStore({ ...cur, rows });
   } catch {
-    /* ignore */
+    persistReceptionLayoutStore({
+      rows,
+      masters: { ...DEFAULT_RECEPTION_MASTERS_PANEL },
+      upcoming: { ...DEFAULT_RECEPTION_UPCOMING_PANEL },
+    });
   }
 }
 

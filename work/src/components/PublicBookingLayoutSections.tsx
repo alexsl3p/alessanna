@@ -17,6 +17,8 @@ import type { Dispatch, ReactNode, SetStateAction } from "react";
 import type {
   ReceptionMastersDensity,
   ReceptionMastersLayoutMode,
+  ReceptionUpcomingDensity,
+  ReceptionUpcomingContentWidth,
 } from "../lib/receptionLayout";
 import type { PublicCalendarScope } from "../lib/publicCalendarRange";
 import { formatSlotRange, type Slot } from "../lib/slots";
@@ -230,23 +232,61 @@ type UpcomingProps = {
   staff: StaffMember[];
   services: PublicServiceMini[];
   i18n: i18n;
+  t: TFunction;
+  density?: ReceptionUpcomingDensity;
+  contentWidth?: ReceptionUpcomingContentWidth;
 };
 
-export function PublicBookingUpcomingSection({ receptionUpcoming, staff, services, i18n }: UpcomingProps) {
+function upcomingSectionPadding(d: ReceptionUpcomingDensity | undefined): string {
+  switch (d) {
+    case "comfortable":
+      return "p-4 md:p-5";
+    case "dense":
+      return "p-2.5 md:p-3";
+    default:
+      return "p-3 md:p-4";
+  }
+}
+
+function upcomingCardClass(d: ReceptionUpcomingDensity | undefined): string {
+  switch (d) {
+    case "comfortable":
+      return "rounded-lg border border-zinc-800 bg-zinc-950/70 px-3 py-2.5 text-sm text-zinc-300";
+    case "dense":
+      return "rounded-md border border-zinc-800/90 bg-zinc-950/70 px-2 py-1.5 text-[11px] leading-snug text-zinc-300";
+    default:
+      return "rounded-lg border border-zinc-800 bg-zinc-950/70 px-2.5 py-1.5 text-xs text-zinc-300";
+  }
+}
+
+export function PublicBookingUpcomingSection({
+  receptionUpcoming,
+  staff,
+  services,
+  i18n,
+  t,
+  density = "compact",
+  contentWidth = "narrow",
+}: UpcomingProps) {
+  const widthCls =
+    contentWidth === "full"
+      ? "w-full"
+      : contentWidth === "medium"
+        ? "w-full max-w-xl"
+        : "w-full max-w-md";
   return (
-    <section className="rounded-xl border border-zinc-800 bg-black/30 p-4 md:p-5">
-      <h2 className="text-sm font-semibold text-white">Ближайшие работы</h2>
-      <p className="mt-1 text-xs text-zinc-500">Следующие записи по салону.</p>
-      <div className="mt-3 space-y-2">
+    <section
+      className={`rounded-xl border border-zinc-800 bg-black/30 ${upcomingSectionPadding(density)} ${widthCls}`}
+    >
+      <h2 className="text-sm font-semibold text-white">{t("publicBook.upcomingWorksTitle")}</h2>
+      <p className="mt-1 text-xs text-zinc-500">{t("publicBook.upcomingWorksHint")}</p>
+      <div className={density === "dense" ? "mt-2 space-y-1.5" : "mt-2.5 space-y-2"}>
         {receptionUpcoming.length > 0 ? (
           receptionUpcoming.map((ap) => {
             const master = staff.find((s) => s.id === ap.staff_id);
             const svcName = services.find((s) => String(s.id) === String(ap.service_id))?.name || "—";
             return (
-              <div
-                key={ap.id}
-                className="rounded-lg border border-zinc-800 bg-zinc-950/70 px-3 py-2 text-xs text-zinc-300"
-              >
+              <div key={ap.id} className={upcomingCardClass(density)}>
                 <div className="font-medium text-zinc-100">
                   {ap.start_time
                     ? new Date(ap.start_time).toLocaleString(i18n.language, {
@@ -263,7 +303,7 @@ export function PublicBookingUpcomingSection({ receptionUpcoming, staff, service
             );
           })
         ) : (
-          <p className="text-xs text-zinc-600">Ближайших записей пока нет.</p>
+          <p className="text-xs text-zinc-600">{t("publicBook.upcomingWorksEmpty")}</p>
         )}
       </div>
     </section>

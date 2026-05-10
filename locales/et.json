@@ -272,6 +272,9 @@
     "mastersNails": "Maniküür ja pediküür",
     "mastersColumnEmpty": "Siin pole veel kedagi.",
     "masterServicesMarked": "★ teenuste nimekirjas — valitud meistri teenused.",
+    "upcomingWorksTitle": "Lähenevad tööd",
+    "upcomingWorksHint": "Salongi järgmised broneeringud.",
+    "upcomingWorksEmpty": "Lähenevaid kirjeid pole.",
     "slots": "Vabad ajad",
     "noSlots": "Sellel päeval vabu aegu pole.",
     "confirm": "Broneeri",
@@ -291,7 +294,7 @@
       "edit": "Kohanda blokke",
       "done": "Valmis",
       "reset": "Vaikimisi",
-      "hint": "Ainult administraatoritele. Allpool — ridade järjekord ja plokk «Meistrid»: kes millises veerus, kaartide suurus, kitsas või lai vaade. Järjekord serveris; koopia «Saidi seaded».",
+      "hint": "Ainult administraatoritele. Ridade järjekord, plokk «Meistrid», plokk «Lähenevad tööd» (veeru laius ja tihedus). Salvestatakse serverisse; koopia «Saidi seaded».",
       "moveUp": "Üles",
       "moveDown": "Alla",
       "editor": {
@@ -321,6 +324,15 @@
         "columns": "Ploki laius",
         "columnsTwo": "Kaks veergu",
         "columnsOne": "Ahtane veerg"
+      },
+      "upcoming": {
+        "title": "Plokk «Lähenevad tööd»",
+        "subtitle": "«Meistrite» kõrval kitsas veerg vähendab tühja ruumi. Kirjete tihedus.",
+        "pairColumn": "Nimekirja veeru laius (laias ekraanis)",
+        "pairNarrow": "Kitsas (~18rem)",
+        "pairMedium": "Keskmine (~26rem)",
+        "pairFull": "Pool ekraani",
+        "density": "Kirje rea suurus"
       }
     }
   },
