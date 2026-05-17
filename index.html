@@ -20,8 +20,8 @@
   })();
   </script>
   <link rel="canonical" href="https://alessannailu.com/ru/" />
-  <link rel="icon" href="assets/alessanna-logo-transparent.png" type="image/png" />
-  <link rel="apple-touch-icon" href="assets/alessanna-logo-transparent.png" />
+  <link rel="icon" href="/assets/alessanna-logo-transparent.png" type="image/png" />
+  <link rel="apple-touch-icon" href="/assets/alessanna-logo-transparent.png" />
   <meta property="og:type" content="website" />
   <meta property="og:locale" content="ru_RU" />
   <meta property="og:site_name" content="AlesSanna Ilusalong" />
@@ -37,9 +37,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Great+Vibes&family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=20260517_i18n" />
-  <link rel="preload" as="image" href="assets/salon-bg.png" fetchpriority="high" />
-  <script src="translations.js" defer></script>
+  <link rel="stylesheet" href="/styles.css?v=20260517_i18n2" />
+  <link rel="preload" as="image" href="/assets/salon-bg.png" fetchpriority="high" />
+  <script src="/translations.js" defer></script>
 </head>
 <body class="site-ilusalong">
   <a class="skip-link" href="#main" data-i18n="site.skip">К основному содержимому</a>
@@ -47,7 +47,7 @@
   <header class="site-header" id="header">
     <div class="container header-inner">
       <a class="logo-link" href="#hero" aria-label="AlesSanna Ilusalong">
-        <img class="logo-link__image" src="assets/alessanna-logo-transparent.png" alt="" width="1200" height="430" />
+        <img class="logo-link__image" src="/assets/alessanna-logo-transparent.png" alt="" width="1200" height="430" />
       </a>
       <div class="header-actions">
         <span class="lang-switch" data-i18n-attr="aria-label:common.language">
@@ -86,7 +86,7 @@
         <div class="hero-brand-wrap">
           <div class="hero-brand-text">
             <h1 class="visually-hidden">AlesSanna Ilusalong</h1>
-            <img class="hero-wordmark-image" src="assets/alessanna-logo-transparent.png" alt="" width="1200" height="430" />
+            <img class="hero-wordmark-image" src="/assets/alessanna-logo-transparent.png" alt="" width="1200" height="430" />
           </div>
         </div>
         <p class="hero-display" data-i18n="site.heroDisplay">Пространство, где красота дышит спокойно</p>
@@ -434,7 +434,7 @@
         <li><a href="/privacy.html" data-i18n="site.footerPrivacy">Приватность</a></li>
         <li><a href="/cookies.html" data-i18n="site.footerCookies">Cookie</a></li>
       </ul>
-      <img class="footer-logo" src="assets/alessanna-logo-transparent.png" alt="AlesSanna Ilusalong" width="1200" height="430" />
+      <img class="footer-logo" src="/assets/alessanna-logo-transparent.png" alt="AlesSanna Ilusalong" width="1200" height="430" />
       <p class="footer-meta" data-i18n="site.trustAddress">Härma Keskus · Tallinna mnt 70 · Pärnu</p>
       <p class="footer-copy">© <span id="year"></span> AlesSanna Ilusalong</p>
     </div>
@@ -474,20 +474,20 @@
        выглядел грубо и блокировал страницу. -->
   <div id="toast-root" class="toast-root" aria-live="polite" aria-atomic="true"></div>
 
-  <script src="supabase-public-config.js"></script>
+  <script src="/supabase-public-config.js"></script>
   <!-- Cookie-баннер: показывает GDPR-окно при первом визите, пишет согласие
        в БД (client_record_consent) и предоставляет глобальный API
        window.AlesSannaConsent. Должен загружаться ПОСЛЕ supabase-public-config.js,
        но не блокировать рендер — поэтому defer. -->
-  <script src="cookie-consent.js?v=20260420a" defer></script>
+  <script src="/cookie-consent.js?v=20260420a" defer></script>
   <!-- admin preview helper: ?admin=1 включает диагностические подсказки в углу,
        ?admin=0 выключает. Все «admin only» сообщения по умолчанию скрыты от клиентов
        через CSS, видны только когда body[data-admin-preview="1"]. -->
-  <script type="module" src="site-admin-preview.mjs"></script>
-  <script type="module" src="site-services.mjs?v=20260420j"></script>
-  <script type="module" src="site-team.mjs?v=20260420k"></script>
-  <script type="module" src="site-builder.mjs"></script>
-  <script type="module" src="site-support-chat.mjs"></script>
-  <script src="script.js?v=20260510_salon_phone" defer></script>
+  <script type="module" src="/site-admin-preview.mjs"></script>
+  <script type="module" src="/site-services.mjs?v=20260420j"></script>
+  <script type="module" src="/site-team.mjs?v=20260420k"></script>
+  <script type="module" src="/site-builder.mjs"></script>
+  <script type="module" src="/site-support-chat.mjs"></script>
+  <script src="/script.js?v=20260510_salon_phone" defer></script>
 </body>
 </html>
