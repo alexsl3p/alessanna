@@ -17,6 +17,13 @@ function getSb(url, key) {
 const POLL_FALLBACK_MS = 60000;
 const LOG_PREFIX = "[site-services]";
 
+let lastGroups = null;
+let lastSvcMasters = null;
+
+function tr(key, fb) {
+  return window.ALESSANNA_T ? window.ALESSANNA_T(key, fb) : fb != null ? fb : key;
+}
+
 function info(msg, extra) {
   if (extra !== undefined) console.info(LOG_PREFIX, msg, extra);
   else console.info(LOG_PREFIX, msg);
@@ -37,7 +44,10 @@ function mountEl() {
 function setLoading() {
   const mount = mountEl();
   if (!mount) return;
-  mount.innerHTML = '<p class="menu-footnote">Teenused laadivad...</p>';
+  mount.innerHTML =
+    '<p class="menu-footnote" data-i18n="site.ui.servicesLoading">' +
+    esc(tr("site.ui.servicesLoading", "Loading services…")) +
+    "</p>";
 }
 
 function isPlaceholder(v) {
@@ -210,18 +220,21 @@ async function fetchServiceMasters(client) {
  */
 function buildCatalogHtml(groups, svcMasters, prefix) {
   const px = prefix || "";
-  let tabHtml = '<div class="tabs-bar" role="tablist" aria-label="Teenuste kategooriad">';
+  let tabHtml =
+    '<div class="tabs-bar" role="tablist" aria-label="' +
+    esc(tr("site.ui.categoriesAria", "Service categories")) +
+    '">';
   let panelHtml = "";
-  for (let t = 0; t < groups.length; t++) {
-    const gr = groups[t];
+  for (let ti = 0; ti < groups.length; ti++) {
+    const gr = groups[ti];
     /* Уникальный id по индексу + префиксу:
      *   - "panel-cat-0"  — прайс
      *   - "f-panel-cat-0" — форма
      *   разные id обязательны, иначе aria-controls пересечётся и обе панели
      *   будут переключаться синхронно при клике в любом месте. */
-    const panelId = px + "panel-cat-" + t;
-    const tabId = px + "tab-cat-" + t;
-    const isFirst = t === 0;
+    const panelId = px + "panel-cat-" + ti;
+    const tabId = px + "tab-cat-" + ti;
+    const isFirst = ti === 0;
     const catKey = gr.id;
     tabHtml +=
       '<button type="button" class="tab-btn' +
@@ -233,7 +246,7 @@ function buildCatalogHtml(groups, svcMasters, prefix) {
       '" id="' +
       esc(tabId) +
       '" data-tab-index="' +
-      t +
+      ti +
       '">' +
       esc(gr.name) +
       "</button>";
@@ -253,7 +266,10 @@ function buildCatalogHtml(groups, svcMasters, prefix) {
       esc(gr.name) +
       '</p><ul class="menu-list">';
     if (!gr.items || gr.items.length === 0) {
-      panelHtml += '<li><span class="menu-footnote">Teenused lisatakse peagi.</span></li>';
+      panelHtml +=
+        '<li><span class="menu-footnote">' +
+        esc(tr("site.ui.servicesSoon", "Services will be added soon.")) +
+        "</span></li>";
     } else {
       for (let j = 0; j < gr.items.length; j++) {
         const it = gr.items[j];
@@ -317,7 +333,7 @@ function renderFormSelects(groups, svcMasters) {
   catSel.innerHTML = "";
   const catPlaceholder = document.createElement("option");
   catPlaceholder.value = "";
-  catPlaceholder.textContent = "Выберите категорию";
+  catPlaceholder.textContent = tr("site.ui.pickCategory", "Choose a category");
   catSel.appendChild(catPlaceholder);
 
   itemSel.innerHTML = "";
@@ -352,7 +368,7 @@ function renderFormSelects(groups, svcMasters) {
       /* В списке услуг формы — только название (без цены): ориентир из прайса
        * не равен финальному счёту. Цена остаётся в data-service-price для
        * слотов и служебной логики. */
-      itemOpt.textContent = String(it.name || "Teenus");
+      itemOpt.textContent = String(it.name || tr("site.ui.serviceDefault", "Service"));
       itemOpt.setAttribute("data-category-id", gr.id);
       itemOpt.setAttribute("data-service-id", sid);
       itemOpt.setAttribute("data-service-name", String(it.name || ""));
@@ -388,7 +404,7 @@ function renderFormSelects(groups, svcMasters) {
     ph.disabled = true;
     ph.selected = true;
     ph.setAttribute("data-form-placeholder", "1");
-    ph.textContent = "Сначала выберите категорию";
+    ph.textContent = tr("site.formCategoryFirst", "Choose a category first");
     itemSel.insertBefore(ph, itemSel.firstChild);
   }
   if (restoredCat) {
@@ -412,11 +428,16 @@ function render(groups, serviceMasters) {
   const mount = mountEl();
   const warn = document.getElementById("teenused-config-warn");
   const svcMasters = serviceMasters instanceof Map ? serviceMasters : new Map();
+  lastGroups = groups;
+  lastSvcMasters = svcMasters;
 
   if (!mount) return;
 
   if (!groups || groups.length === 0) {
-    const empty = '<p class="menu-footnote">Teenuseid ei leitud. Kontrolli, et teenused oleksid andmebaasis aktiivsed.</p>';
+    const empty =
+      '<p class="menu-footnote">' +
+      esc(tr("site.ui.servicesEmpty", "No services found.")) +
+      "</p>";
     mount.innerHTML = empty;
     /* В форме тоже сбросить, чтобы не висели старые option'ы. */
     renderFormSelects([], svcMasters);
@@ -895,6 +916,14 @@ async function main() {
 
   window.addEventListener("storage", function (ev) {
     if (ev.key === "salon-services-bump") refresh();
+  });
+
+  document.addEventListener("alessanna:locale", function () {
+    if (lastGroups !== null) {
+      render(lastGroups, lastSvcMasters || new Map());
+    } else {
+      setLoading();
+    }
   });
 }
 

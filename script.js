@@ -72,7 +72,7 @@
     var closeBtn = document.createElement("button");
     closeBtn.type = "button";
     closeBtn.className = "toast__close";
-    closeBtn.setAttribute("aria-label", "Закрыть уведомление");
+    closeBtn.setAttribute("aria-label", pubT("site.ui.toastClose", "Close notification"));
     closeBtn.textContent = "×";
     t.appendChild(closeBtn);
 
@@ -91,6 +91,10 @@
   /* Экспортируем глобально, чтобы можно было дёргать из других скриптов
    * (site-services.mjs, site-team.mjs) без дублирования реализации. */
   window.showToast = showToast;
+
+  function pubT(key, fb) {
+    return window.ALESSANNA_T ? window.ALESSANNA_T(key, fb) : fb != null ? fb : key;
+  }
 
   if (yearEl) {
     yearEl.textContent = String(new Date().getFullYear());
@@ -633,20 +637,13 @@
     var masterSelect = bookingForm.querySelector("[data-master-select]");
     var teamRoot = document.getElementById("meistrid");
 
-    var selLang = (document.documentElement.getAttribute("lang") || "et").toLowerCase().slice(0, 2);
-    var selRu = selLang === "ru";
-    var selEn = selLang === "en";
-    var selFi = selLang === "fi";
-    var UI = {
-      remove: selRu
-        ? "Убрать из списка"
-        : selEn
-          ? "Remove from list"
-          : selFi
-            ? "Poista listasta"
-            : "Eemalda nimekirjast",
-      masterNone: "—",
-    };
+    function getPickUi() {
+      return {
+        remove: pubT("site.ui.removeFromList", "Remove from list"),
+        masterNone: "—",
+      };
+    }
+    var UI = getPickUi();
 
     var PANEL_TO_SERVICE = {
       "panel-cuts": "hair-cut",
@@ -822,10 +819,7 @@
 
     function masterNameById(id) {
       if (id === "any") {
-        if (selRu) return "Не важно";
-        if (selEn) return "No preference";
-        if (selFi) return "Ei väliä";
-        return "Pole oluline";
+        return pubT("site.ui.anyMaster", "No preference");
       }
       var st = globalThis.__SALON_PUBLIC_STAFF__;
       if (st && id) {
@@ -1325,7 +1319,7 @@
           var masterLabel = "";
           if (mid === ANY_MASTER_ID) masterLabel = anyMasterLabelForChip();
           else if (mid) masterLabel = masterNameById(mid);
-          if (masterLabel) parts.push("мастер: " + masterLabel);
+          if (masterLabel) parts.push(pubT("site.ui.masterWord", "stylist") + ": " + masterLabel);
           return p.label + " (" + parts.join(", ") + ")";
         })
         .join("; ");
@@ -1409,7 +1403,7 @@
         } else if (p.selectedMaster) {
           master.textContent = masterNameById(p.selectedMaster);
         } else {
-          master.textContent = "мастер не выбран";
+          master.textContent = pubT("site.ui.masterNotSelected", "stylist not selected");
           master.classList.add("booking-chain-master--empty");
           missingMaster = true;
         }
@@ -1430,7 +1424,8 @@
          * Сам расчёт `totalMin` остаётся, потому что он нужен для подбора
          * слотов и для конца окна визита. */
         var totalMin = computePlanTotalMinutes();
-        totalEl.textContent = "Ориентировочно до " + formatTimeHm(startMin + totalMin);
+        totalEl.textContent =
+          pubT("site.ui.approxUntil", "Approximately until") + " " + formatTimeHm(startMin + totalMin);
       } else {
         totalEl.textContent = "";
       }
@@ -1439,11 +1434,16 @@
       if (hintEl) {
         if (missingMaster) {
           hintEl.hidden = false;
-          hintEl.textContent =
-            "Выберите мастера (или «Не важно» — тогда подберём свободного).";
+          hintEl.textContent = pubT(
+            "site.ui.chainHintMaster",
+            "Choose a stylist (or No preference)."
+          );
         } else if (startMin == null) {
           hintEl.hidden = false;
-          hintEl.textContent = "Выберите день и время — и мы покажем точное расписание визита.";
+          hintEl.textContent = pubT(
+            "site.ui.chainHintTime",
+            "Pick a day and time for your visit schedule."
+          );
         } else {
           hintEl.hidden = true;
           hintEl.textContent = "";
@@ -1467,10 +1467,12 @@
     function formatDuration(min) {
       var m = Math.max(0, Math.round(Number(min) || 0));
       if (!m) return "";
-      if (m < 60) return m + " мин";
+      if (m < 60) return m + " " + pubT("site.ui.durationMin", "min");
       var h = Math.floor(m / 60);
       var r = m % 60;
-      return r ? h + " ч " + r + " мин" : h + " ч";
+      var hour = pubT("site.ui.durationHour", "h");
+      var min = pubT("site.ui.durationMin", "min");
+      return r ? h + " " + hour + " " + r + " " + min : h + " " + hour;
     }
 
     function mastersForSpecificPick(pick) {
@@ -1572,22 +1574,22 @@
     }
 
     function anyMasterLabelForChip() {
-      if (selRu) return "Не важно";
-      if (selEn) return "No preference";
-      if (selFi) return "Ei väliä";
-      return "Pole oluline";
+      return pubT("site.ui.anyMaster", "No preference");
     }
 
     function renderPickMasterChips(host, pick) {
       host.innerHTML = "";
       host.className = "pick-chip-masters";
       host.setAttribute("role", "radiogroup");
-      host.setAttribute("aria-label", "Мастер для услуги " + pick.label);
+      host.setAttribute(
+        "aria-label",
+        pubT("site.ui.masterForService", "Stylist for service") + " " + pick.label
+      );
       var masters = mastersForSpecificPick(pick);
       if (!masters.length) {
         var empty = document.createElement("span");
         empty.className = "pick-chip-masters-empty";
-        empty.textContent = "Мастера пока не загружены";
+        empty.textContent = pubT("site.ui.mastersNotLoaded", "Loading stylists…");
         host.appendChild(empty);
         return;
       }
@@ -1892,10 +1894,10 @@
       ph.selected = true;
       ph.setAttribute("data-form-placeholder", "1");
       ph.textContent = !catId
-        ? "Сначала выберите категорию"
+        ? pubT("site.formCategoryFirst", "Choose a category first")
         : matched === 0
-          ? "В категории нет услуг"
-          : "Выберите услугу";
+          ? pubT("site.ui.noServicesInCategory", "No services in category")
+          : pubT("site.ui.pickService", "Choose a service");
       serviceItemSelect.insertBefore(ph, serviceItemSelect.firstChild);
       serviceItemSelect.disabled = !catId || matched === 0;
       serviceItemSelect.value = "";
@@ -2183,6 +2185,11 @@
       bookingCartEnabled = flags.cart;
       applyBookingCartVisibility();
     });
+
+    document.addEventListener("alessanna:locale", function () {
+      UI = getPickUi();
+      if (picked.length) renderList();
+    });
   })();
 
   /* =============================================================================
@@ -2243,88 +2250,29 @@
       "Heinäkuu", "Elokuu", "Syyskuu", "Lokakuu", "Marraskuu", "Joulukuu"
     ];
 
-    var MSGS = isRu
-      ? {
-          noTime: "Нет свободного времени",
-          noTimeShort: "Нет времени",
-          pickMaster: "Выберите мастера, чтобы увидеть свободные даты",
-          pickDay: "Выберите день в календаре",
-          pickTimeFirst: "Сначала выберите день",
-          pickTime: "Выберите время",
-          many: "Много окон",
-          busy: "Почти занято",
-          best: "Лучший день",
-          slotsAvailable: "Доступно:",
-          /* Объяснения почему день серый — попадают в title (tooltip) и в aria-label
-           * у disabled-ячеек календаря. Раньше клиенты не понимали разницу между
-           * «прошедшая дата», «выходной» и «нет окон у выбранного мастера». */
-          dayPast: "Прошедшая дата",
-          dayOff: "Выходной",
-          dayNoSlots: "Нет свободных окон в этот день",
-          legendBest: "Лучший день",
-          legendMany: "Много окон",
-          legendBusy: "Почти занято",
-          legendUnavailable: "Нет окон / выходной",
-        }
-      : isEn
-        ? {
-            noTime: "No available times",
-            noTimeShort: "None",
-            pickMaster: "Choose a stylist to see available days",
-            pickDay: "Pick a day in the calendar",
-            pickTimeFirst: "Pick a day first",
-            pickTime: "Pick a time",
-            many: "Many openings",
-            busy: "Almost full",
-            best: "Recommended day",
-            slotsAvailable: "Available:",
-            dayPast: "Past date",
-            dayOff: "Day off",
-            dayNoSlots: "No openings this day",
-            legendBest: "Recommended",
-            legendMany: "Many openings",
-            legendBusy: "Almost full",
-            legendUnavailable: "No openings / day off",
-          }
-        : isFi
-          ? {
-              noTime: "Ei vapaita aikoja",
-              noTimeShort: "Ei aikoja",
-              pickMaster: "Valitse stylisti nähdäksesi vapaat päivät",
-              pickDay: "Valitse päivä kalenterista",
-              pickTimeFirst: "Valitse ensin päivä",
-              pickTime: "Valitse aika",
-              many: "Paljon vapaita",
-              busy: "Lähes täynnä",
-              best: "Suositeltu päivä",
-              slotsAvailable: "Vapaana:",
-              dayPast: "Mennyt päivä",
-              dayOff: "Vapaapäivä",
-              dayNoSlots: "Ei aikoja tänä päivänä",
-              legendBest: "Suositeltu",
-              legendMany: "Paljon vapaita",
-              legendBusy: "Lähes täynnä",
-              legendUnavailable: "Ei aikoja / vapaapäivä",
-            }
-          : {
-              noTime: "Pole vaba aega",
-              noTimeShort: "Pole aega",
-              pickMaster: "Vali meister, et näha vabu päevi",
-              pickDay: "Vali kalendrist sobiv päev",
-              pickTimeFirst: "Vali kõigepealt päev",
-              pickTime: "Vali kellaaeg",
-              many: "Palju vabu aegu",
-              busy: "Peaaegu täis",
-              best: "Soovituspäev",
-              slotsAvailable: "Saadaval:",
-              dayPast: "Möödunud kuupäev",
-              dayOff: "Puhkepäev",
-              dayNoSlots: "Sel päeval pole vabu aegu",
-              legendBest: "Soovituspäev",
-              legendMany: "Palju vabu aegu",
-              legendBusy: "Peaaegu täis",
-              legendUnavailable: "Pole aegu / puhkepäev",
-            };
+    function buildCalendarMsgs() {
+      if (window.ALESSANNA_BUILD_CALENDAR_MSGS) return window.ALESSANNA_BUILD_CALENDAR_MSGS();
+      return {
+        noTime: "No available times",
+        noTimeShort: "None",
+        pickMaster: "Choose a stylist",
+        pickDay: "Pick a day",
+        pickTimeFirst: "Pick a day first",
+        pickTime: "Pick a time",
+        many: "Many slots",
+        busy: "Almost full",
+        best: "Best day",
+        slotsAvailable: "Available:",
+        dayPast: "Past date",
+        dayOff: "Day off",
+        dayNoSlots: "No openings",
+        legendBest: "Best",
+        legendMany: "Many",
+        legendBusy: "Busy",
+        legendUnavailable: "Closed",
+      };
+    }
+    var MSGS = buildCalendarMsgs();
 
     var ANY_MASTER_ID = "any";
 
@@ -2366,10 +2314,7 @@
     }
 
     function anyMasterLabel() {
-      if (isRu) return "Не важно";
-      if (isEn) return "No preference";
-      if (isFi) return "Ei väliä";
-      return "Pole oluline";
+      return pubT("site.ui.anyMaster", "No preference");
     }
 
     function selectedMasterForAvailability() {
@@ -2441,28 +2386,26 @@
     }
 
     function formatLongDate(y, m, d) {
-      if (isRu) {
-        return d + " " + MONTHS_RU[m] + " " + y;
-      }
-      if (isEn) {
-        return MONTHS_TITLE_EN[m] + " " + d + ", " + y;
-      }
-      if (isFi) {
-        return d + ". " + MONTHS_TITLE_FI[m] + " " + y;
-      }
+      var titles = window.ALESSANNA_T_ARR ? window.ALESSANNA_T_ARR("site.ui.monthsTitle") : null;
+      var gen = window.ALESSANNA_T_ARR ? window.ALESSANNA_T_ARR("site.ui.monthsGenitive") : null;
+      var lowers = window.ALESSANNA_T_ARR ? window.ALESSANNA_T_ARR("site.ui.monthsLower") : null;
+      if (pageLang === "ru" && gen) return d + " " + gen[m] + " " + y;
+      if (pageLang === "en" && titles) return titles[m] + " " + d + ", " + y;
+      if (lowers) return d + ". " + lowers[m] + " " + y;
       return d + ". " + MONTHS_ET[m] + " " + y;
     }
 
     function monthTitle(y, m) {
-      if (isRu) {
-        return MONTHS_TITLE_RU[m] + " " + y;
+      var titles = window.ALESSANNA_T_ARR ? window.ALESSANNA_T_ARR("site.ui.monthsTitle") : null;
+      var lowers = window.ALESSANNA_T_ARR ? window.ALESSANNA_T_ARR("site.ui.monthsLower") : null;
+      if (titles) {
+        if (pageLang === "et" && lowers) {
+          return lowers[m].charAt(0).toUpperCase() + lowers[m].slice(1) + " " + y;
+        }
+        return titles[m] + " " + y;
       }
-      if (isEn) {
-        return MONTHS_TITLE_EN[m] + " " + y;
-      }
-      if (isFi) {
-        return MONTHS_TITLE_FI[m] + " " + y;
-      }
+      if (isRu) return MONTHS_TITLE_RU[m] + " " + y;
+      if (isEn) return MONTHS_TITLE_EN[m] + " " + y;
       return MONTHS_ET[m].charAt(0).toUpperCase() + MONTHS_ET[m].slice(1) + " " + y;
     }
 
@@ -2823,29 +2766,11 @@
 
       var msg = "";
       if (pickedCount === 1) {
-        msg = lang === "ru"
-          ? "Можно оставить «Не важно» — мы подберём свободного мастера."
-          : lang === "en"
-            ? "You can leave “No preference” — we’ll assign a free stylist."
-            : lang === "fi"
-              ? "Voit jättää “Ei väliä” — valitsemme vapaan stylistin."
-              : "Võid jätta “Pole vahet” — valime vaba meistri.";
+        msg = pubT("site.ui.masterHintSingle", "You can leave No preference.");
       } else if (commonMasterCount > 0 || hasPartialMasters) {
-        msg = lang === "ru"
-          ? "Выберите мастера для записи или оставьте «Не важно»."
-          : lang === "en"
-            ? "Choose a stylist for this booking or leave “No preference”."
-            : lang === "fi"
-              ? "Valitse tälle varaukselle stylisti tai jätä “Ei väliä”."
-              : "Vali broneeringule meister või jäta “Pole vahet”.";
+        msg = pubT("site.ui.masterHintMultiOr", "Choose a stylist or leave No preference.");
       } else {
-        msg = lang === "ru"
-          ? "Выберите мастера для записи."
-          : lang === "en"
-            ? "Choose a stylist for this booking."
-            : lang === "fi"
-              ? "Valitse tälle varaukselle stylisti."
-              : "Vali sellele broneeringule meister.";
+        msg = pubT("site.ui.masterHintMulti", "Choose a stylist for this booking.");
       }
       hintEl.textContent = msg;
       hintEl.hidden = false;
@@ -3174,34 +3099,9 @@
     }
 
     function chainHumanErrorMessage(code, fallback) {
-      var map = isRu
-        ? {
-            staff_busy: "Мастер занят в это время. Выберите другое время или другого мастера.",
-            no_free_master: "Нет свободного мастера в это время. Выберите другое время.",
-            staff_not_service: "Этот мастер не делает выбранную услугу.",
-            staff_unavailable: "Мастер недоступен. Выберите другого.",
-            service_inactive: "Услуга сейчас недоступна.",
-            service_not_found: "Услуга не найдена.",
-            service_no_duration: "Для услуги не задана длительность — обратитесь в салон.",
-            missing_name: "Укажите имя.",
-            missing_start: "Выберите день и время.",
-            empty_items: "Выберите услугу в прайсе.",
-            too_many_items: "Сейчас доступна запись только на одну услугу за раз.",
-          }
-        : {
-            staff_busy: "Master is busy at that time.",
-            no_free_master: "No free master at that time.",
-            staff_not_service: "This master does not do this service.",
-            staff_unavailable: "Master is unavailable.",
-            service_inactive: "Service is not bookable right now.",
-            service_not_found: "Service not found.",
-            service_no_duration: "Service duration is missing.",
-            missing_name: "Please enter your name.",
-            missing_start: "Pick a day and time.",
-            empty_items: "Pick one service from the price list.",
-            too_many_items: "Only one service per booking is available now.",
-          };
-      return (code && map[code]) || fallback;
+      var map =
+        window.ALESSANNA_BUILD_CHAIN_ERRORS && window.ALESSANNA_BUILD_CHAIN_ERRORS();
+      return (code && map && map[code]) || fallback;
     }
 
     /** Если корзина пуста, но в форме выбрана категория + мастер — подбираем
@@ -3268,21 +3168,11 @@
 
     /** После успешной записи: кратко о том, что цена в прайсе — ориентир. */
     function bookingSuccessMessageWithPriceNote() {
-      var base = isRu
-        ? "Запись подтверждена. Ждём вас в салоне."
-        : isEn
-          ? "Booking confirmed. See you at the salon."
-          : isFi
-            ? "Varaus vahvistettu. Nähdään salongilla."
-            : "Broneering kinnitatud. Täname!";
-      var note = isRu
-        ? "Сумма в прайсе — ориентир: итог может отличаться в зависимости от объёма работ, времени, расхода материалов и уточнений на месте. Точную стоимость согласуем с вами при подтверждении записи или после консультации с мастером."
-        : isEn
-          ? "The listed price is a guide: your final total may reflect the work done, time, materials, and details we agree on site. We will confirm the exact amount when we confirm your appointment or after your stylist consults you."
-          : isFi
-            ? "Hintaluettelon hinta on suuntaa-antava; lopullinen hinta voi riippua työn laajuudesta, ajasta ja materiaaleista. Tarkan summan sovimme varauksen yhteydessä tai konsultaation jälkeen."
-            : "Hinnakirja summa on orientiir: lõplik hind võib sõltuda töö mahust, ajast, materjalikulust ja täpsustustest kohapeal. Täpse hinna lepime kokku broneeringu kinnitamisel või pärast konsultatsiooni meistriga.";
-      return base + "\n\n" + note;
+      return (
+        pubT("site.ui.bookingConfirmed", "Booking confirmed.") +
+        "\n\n" +
+        pubT("site.ui.priceDisclaimer", "Prices are indicative.")
+      );
     }
 
     /** Одна услуга + конкретный мастер → Edge Function `website_booking` (сразу Google Calendar, затем CRM).
@@ -3373,13 +3263,10 @@
       if (!items.length) {
         /* Прайс ещё не загружен, или пользователь не выбрал категорию: мягкий блок, без mailto. */
         showToast(
-          isRu
-            ? "Выберите услугу в прайсе выше — так мы поймём длительность и сможем подобрать время."
-            : isEn
-              ? "Please pick a service from the price list so we know the duration and can offer times."
-              : isFi
-                ? "Valitse palvelu hinnastosta, jotta tiedämme keston ja voimme tarjota aikoja."
-                : "Valige teenus hinnakirjast — siis saame kestuse järgi aegu pakkuda.",
+          pubT(
+            "site.ui.pickServiceFirst",
+            "Pick a service from the price list above."
+          ),
           "err"
         );
         return Promise.resolve({ handled: true, ok: false });
@@ -3430,10 +3317,11 @@
           /* Supabase вернула ошибку схемы (RLS/FK/функция не найдена) — отмечаем как «не
            * обработано», чтобы сработал fallback mailto и заявка всё равно дошла. */
           if (!j || typeof j.ok === "undefined") return { handled: false };
-          var fb = isRu
-            ? "Не удалось забронировать. Выберите другое время или напишите нам."
-            : "Booking failed. Please pick another time or contact us.";
-          showToast(chainHumanErrorMessage(j.error, (j.message || fb)), "err");
+          var fb = pubT(
+            "site.ui.bookingFailed",
+            "Could not complete booking. Try another time."
+          );
+          showToast(chainHumanErrorMessage(j.error, j.message || fb), "err");
           return { handled: true, ok: false };
         })
         .catch(function () {
@@ -3511,27 +3399,12 @@
             } else {
               var err =
                 (x.j && x.j.error) ||
-                (isRu
-                  ? "Не удалось забронировать. Выберите другое время."
-                  : isEn
-                    ? "Booking failed. Please pick another time."
-                    : isFi
-                      ? "Varaus epäonnistui. Valitse toinen aika."
-                      : "Broneering ebaõnnestus.");
+                pubT("site.ui.bookingFailedShort", "Could not book. Try another time.");
               showToast(err, "err");
             }
           })
           .catch(function () {
-            showToast(
-              isRu
-                ? "Сеть или сервер недоступны."
-                : isEn
-                  ? "Network or server unavailable."
-                  : isFi
-                    ? "Verkko tai palvelin ei tavoitettavissa."
-                    : "Võrgu viga.",
-              "err"
-            );
+            showToast(pubT("site.ui.networkError", "Network or server unavailable."), "err");
           });
         return;
       }
@@ -3541,16 +3414,19 @@
         if (key === "master" && (val === ANY_MASTER_ID || !val)) val = anyMasterLabel();
         lines.push(key + ": " + val);
       });
-      var subject = isRu
-        ? encodeURIComponent("Запись AlesSanna")
-        : isEn
-          ? encodeURIComponent("Booking AlesSanna")
-          : isFi
-            ? encodeURIComponent("Varaus AlesSanna")
-            : encodeURIComponent("Broneering AlesSanna");
+      var subject = encodeURIComponent(pubT("site.ui.mailSubjectBooking", "Booking AlesSanna"));
       var body = encodeURIComponent(lines.join("\n"));
       window.location.href = "mailto:alessanna.ilusalong@gmail.com?subject=" + subject + "&body=" + body;
       } /* end continueLegacySubmit */
+    });
+
+    document.addEventListener("alessanna:locale", function () {
+      MSGS = buildCalendarMsgs();
+      if (window.ALESSANNA_APPLY_PUBLIC_I18N && window.ALESSANNA_PUBLIC_I18N) {
+        window.ALESSANNA_APPLY_PUBLIC_I18N(window.ALESSANNA_PUBLIC_I18N);
+      }
+      setNotes();
+      renderCalendar();
     });
     });
   }
@@ -3558,52 +3434,23 @@
   /* Tagasiside / отзыв: mailto salongi töömeilile modereerimiseks (sama aadress mis broneeringul) */
   var reviewForm = document.getElementById("review-form");
   if (reviewForm) {
-    var langRev = (document.documentElement.getAttribute("lang") || "et").toLowerCase().slice(0, 2);
-    if (langRev !== "ru" && langRev !== "et" && langRev !== "fi" && langRev !== "en") langRev = "et";
-    var revMsg =
-      langRev === "ru"
-        ? {
-            subject: "AlesSanna: отзыв (на модерацию)",
-            name: "Имя",
-            email: "Эл. почта",
-            rating: "Оценка (звёзды)",
-            message: "Текст отзыва",
-            alertName: "Укажите имя.",
-            alertMsg: "Напишите отзыв хотя бы в несколько слов.",
-            alertEmail: "Проверьте формат e-mail или оставьте поле пустым.",
-          }
-        : langRev === "en"
-          ? {
-              subject: "AlesSanna: review (moderation)",
-              name: "Name",
-              email: "Email",
-              rating: "Rating (stars)",
-              message: "Your feedback",
-              alertName: "Please enter your name.",
-              alertMsg: "Please write a few words of feedback.",
-              alertEmail: "Check the email format or leave the field empty.",
-            }
-          : langRev === "fi"
-            ? {
-                subject: "AlesSanna: palaute (moderaatio)",
-                name: "Nimi",
-                email: "Sähköposti",
-                rating: "Arvio (tähdet)",
-                message: "Palautteesi",
-                alertName: "Kirjoita nimi.",
-                alertMsg: "Kirjoita palaute vähintään muutamalla sanalla.",
-                alertEmail: "Tarkista sähköpostin muoto tai jätä kenttä tyhjäksi.",
-              }
-            : {
-                subject: "AlesSanna: tagasiside (modereerimiseks)",
-                name: "Nimi",
-                email: "E-post",
-                rating: "Hinnang (tärnid)",
-                message: "Tagasiside tekst",
-                alertName: "Palun sisestage nimi.",
-                alertMsg: "Palun kirjutage tagasiside vähemalt mõne sõnaga.",
-                alertEmail: "Kontrollige e-posti vormingut või jätke väli tühjaks.",
-              };
+    function buildRevMsg() {
+      if (window.ALESSANNA_BUILD_REVIEW_MSGS) return window.ALESSANNA_BUILD_REVIEW_MSGS();
+      return {
+        subject: "AlesSanna: review",
+        name: "Name",
+        email: "Email",
+        rating: "Rating",
+        message: "Message",
+        alertName: "Enter name",
+        alertMsg: "Write feedback",
+        alertEmail: "Check email",
+      };
+    }
+    var revMsg = buildRevMsg();
+    document.addEventListener("alessanna:locale", function () {
+      revMsg = buildRevMsg();
+    });
 
     reviewForm.addEventListener("submit", function (e) {
       e.preventDefault();

@@ -40,6 +40,69 @@
     return PUBLIC_LANGS.indexOf(lang) >= 0 ? lang : "ru";
   }
 
+  function t(key, fallback) {
+    var v = byPath(window.ALESSANNA_PUBLIC_I18N, key);
+    return typeof v === "string" ? v : fallback != null ? fallback : key;
+  }
+
+  function tArr(key) {
+    var v = byPath(window.ALESSANNA_PUBLIC_I18N, key);
+    return Array.isArray(v) ? v : null;
+  }
+
+  function publishRuntimeI18n() {
+    window.ALESSANNA_T = t;
+    window.ALESSANNA_T_ARR = tArr;
+    window.ALESSANNA_BUILD_CALENDAR_MSGS = function () {
+      return {
+        noTime: t("site.calendarNotePrimary", "No available times"),
+        noTimeShort: t("site.ui.calNoTimeShort", "None"),
+        pickMaster: t("site.calendarNoteSecondary", "Choose a stylist"),
+        pickDay: t("site.ui.calPickDay", "Pick a day"),
+        pickTimeFirst: t("site.formTimeFirst", "Choose a day first"),
+        pickTime: t("site.ui.calPickTime", "Pick a time"),
+        many: t("site.ui.calMany", "Many slots"),
+        busy: t("site.ui.calBusy", "Almost full"),
+        best: t("site.ui.calBest", "Best day"),
+        slotsAvailable: t("site.ui.calSlotsAvailable", "Available:"),
+        dayPast: t("site.ui.calDayPast", "Past date"),
+        dayOff: t("site.ui.calDayOff", "Day off"),
+        dayNoSlots: t("site.ui.calDayNoSlots", "No openings"),
+        legendBest: t("site.legendFeatured", "Best dates"),
+        legendMany: t("site.legendSoft", "Many slots"),
+        legendBusy: t("site.legendBusy", "Almost full"),
+        legendUnavailable: t("site.legendUnavailable", "No slots / closed"),
+      };
+    };
+    window.ALESSANNA_BUILD_REVIEW_MSGS = function () {
+      return {
+        subject: t("site.ui.reviewSubject", "Review"),
+        name: t("site.ui.reviewName", "Name"),
+        email: t("site.ui.reviewEmail", "Email"),
+        rating: t("site.ui.reviewRating", "Rating"),
+        message: t("site.ui.reviewMessage", "Message"),
+        alertName: t("site.ui.reviewAlertName", "Enter name"),
+        alertMsg: t("site.ui.reviewAlertMsg", "Write feedback"),
+        alertEmail: t("site.ui.reviewAlertEmail", "Check email"),
+      };
+    };
+    window.ALESSANNA_BUILD_CHAIN_ERRORS = function () {
+      return {
+        staff_busy: t("site.ui.errStaffBusy", "Busy"),
+        no_free_master: t("site.ui.errNoFreeMaster", "No free stylist"),
+        staff_not_service: t("site.ui.errStaffNotService", "Stylist mismatch"),
+        staff_unavailable: t("site.ui.errStaffUnavailable", "Unavailable"),
+        service_inactive: t("site.ui.errServiceInactive", "Inactive"),
+        service_not_found: t("site.ui.errServiceNotFound", "Not found"),
+        service_no_duration: t("site.ui.errServiceNoDuration", "No duration"),
+        missing_name: t("site.ui.errMissingName", "Enter name"),
+        missing_start: t("site.ui.errMissingStart", "Pick time"),
+        empty_items: t("site.ui.errEmptyItems", "Pick a service"),
+        too_many_items: t("site.ui.errTooManyItems", "One service only"),
+      };
+    };
+  }
+
   function applyBundle(bundle) {
     document.querySelectorAll("[data-i18n]").forEach(function (el) {
       var key = el.getAttribute("data-i18n");
@@ -107,9 +170,10 @@
         return r.json();
       })
       .then(function (bundle) {
-        applyBundle(bundle);
         window.ALESSANNA_PUBLIC_LOCALE = lang;
         window.ALESSANNA_PUBLIC_I18N = bundle;
+        publishRuntimeI18n();
+        applyBundle(bundle);
         hideLangPicker();
         try {
           document.dispatchEvent(

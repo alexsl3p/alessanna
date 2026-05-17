@@ -50,7 +50,16 @@ function detectLang() {
   )
     .toLowerCase()
     .slice(0, 2);
-  return raw === "et" ? "et" : "ru";
+  if (raw === "et") return "et";
+  if (raw === "en") return "en";
+  return "ru";
+}
+
+function localeTag() {
+  const lang = detectLang();
+  if (lang === "et") return "et-EE";
+  if (lang === "en") return "en-GB";
+  return "ru-RU";
 }
 
 const I18N = {
@@ -98,6 +107,9 @@ const I18N = {
     resetConfirm: "Начать новый диалог? Текущая переписка скроется.",
     statusClosed: "Диалог закрыт сотрудником. Напишите сообщение, чтобы открыть снова.",
     poweredBy: "Защищённый чат · ваши сообщения видит только команда AlesSanna",
+    statusOpen: "открыт",
+    statusPending: "в ожидании",
+    statusClosedShort: "закрыт",
   },
   et: {
     launcherLabel: "Kirjuta tugiteenusele",
@@ -143,10 +155,63 @@ const I18N = {
     resetConfirm: "Alusta uut vestlust? Praegune peidetakse.",
     statusClosed: "Vestluse sulges töötaja. Kirjuta sõnum, et avada uuesti.",
     poweredBy: "Turvaline vestlus · teie sõnumeid näeb ainult AlesSanna meeskond",
+    statusOpen: "avatud",
+    statusPending: "ootel",
+    statusClosedShort: "suletud",
+  },
+  en: {
+    launcherLabel: "Message support",
+    launcherTeaser: "Chat · online",
+    nudgeTitle: "Hello!",
+    nudgeText: "We can help with booking or answer a question — write to us.",
+    nudgeClose: "Dismiss",
+    headerTitle: "AlesSanna · support",
+    headerSub: "online · we reply within an hour",
+    close: "Close",
+    back: "← Back",
+    welcome: "Hello! What should we call you?",
+    nameLabel: "Your name",
+    namePh: "e.g. Anna",
+    emailLabel: "Email (optional)",
+    emailPh: "so we can reply if you leave the page",
+    topicLabel: "What is this about?",
+    topicSalon: "Salon question",
+    topicSalonSub: "booking, services, stylists",
+    topicSite: "Website support",
+    topicSiteSub: "form not working, bug, idea",
+    messageLabel: "Your message",
+    messagePh: "Briefly describe what you need…",
+    start: "Send",
+    starting: "Sending…",
+    nameRequired: "Please enter your name.",
+    messageRequired: "Please write a message.",
+    err: "Could not send. Please try again.",
+    replyPh: "Write a message…",
+    send: "Send",
+    sending: "…",
+    loading: "Loading…",
+    attach: "Attach file",
+    attachTooLarge: "File is over 8 MB — please send a smaller one.",
+    attachErr: "Could not upload the file.",
+    you: "You",
+    salon: "Salon",
+    support: "Support",
+    typing: "support is typing",
+    emptyThread: "Start the conversation.",
+    hintEnter: "Enter — send · Shift+Enter — new line",
+    resetThread: "Start new chat",
+    resetConfirm: "Start a new chat? The current thread will be hidden.",
+    statusClosed: "This chat was closed by staff. Send a message to reopen.",
+    poweredBy: "Secure chat · only the AlesSanna team can see your messages",
+    statusOpen: "open",
+    statusPending: "pending",
+    statusClosedShort: "closed",
   },
 };
 
-const L = I18N[detectLang()];
+function L() {
+  return I18N[detectLang()] || I18N.ru;
+}
 
 function safeParse(raw) {
   try {
@@ -214,12 +279,12 @@ function formatTime(iso) {
       d.getFullYear() === now.getFullYear() &&
       d.getMonth() === now.getMonth() &&
       d.getDate() === now.getDate();
-    const t = d.toLocaleTimeString(detectLang() === "et" ? "et-EE" : "ru-RU", {
+    const t = d.toLocaleTimeString(localeTag(), {
       hour: "2-digit",
       minute: "2-digit",
     });
     if (same) return t;
-    const dt = d.toLocaleDateString(detectLang() === "et" ? "et-EE" : "ru-RU", {
+    const dt = d.toLocaleDateString(localeTag(), {
       day: "2-digit",
       month: "2-digit",
     });
@@ -863,7 +928,7 @@ function makeLauncher() {
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = "ssc-launcher";
-  btn.setAttribute("aria-label", L.launcherLabel);
+  btn.setAttribute("aria-label", L().launcherLabel);
   btn.innerHTML = `
     <span class="ssc-launcher-ring" aria-hidden="true"></span>
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -875,7 +940,7 @@ function makeLauncher() {
 
   const label = document.createElement("span");
   label.className = "ssc-launcher-label";
-  label.textContent = L.launcherTeaser;
+  label.textContent = L().launcherTeaser;
   label.setAttribute("aria-hidden", "true");
 
   const nudge = document.createElement("div");
@@ -883,9 +948,9 @@ function makeLauncher() {
   nudge.setAttribute("role", "status");
   nudge.setAttribute("aria-live", "polite");
   nudge.innerHTML = `
-    <button type="button" class="ssc-nudge-close" aria-label="${escapeHtml(L.nudgeClose)}">×</button>
-    <p class="ssc-nudge-title">${escapeHtml(L.nudgeTitle)}</p>
-    <p class="ssc-nudge-text">${escapeHtml(L.nudgeText)}</p>
+    <button type="button" class="ssc-nudge-close" aria-label="${escapeHtml(L().nudgeClose)}">×</button>
+    <p class="ssc-nudge-title">${escapeHtml(L().nudgeTitle)}</p>
+    <p class="ssc-nudge-text">${escapeHtml(L().nudgeText)}</p>
   `;
 
   wrap.appendChild(btn);
@@ -914,40 +979,40 @@ function renderForm(widget) {
   const profile = getProfile() || {};
   const topic = profile.lastTopic || "salon";
   widget.body.innerHTML = `
-    <p class="ssc-form-greeting">${L.welcome}</p>
+    <p class="ssc-form-greeting">${L().welcome}</p>
     <form class="ssc-form" novalidate>
       <div class="ssc-field">
-        <label class="ssc-label" for="ssc-name">${L.nameLabel}</label>
+        <label class="ssc-label" for="ssc-name">${L().nameLabel}</label>
         <input id="ssc-name" class="ssc-input" type="text" maxlength="120"
-          autocomplete="given-name" placeholder="${L.namePh}"
+          autocomplete="given-name" placeholder="${L().namePh}"
           value="${escapeHtml(profile.name || "")}" required />
       </div>
       <div class="ssc-field">
-        <label class="ssc-label" for="ssc-email">${L.emailLabel}</label>
+        <label class="ssc-label" for="ssc-email">${L().emailLabel}</label>
         <input id="ssc-email" class="ssc-input" type="email" maxlength="200"
-          autocomplete="email" placeholder="${L.emailPh}"
+          autocomplete="email" placeholder="${L().emailPh}"
           value="${escapeHtml(profile.email || "")}" />
       </div>
       <div class="ssc-field">
-        <span class="ssc-label">${L.topicLabel}</span>
+        <span class="ssc-label">${L().topicLabel}</span>
         <div class="ssc-topic-group" role="radiogroup">
           <button type="button" class="ssc-topic ${topic === "salon" ? "ssc-selected" : ""}" data-topic="salon" role="radio" aria-checked="${topic === "salon"}">
-            <span class="ssc-topic-title">${L.topicSalon}</span>
-            <span class="ssc-topic-sub">${L.topicSalonSub}</span>
+            <span class="ssc-topic-title">${L().topicSalon}</span>
+            <span class="ssc-topic-sub">${L().topicSalonSub}</span>
           </button>
           <button type="button" class="ssc-topic ${topic === "site" ? "ssc-selected" : ""}" data-topic="site" role="radio" aria-checked="${topic === "site"}">
-            <span class="ssc-topic-title">${L.topicSite}</span>
-            <span class="ssc-topic-sub">${L.topicSiteSub}</span>
+            <span class="ssc-topic-title">${L().topicSite}</span>
+            <span class="ssc-topic-sub">${L().topicSiteSub}</span>
           </button>
         </div>
       </div>
       <div class="ssc-field">
-        <label class="ssc-label" for="ssc-msg">${L.messageLabel}</label>
-        <textarea id="ssc-msg" class="ssc-textarea" maxlength="4000" placeholder="${L.messagePh}" required></textarea>
+        <label class="ssc-label" for="ssc-msg">${L().messageLabel}</label>
+        <textarea id="ssc-msg" class="ssc-textarea" maxlength="4000" placeholder="${L().messagePh}" required></textarea>
       </div>
       <div class="ssc-error" data-err hidden></div>
-      <button type="submit" class="ssc-btn">${L.start}</button>
-      <p class="ssc-footer-note">${L.poweredBy}</p>
+      <button type="submit" class="ssc-btn">${L().start}</button>
+      <p class="ssc-footer-note">${L().poweredBy}</p>
     </form>
   `;
   const form = widget.body.querySelector("form");
@@ -971,18 +1036,18 @@ function renderForm(widget) {
     const email = form.querySelector("#ssc-email").value.trim();
     const message = form.querySelector("#ssc-msg").value.trim();
     if (!name) {
-      errEl.textContent = L.nameRequired;
+      errEl.textContent = L().nameRequired;
       errEl.hidden = false;
       return;
     }
     if (!message) {
-      errEl.textContent = L.messageRequired;
+      errEl.textContent = L().messageRequired;
       errEl.hidden = false;
       return;
     }
     const btn = form.querySelector("button[type=submit]");
     btn.disabled = true;
-    btn.textContent = L.starting;
+    btn.textContent = L().starting;
     try {
       const { error } = await widget.sb.rpc("support_visitor_start_thread", {
         p_session_token: widget.sessionToken,
@@ -1000,10 +1065,10 @@ function renderForm(widget) {
       renderThread(widget);
     } catch (err) {
       log("start error", err);
-      errEl.textContent = L.err;
+      errEl.textContent = L().err;
       errEl.hidden = false;
       btn.disabled = false;
-      btn.textContent = L.start;
+      btn.textContent = L().start;
     }
   });
 }
@@ -1050,7 +1115,7 @@ function renderMessages(widget) {
   if (!holder) return;
   const { thread, messages } = widget.state;
   if (!messages || messages.length === 0) {
-    holder.innerHTML = `<p class="ssc-info">${L.emptyThread}</p>`;
+    holder.innerHTML = `<p class="ssc-info">${L().emptyThread}</p>`;
     return;
   }
   const statusPill =
@@ -1059,29 +1124,29 @@ function renderMessages(widget) {
           thread.status === "open" ? "● " : thread.status === "pending" ? "… " : "× "
         }${
           thread.status === "open"
-            ? (detectLang() === "et" ? "avatud" : "открыт")
+            ? L().statusOpen
             : thread.status === "pending"
-              ? (detectLang() === "et" ? "ootel" : "в ожидании")
-              : (detectLang() === "et" ? "suletud" : "закрыт")
+              ? L().statusPending
+              : L().statusClosedShort
         }</span>`
       : "";
-  let html = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">${statusPill}<button type="button" class="ssc-reset" data-reset>${L.resetThread}</button></div>`;
+  let html = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">${statusPill}<button type="button" class="ssc-reset" data-reset>${L().resetThread}</button></div>`;
   if (thread && thread.status === "closed") {
-    html += `<div class="ssc-info">${L.statusClosed}</div>`;
+    html += `<div class="ssc-info">${L().statusClosed}</div>`;
   }
   for (const m of messages) {
     const who = m.sender_type === "staff" ? "staff" : "visitor";
     const senderName =
       m.sender_type === "staff"
-        ? (m.sender_staff_name || L.support)
-        : L.you;
+        ? (m.sender_staff_name || L().support)
+        : L().you;
     const time = formatTime(m.created_at);
     let attachHtml = "";
     if (m.attachment_url) {
       const isImg = (m.attachment_mime || "").startsWith("image/");
       attachHtml = isImg
         ? `<a href="${escapeHtml(m.attachment_url)}" target="_blank" rel="noreferrer"><img class="ssc-attach-img" src="${escapeHtml(m.attachment_url)}" alt="${escapeHtml(m.attachment_name || "")}"></a>`
-        : `<a class="ssc-attach-preview" href="${escapeHtml(m.attachment_url)}" target="_blank" rel="noreferrer">📎 <span>${escapeHtml(m.attachment_name || L.attach)}</span></a>`;
+        : `<a class="ssc-attach-preview" href="${escapeHtml(m.attachment_url)}" target="_blank" rel="noreferrer">📎 <span>${escapeHtml(m.attachment_name || L().attach)}</span></a>`;
     }
     const body = m.body ? linkify(m.body).replace(/\n/g, "<br>") : "";
     html += `
@@ -1105,7 +1170,7 @@ function renderMessages(widget) {
             <span class="ssc-typing-dot"></span>
             <span class="ssc-typing-dot"></span>
           </span>
-          <span class="ssc-typing-label">${escapeHtml(L.typing || "")}</span>
+          <span class="ssc-typing-label">${escapeHtml(L().typing || "")}</span>
         </div>
       </div>
     `;
@@ -1114,7 +1179,7 @@ function renderMessages(widget) {
   const resetBtn = holder.querySelector("[data-reset]");
   if (resetBtn) {
     resetBtn.addEventListener("click", () => {
-      if (!confirm(L.resetConfirm)) return;
+      if (!confirm(L().resetConfirm)) return;
       // New session token; keep profile so name remains pre-filled
       writeLS(STORAGE_SESSION, null);
       widget.sessionToken = getOrCreateSessionToken();
@@ -1140,16 +1205,16 @@ function renderFooter(widget) {
       <button type="button" data-chip-remove aria-label="remove">×</button>
     </div>
     <div class="ssc-reply-row">
-      <label class="ssc-attach-btn" title="${L.attach}">
+      <label class="ssc-attach-btn" title="${L().attach}">
         📎
         <input type="file" style="display:none" data-file>
       </label>
-      <textarea class="ssc-reply" placeholder="${L.replyPh}" rows="1" maxlength="4000" data-reply></textarea>
-      <button type="button" class="ssc-send-btn" data-send title="${L.send}" aria-label="${L.send}">
+      <textarea class="ssc-reply" placeholder="${L().replyPh}" rows="1" maxlength="4000" data-reply></textarea>
+      <button type="button" class="ssc-send-btn" data-send title="${L().send}" aria-label="${L().send}">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
       </button>
     </div>
-    <p class="ssc-footer-note">${L.hintEnter}</p>
+    <p class="ssc-footer-note">${L().hintEnter}</p>
   `;
   widget.footer.dataset.mode = "thread";
 
@@ -1182,7 +1247,7 @@ function renderFooter(widget) {
     const f = fileInput.files && fileInput.files[0];
     if (!f) return;
     if (f.size > MAX_ATTACHMENT_BYTES) {
-      alert(L.attachTooLarge);
+      alert(L().attachTooLarge);
       fileInput.value = "";
       return;
     }
@@ -1223,7 +1288,7 @@ function renderFooter(widget) {
       showTyping(widget);
     } catch (err) {
       log("send error", err);
-      alert(L.err);
+      alert(L().err);
     } finally {
       sendBtn.disabled = false;
     }
@@ -1241,7 +1306,7 @@ async function uploadAttachment(widget, file) {
   });
   if (error) {
     log("upload error", error);
-    throw new Error(L.attachErr);
+    throw new Error(L().attachErr);
   }
   const pub = widget.sb.storage.from(BUCKET).getPublicUrl(key);
   return {
@@ -1361,7 +1426,7 @@ export function initSupportChat() {
   const panel = document.createElement("div");
   panel.className = "ssc-panel";
   panel.setAttribute("role", "dialog");
-  panel.setAttribute("aria-label", L.headerTitle);
+  panel.setAttribute("aria-label", L().headerTitle);
   panel.innerHTML = `
     <header class="ssc-header">
       <div class="ssc-header-badge" aria-hidden="true">
@@ -1379,10 +1444,10 @@ export function initSupportChat() {
         <span class="ssc-online-dot" aria-hidden="true"></span>
       </div>
       <div class="ssc-header-text">
-        <p class="ssc-header-title">${L.headerTitle}</p>
-        <p class="ssc-header-sub">${L.headerSub}</p>
+        <p class="ssc-header-title">${L().headerTitle}</p>
+        <p class="ssc-header-sub">${L().headerSub}</p>
       </div>
-      <button type="button" class="ssc-close" aria-label="${L.close}">×</button>
+      <button type="button" class="ssc-close" aria-label="${L().close}">×</button>
     </header>
     <div class="ssc-body" data-body></div>
     <div class="ssc-footer" data-footer></div>

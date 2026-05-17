@@ -32,6 +32,13 @@ function esc(s) {
     .replace(/"/g, "&quot;");
 }
 
+function tr(key, fb) {
+  return window.ALESSANNA_T ? window.ALESSANNA_T(key, fb) : fb != null ? fb : key;
+}
+
+let lastTeamGroups = null;
+let lastTeamStaff = null;
+
 /** Совпадает с site-services.mjs: публично видим только активных, не-админов
  * и тех, у кого show_on_marketing_site не выключен в CRM. Иначе админы-«технари»
  * могут протекать в публичный dropdown «Мастер», даже если триггер
@@ -115,10 +122,15 @@ function forceRevealMeistrid() {
 function renderTeam(groups, staffList) {
   const root = document.querySelector("#meistrid .team-groups");
   if (!root) return;
+  lastTeamGroups = groups;
+  lastTeamStaff = staffList;
+  const fallbackTitle = tr("site.teamTitle", "Stylists");
 
   if (!staffList.length) {
     root.innerHTML =
-      '<div class="team-group"><h3 class="team-group-title">Meistrid</h3><ul class="team-names">' +
+      '<div class="team-group"><h3 class="team-group-title">' +
+      esc(fallbackTitle) +
+      '</h3><ul class="team-names">' +
       "<li>—</li>" +
       "</ul></div>";
     forceRevealMeistrid();
@@ -127,7 +139,9 @@ function renderTeam(groups, staffList) {
 
   if (!groups.length) {
     root.innerHTML =
-      '<div class="team-group"><h3 class="team-group-title">Meistrid</h3><ul class="team-names">' +
+      '<div class="team-group"><h3 class="team-group-title">' +
+      esc(fallbackTitle) +
+      '</h3><ul class="team-names">' +
       staffList
         .map((s) => '<li data-master-id="' + esc(String(s.id)) + '">' + esc(String(s.name || "")) + "</li>")
         .join("") +
@@ -217,6 +231,12 @@ async function main() {
     notifyReady();
   }
 }
+
+document.addEventListener("alessanna:locale", function () {
+  if (lastTeamStaff !== null) {
+    renderTeam(lastTeamGroups || [], lastTeamStaff);
+  }
+});
 
 void main();
 
