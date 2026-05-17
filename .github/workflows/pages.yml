@@ -26,7 +26,7 @@ jobs:
           set -euo pipefail
           mkdir -p _site
           cp index.html ru.html 404.html _site/
-          cp styles.css script.js translations.js _site/
+          cp styles.css script.js translations.js catalog-i18n.js _site/
           cp work.css work.js work.html _site/
           cp -r assets _site/
           cp -r locales _site/

@@ -1746,7 +1746,12 @@
 
     function readPickFromLi(li, panel, label, price) {
       var category = serviceCategoryFromPanel(panel);
-      var key = pickKey(panel, label);
+      var labelRu = String(li.getAttribute("data-service-name") || label || "").trim();
+      var displayLabel =
+        window.ALESSANNA_CATALOG_NAME && labelRu
+          ? window.ALESSANNA_CATALOG_NAME("service", labelRu)
+          : String(label || "").trim();
+      var key = pickKey(panel, labelRu);
       var svcId = String(li.getAttribute("data-service-id") || "").trim();
       var dur = Number(li.getAttribute("data-service-duration"));
       var buf = Number(li.getAttribute("data-service-buffer"));
@@ -1761,7 +1766,8 @@
         : [];
       var pick = {
         key: key,
-        label: label,
+        label: displayLabel,
+        labelRu: labelRu,
         price: price,
         category: category,
         serviceId: svcId,
@@ -1790,9 +1796,13 @@
       var nameSpan = li.querySelector("span:not(.price)");
       var priceEl = li.querySelector(".price");
       if (!nameSpan || !priceEl) return;
-      var label = nameSpan.textContent.trim();
+      var labelRu = String(li.getAttribute("data-service-name") || nameSpan.textContent || "").trim();
+      var label =
+        window.ALESSANNA_CATALOG_NAME && labelRu
+          ? window.ALESSANNA_CATALOG_NAME("service", labelRu)
+          : nameSpan.textContent.trim();
       var price = priceEl.textContent.trim();
-      var key = pickKey(panel, label);
+      var key = pickKey(panel, labelRu);
       var idx = -1;
       for (var i = 0; i < picked.length; i++) {
         if (picked[i].key === key) {
@@ -1908,7 +1918,11 @@
       var catSel = serviceSelect;
       var catOpt = catSel ? catSel.options[catSel.selectedIndex] : null;
       var category = catOpt ? String(catOpt.value || "") : "";
-      var label = String(opt.getAttribute("data-service-name") || opt.textContent || "").trim();
+      var labelRu = String(opt.getAttribute("data-service-name") || opt.textContent || "").trim();
+      var label =
+        window.ALESSANNA_CATALOG_NAME && labelRu
+          ? window.ALESSANNA_CATALOG_NAME("service", labelRu)
+          : labelRu;
       /* Цена в pick хранится как строка («18 €») — берём то, что мы
        * клали в data-service-price из site-services.mjs (fmtPrice). */
       var price = String(opt.getAttribute("data-service-price") || "—");
@@ -1922,7 +1936,7 @@
       /* pickKey должен совпадать с тем, что генерируется в прайсе.
        * pickKey() умеет работать со строкой category id или с DOM-панелью —
        * передаём category id (это data-pick-category в прайсе). */
-      var key = pickKey(category, label);
+      var key = pickKey(category, labelRu);
       for (var i = 0; i < picked.length; i++) {
         if (picked[i].key === key) {
           /* Уже выбрана эта услуга — ничего не меняем. */
@@ -1932,6 +1946,7 @@
       var pick = {
         key: key,
         label: label,
+        labelRu: labelRu,
         price: price,
         category: category,
         serviceId: svcId,
@@ -2188,7 +2203,15 @@
 
     document.addEventListener("alessanna:locale", function () {
       UI = getPickUi();
-      if (picked.length) renderList();
+      if (picked.length) {
+        picked = picked.map(function (p) {
+          if (p.labelRu && window.ALESSANNA_CATALOG_NAME) {
+            p.label = window.ALESSANNA_CATALOG_NAME("service", p.labelRu);
+          }
+          return p;
+        });
+        renderList();
+      }
     });
   })();
 

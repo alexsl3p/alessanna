@@ -36,6 +36,13 @@ function tr(key, fb) {
   return window.ALESSANNA_T ? window.ALESSANNA_T(key, fb) : fb != null ? fb : key;
 }
 
+function catalogName(type, ruName) {
+  const ru = String(ruName || "").trim();
+  if (!ru) return ru;
+  if (window.ALESSANNA_CATALOG_NAME) return window.ALESSANNA_CATALOG_NAME(type, ru);
+  return ru;
+}
+
 let lastTeamGroups = null;
 let lastTeamStaff = null;
 
@@ -160,7 +167,7 @@ function renderTeam(groups, staffList) {
         esc(g.nameKey || "") +
         '">' +
         '<h3 class="team-group-title">' +
-        esc(g.title) +
+        esc(catalogName("category", g.title)) +
         "</h3>" +
         '<ul class="team-names">' +
         g.names.map((n) => '<li data-master-id="' + esc(n.id) + '">' + esc(n.name) + "</li>").join("") +

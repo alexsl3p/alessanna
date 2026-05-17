@@ -24,6 +24,13 @@ function tr(key, fb) {
   return window.ALESSANNA_T ? window.ALESSANNA_T(key, fb) : fb != null ? fb : key;
 }
 
+function catalogName(type, ruName) {
+  const ru = String(ruName || "").trim();
+  if (!ru) return ru;
+  if (window.ALESSANNA_CATALOG_NAME) return window.ALESSANNA_CATALOG_NAME(type, ru);
+  return ru;
+}
+
 function info(msg, extra) {
   if (extra !== undefined) console.info(LOG_PREFIX, msg, extra);
   else console.info(LOG_PREFIX, msg);
@@ -248,7 +255,7 @@ function buildCatalogHtml(groups, svcMasters, prefix) {
       '" data-tab-index="' +
       ti +
       '">' +
-      esc(gr.name) +
+      esc(catalogName("category", gr.name)) +
       "</button>";
 
     panelHtml +=
@@ -263,7 +270,7 @@ function buildCatalogHtml(groups, svcMasters, prefix) {
       ' data-pick-category="' +
       esc(catKey) +
       '"><p class="price-panel-title">' +
-      esc(gr.name) +
+      esc(catalogName("category", gr.name)) +
       '</p><ul class="menu-list">';
     if (!gr.items || gr.items.length === 0) {
       panelHtml +=
@@ -297,7 +304,7 @@ function buildCatalogHtml(groups, svcMasters, prefix) {
           '" data-service-name="' +
           esc(it.name) +
           '"><span>' +
-          esc(it.name) +
+          esc(catalogName("service", it.name)) +
           '</span><span class="price">' +
           esc(fmtPrice(it.price)) +
           "</span></li>";
@@ -343,7 +350,7 @@ function renderFormSelects(groups, svcMasters) {
     const gr = groups[g];
     const catOpt = document.createElement("option");
     catOpt.value = gr.id;
-    catOpt.textContent = gr.name;
+    catOpt.textContent = catalogName("category", gr.name);
     /* lowercase RU — по этому атрибуту script.js находит team-group для
      * фильтрации блока «Мастера». */
     const catKey = String(gr.name || "").trim().toLocaleLowerCase("ru");
@@ -368,7 +375,7 @@ function renderFormSelects(groups, svcMasters) {
       /* В списке услуг формы — только название (без цены): ориентир из прайса
        * не равен финальному счёту. Цена остаётся в data-service-price для
        * слотов и служебной логики. */
-      itemOpt.textContent = String(it.name || tr("site.ui.serviceDefault", "Service"));
+      itemOpt.textContent = catalogName("service", String(it.name || "")) || tr("site.ui.serviceDefault", "Service");
       itemOpt.setAttribute("data-category-id", gr.id);
       itemOpt.setAttribute("data-service-id", sid);
       itemOpt.setAttribute("data-service-name", String(it.name || ""));
