@@ -3,7 +3,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const PUBLIC_LANGS = ["ru", "et", "fi", "en"];
+const PUBLIC_LANGS = ["ru", "et", "en"];
 
 /** Title + meta description per locale (SEO). */
 const SEO_BY_LANG = {
@@ -17,11 +17,6 @@ const SEO_BY_LANG = {
     description:
       "Luksuslik ilusalong Pärnus. Elegantsus, ilu ja hoolitus — rahulik kogemus. Broneeri aeg ja vaata kontakte.",
   },
-  fi: {
-    title: "AlesSanna – Premium kauneushoitola Pärnussa",
-    description:
-      "Premium kauneushoitola Pärnussa. Eleganssia ja huolenpitoa. Varaa aika ja tutustu yhteystietoihin.",
-  },
   en: {
     title: "AlesSanna – Luxury beauty salon in Pärnu",
     description:
@@ -32,7 +27,6 @@ const SEO_BY_LANG = {
 const OG_LOCALE = {
   ru: "ru_RU",
   et: "et_EE",
-  fi: "fi_FI",
   en: "en_US",
 };
 
@@ -108,7 +102,7 @@ function renderPublicLandingHtml(rootDir, req, lang) {
   const syncScript = `
   <script>
   (function(){
-    var S=["ru","et","fi","en"];
+    var S=["ru","et","en"];
     var seg=(location.pathname.split("/").filter(Boolean)[0]||"").toLowerCase();
     if(S.indexOf(seg)<0)return;
     try{localStorage.setItem("lang",seg);}catch(e){}

@@ -203,11 +203,31 @@
       categoryMarketingHint: "Remarketingi tag. Praegu pole aktiivne.",
       settings: "Küpsiste seaded",
     },
+    en: {
+      title: "Cookies & privacy",
+      lead:
+        "We use cookies so the site works and to understand which services " +
+        "visitors look for. Read more in our",
+      privacyLink: "Privacy policy",
+      cookieLink: "Cookie policy",
+      acceptAll: "Accept all",
+      essentialOnly: "Essential only",
+      customize: "Customize",
+      save: "Save choices",
+      categoryEssential: "Essential",
+      categoryEssentialHint: "Required for the site to work. Always on.",
+      categoryAnalytics: "Analytics",
+      categoryAnalyticsHint: "Anonymous visit stats — helps us improve the catalog.",
+      categoryMarketing: "Marketing",
+      categoryMarketingHint: "Remarketing tag. Not active yet.",
+      settings: "Cookie settings",
+    },
   };
 
   function getLang() {
-    var html = document.documentElement.getAttribute("lang") || "ru";
-    return html.toLowerCase().indexOf("et") === 0 ? "et" : "ru";
+    var html = (document.documentElement.getAttribute("lang") || "ru").toLowerCase().slice(0, 2);
+    if (html === "et" || html === "en") return html;
+    return "ru";
   }
 
   function injectStyles() {

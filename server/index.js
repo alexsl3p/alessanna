@@ -73,7 +73,7 @@ function sendPublicFile(name) {
 
 app.get("/locales/:file", (req, res, next) => {
   const m = /^([a-z]{2})\.json$/i.exec(req.params.file || "");
-  if (!m || !["ru", "et", "fi", "en"].includes(m[1].toLowerCase())) return next();
+  if (!m || !["ru", "et", "en"].includes(m[1].toLowerCase())) return next();
   const lng = m[1].toLowerCase();
   const fp = path.join(root, "locales", `${lng}.json`);
   if (!fs.existsSync(fp)) return next();

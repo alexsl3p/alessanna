@@ -33,6 +33,7 @@ jobs:
           cp supabase-public-config.js site-services.mjs site-team.mjs site-builder.mjs site-support-chat.mjs site-admin-preview.mjs _site/
           cp .nojekyll CNAME _site/
           cp -r .github/page-bundle/work _site/
+          node scripts/pages-lang-routes.mjs _site
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site

@@ -466,6 +466,81 @@ a:hover {
   pointer-events: none;
 }
 
+.lang-switch-sep {
+  color: var(--text-muted);
+  margin: 0 0.15rem;
+  opacity: 0.45;
+}
+
+body.lang-picker-open {
+  overflow: hidden;
+}
+
+body.lang-picker-open .site-header,
+body.lang-picker-open main,
+body.lang-picker-open .site-footer,
+body.lang-picker-open .mobile-book-bar {
+  visibility: hidden;
+}
+
+.lang-picker {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+}
+
+.lang-picker[hidden] {
+  display: none !important;
+}
+
+.lang-picker__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(6px);
+}
+
+.lang-picker__panel {
+  position: relative;
+  z-index: 1;
+  width: min(28rem, 100%);
+  padding: clamp(1.75rem, 5vw, 2.5rem);
+  border: 1px solid var(--stroke-strong);
+  border-radius: 1rem;
+  background: rgba(12, 12, 12, 0.96);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+  text-align: center;
+}
+
+.lang-picker__title {
+  font-family: var(--font-display, "Cormorant Garamond", Georgia, serif);
+  font-size: clamp(1.5rem, 4vw, 1.85rem);
+  font-weight: 500;
+  color: var(--gold-bright);
+  margin: 0 0 0.75rem;
+}
+
+.lang-picker__lead {
+  margin: 0 0 1.5rem;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.lang-picker__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.lang-picker__btn {
+  width: 100%;
+  justify-content: center;
+}
+
 @media (max-width: 900px) {
   html {
     background-attachment: scroll;
