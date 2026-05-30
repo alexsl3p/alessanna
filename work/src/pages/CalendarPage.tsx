@@ -27,7 +27,7 @@ import type {
   StaffServiceRow,
   StaffTimeOffRow,
 } from "../types/database";
-import { isStaffRowAdmin, staffEligibleForService, hasStaffRole, normalizeStaffMember } from "../lib/roles";
+import { isStaffRowAdmin, staffEligibleForService, normalizeStaffMember } from "../lib/roles";
 import { effectiveCanWorkCalendar } from "../lib/effectiveRole";
 import { loadServicesCatalog } from "../lib/loadServicesCatalog";
 import {
@@ -45,6 +45,7 @@ import { BookingModal } from "../components/BookingModal";
 import { CalendarSidePanels } from "../components/CalendarSidePanels";
 import { ProCalendar } from "../components/calendar/ProCalendar";
 import { WeekTimelineGrid } from "../components/calendar/WeekTimelineGrid";
+import { ReceptionWeekGrid } from "../components/reception/ReceptionWeekGrid";
 import { buildStaffHueMap } from "../lib/staffHue";
 import {
   CALENDAR_WEEK_EXCEPT_SUNDAY_STAFF_SETTING_KEY,
@@ -54,6 +55,8 @@ import {
 import { staffCrmAppointmentBlockStyle } from "../lib/staffCalendarColors";
 import { generateAvailableSlots } from "../lib/slots";
 
+const ALL_STAFF_ID = "__all__";
+
 type View = "day" | "week" | "month";
 
 export function CalendarPage() {
@@ -62,7 +65,7 @@ export function CalendarPage() {
   const { canManage, isWorkerOnlyEffective } = useEffectiveRole();
   const [view, setView] = useState<View>("week");
   const [cursor, setCursor] = useState(() => new Date());
-  const [staffId, setStaffId] = useState<string | null>(null);
+  const [staffId, setStaffId] = useState<string>(ALL_STAFF_ID);
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [schedules, setSchedules] = useState<StaffScheduleRow[]>([]);
   const [timeOff, setTimeOff] = useState<StaffTimeOffRow[]>([]);
@@ -208,16 +211,11 @@ export function CalendarPage() {
       return;
     }
     if (!activeStaffForCalendar.length) return;
-    const selfInRoster =
-      staffMember &&
-      (hasStaffRole(staffMember, "manager") || hasStaffRole(staffMember, "admin")) &&
-      activeStaffForCalendar.some((e) => e.id === staffMember.id);
-    if (selfInRoster && (staffId == null || !activeStaffForCalendar.some((e) => e.id === staffId))) {
-      setStaffId(staffMember!.id);
-      return;
-    }
-    if (staffId == null || !activeStaffForCalendar.some((e) => e.id === staffId)) {
-      setStaffId(activeStaffForCalendar[0].id);
+    // ALL_STAFF_ID is always a valid selection for admins/managers
+    if (staffId === ALL_STAFF_ID) return;
+    // Fix stale staffId that's no longer in the roster
+    if (!activeStaffForCalendar.some((e) => e.id === staffId)) {
+      setStaffId(ALL_STAFF_ID);
     }
   }, [activeStaffForCalendar, staffMember, staffId, isWorkerOnlyEffective]);
 
@@ -231,7 +229,7 @@ export function CalendarPage() {
   }, [appointments, staffMember, isWorkerOnlyEffective]);
 
   const goNearestSlot = useCallback(() => {
-    if (!canUseCalendar || staffId == null) return;
+    if (!canUseCalendar || staffId === ALL_STAFF_ID) return;
     const now = new Date();
     const sched = schedules
       .filter((s) => s.staff_id === staffId)
@@ -274,9 +272,8 @@ export function CalendarPage() {
       : Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
   function appointmentBlocks(day: Date, allStaff = false) {
-    if (!allStaff && staffId == null) return [];
     return filteredAppointments.filter((b) => {
-      if (!allStaff && b.staff_id !== staffId) return false;
+      if (!allStaff && staffId !== ALL_STAFF_ID && b.staff_id !== staffId) return false;
       try {
         return isSameDay(parseISO(b.start_time), day);
       } catch {
@@ -347,7 +344,7 @@ export function CalendarPage() {
 
   function openQuickBooking() {
     if (!canUseCalendar) return;
-    const targetStaffId = staffId ?? activeStaffForCalendar[0]?.id;
+    const targetStaffId = staffId === ALL_STAFF_ID ? activeStaffForCalendar[0]?.id : staffId;
     if (!targetStaffId) return;
     const base = startOfDay(cursor);
     const now = new Date();
@@ -457,10 +454,11 @@ export function CalendarPage() {
           <label className="flex items-center gap-2 text-sm text-muted">
             {t("calendar.staff")}
             <select
-              value={staffId ?? ""}
+              value={staffId}
               onChange={(e) => setStaffId(e.target.value)}
               className="rounded-lg border border-line/15 bg-panel px-3 py-2 text-fg"
             >
+              <option value={ALL_STAFF_ID}>Все мастера</option>
               {activeStaffForCalendar.map((e) => (
                 <option key={e.id} value={e.id}>
                   {e.name}
@@ -509,8 +507,6 @@ export function CalendarPage() {
                 canDrag={canUseCalendar}
                 lockToStaffId={isWorkerOnlyEffective && staffMember ? staffMember.id : null}
               />
-            ) : staffId == null ? (
-              <p className="text-muted">{t("common.loading")}</p>
             ) : view === "month" ? (
               <div className="grid grid-cols-1 gap-3 md:grid-cols-7">
                 {monthDays.map((day) => {
@@ -586,6 +582,23 @@ export function CalendarPage() {
                   );
                 })}
               </div>
+            ) : staffId === ALL_STAFF_ID ? (
+              <div className="h-[720px] overflow-hidden rounded-xl border border-line/10">
+                <ReceptionWeekGrid
+                  days={days}
+                  staff={activeStaffForCalendar}
+                  appointments={filteredAppointments}
+                  services={services}
+                  schedules={schedules}
+                  timeOff={timeOff}
+                  visibleStaffIds={new Set(activeStaffForCalendar.map((m) => m.id))}
+                  onSlotClick={(start) => {
+                    const sid = activeStaffForCalendar[0]?.id;
+                    if (sid) setModal({ start, staffId: sid });
+                  }}
+                  onApptClick={() => {}}
+                />
+              </div>
             ) : (
               <WeekTimelineGrid
                 days={days}
@@ -613,10 +626,10 @@ export function CalendarPage() {
               services={services}
               schedules={schedules}
               timeOff={timeOff}
-              focusStaffId={staffId}
+              focusStaffId={staffId === ALL_STAFF_ID ? null : staffId}
               serviceDurationMin={durationMin}
-              onNearestSlot={canUseCalendar && staffId ? goNearestSlot : undefined}
-              onCreateBooking={canUseCalendar && staffId ? openQuickBooking : undefined}
+              onNearestSlot={canUseCalendar && staffId !== ALL_STAFF_ID ? goNearestSlot : undefined}
+              onCreateBooking={canUseCalendar ? openQuickBooking : undefined}
             />
           )}
         </div>
