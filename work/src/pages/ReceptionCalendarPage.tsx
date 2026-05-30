@@ -79,14 +79,8 @@ export function ReceptionCalendarPage() {
   useEffect(() => { void load(); }, [load]);
   useCalendarDataRealtime(load);
 
-  const weekStart = useMemo(
-    () => startOfWeek(cursor, { weekStartsOn: 1 }),
-    [cursor],
-  );
-  const days = useMemo(
-    () => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
-    [weekStart],
-  );
+  const weekStart = useMemo(() => startOfWeek(cursor, { weekStartsOn: 1 }), [cursor]);
+  const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
 
   function handleToggleStaff(id: string) {
     setVisibleStaffIds((prev) => {
@@ -117,50 +111,49 @@ export function ReceptionCalendarPage() {
     else setCursor((d) => (dir === 1 ? addMonths(d, 1) : subMonths(d, 1)));
   }
 
-  const periodLabel = cursor.toLocaleString("ru-RU", {
-    month: "long",
-    year: "numeric",
-  });
+  const periodLabel = cursor.toLocaleString("ru-RU", { month: "long", year: "numeric" });
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-zinc-950 text-zinc-500">
+      <div className="flex h-screen items-center justify-center bg-canvas text-muted">
         Загрузка…
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-zinc-950 text-zinc-100">
+    <div className="flex h-screen flex-col overflow-hidden bg-canvas text-fg">
       <AppTopBar />
 
-      {/* Top navigation bar */}
-      <div className="flex shrink-0 items-center gap-2 border-b border-zinc-800 px-3 py-2">
+      {/* Top navigation */}
+      <div className="flex shrink-0 items-center gap-2 border-b border-line/15 bg-panel px-3 py-2">
         <button
           onClick={() => navigate(-1)}
-          className="flex h-8 w-8 items-center justify-center rounded-full text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+          className="flex h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-surface hover:text-fg"
         >
           ‹
         </button>
         <button
           onClick={() => setCursor(new Date())}
-          className="rounded-lg border border-zinc-700 px-3 py-1 text-sm font-medium text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
+          className="rounded-lg border border-line/20 px-3 py-1 text-sm font-medium text-fg/70 hover:bg-surface hover:text-fg"
         >
           Сегодня
         </button>
         <button
           onClick={() => navigate(1)}
-          className="flex h-8 w-8 items-center justify-center rounded-full text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+          className="flex h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-surface hover:text-fg"
         >
           ›
         </button>
-        <span className="ml-1 text-base font-medium capitalize text-zinc-200">
+
+        <span className="ml-1 text-base font-medium capitalize text-fg/80">
           {periodLabel}
         </span>
+
         <div className="flex-1" />
 
         {/* View switcher */}
-        <div className="flex items-center rounded-lg border border-zinc-700 p-0.5">
+        <div className="flex items-center rounded-lg border border-line/20 bg-surface/40 p-0.5">
           {(["week", "month"] as const).map((v) => (
             <button
               key={v}
@@ -168,8 +161,8 @@ export function ReceptionCalendarPage() {
               className={[
                 "rounded-md px-3 py-1 text-sm font-medium transition-colors",
                 view === v
-                  ? "bg-zinc-700 text-zinc-100"
-                  : "text-zinc-400 hover:text-zinc-200",
+                  ? "bg-surface text-fg shadow-sm"
+                  : "text-muted hover:text-fg/80",
               ].join(" ")}
             >
               {v === "week" ? "Неделя" : "Месяц"}
@@ -213,7 +206,6 @@ export function ReceptionCalendarPage() {
         )}
       </div>
 
-      {/* Booking popup */}
       {popup && (
         <ReceptionBookingPopup
           anchorX={popup.anchorX}
@@ -228,7 +220,6 @@ export function ReceptionCalendarPage() {
         />
       )}
 
-      {/* Appointment detail */}
       {detail && (
         <ReceptionAppointmentDetail
           appt={detail.appt}

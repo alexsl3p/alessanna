@@ -70,7 +70,7 @@ function computeOverlapLayout(appts: AppointmentRow[]): ApptLayout[] {
   });
 }
 
-function staffDotColor(member: StaffMember, hueMap: Map<string, number>): string {
+function staffChipColor(member: StaffMember, hueMap: Map<string, number>): string {
   const hex = member.calendar_color_hex?.trim();
   if (hex && /^#[0-9a-f]{6}$/i.test(hex)) return hex;
   const hue = hueMap.get(member.id) ?? 200;
@@ -110,7 +110,6 @@ export function ReceptionWeekGrid({
   }, []);
 
   function handleBodyClick(e: React.MouseEvent<HTMLDivElement>, day: Date) {
-    // Don't open popup if clicking an existing appointment
     if ((e.target as HTMLElement).closest("[data-appt]")) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const scrollTop = bodyRef.current?.scrollTop ?? 0;
@@ -131,12 +130,10 @@ export function ReceptionWeekGrid({
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       {/* Day header row */}
-      <div className="flex shrink-0 border-b border-zinc-800">
-        {/* Gutter header (timezone) */}
-        <div className="flex w-12 shrink-0 items-end justify-center pb-1 text-[10px] text-zinc-500">
+      <div className="flex shrink-0 border-b border-line/15 bg-panel">
+        <div className="flex w-12 shrink-0 items-end justify-center pb-1 text-[10px] text-muted/50">
           GMT+3
         </div>
-        {/* Day headers */}
         {days.map((day, i) => {
           const isToday = isSameDay(day, now);
           const workingStaff = panelStaffWorkingOnDate(staff, schedules, day, new Set<string>()).filter(
@@ -146,33 +143,32 @@ export function ReceptionWeekGrid({
           return (
             <div
               key={day.toISOString()}
-              className="flex min-w-0 flex-1 flex-col items-center border-l border-zinc-800 py-1"
+              className="flex min-w-0 flex-1 flex-col items-center border-l border-line/10 py-1"
             >
-              <span className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
+              <span className="text-[11px] font-medium uppercase tracking-wide text-muted/60">
                 {ruDay}
               </span>
               <span
                 className={[
                   "flex h-8 w-8 items-center justify-center rounded-full text-lg font-semibold",
-                  isToday ? "bg-blue-600 text-white" : "text-zinc-200",
+                  isToday ? "bg-gold text-canvas" : "text-fg/80",
                 ].join(" ")}
               >
                 {format(day, "d")}
               </span>
-              {/* Working staff chips */}
               {workingStaff.length > 0 && (
                 <div className="mt-0.5 flex flex-wrap justify-center gap-0.5 px-1">
                   {workingStaff.slice(0, 4).map((m) => (
                     <span
                       key={m.id}
                       className="max-w-[52px] truncate rounded px-1.5 py-0.5 text-[10px] font-medium text-white"
-                      style={{ backgroundColor: staffDotColor(m, staffHueMap) }}
+                      style={{ backgroundColor: staffChipColor(m, staffHueMap) }}
                     >
                       {m.name.split(" ")[0]}
                     </span>
                   ))}
                   {workingStaff.length > 4 && (
-                    <span className="rounded px-1 py-0.5 text-[9px] text-zinc-500">
+                    <span className="rounded px-1 py-0.5 text-[9px] text-muted/60">
                       +{workingStaff.length - 4}
                     </span>
                   )}
@@ -184,31 +180,28 @@ export function ReceptionWeekGrid({
       </div>
 
       {/* Scrollable time body */}
-      <div ref={bodyRef} className="flex min-h-0 flex-1 overflow-y-auto">
+      <div ref={bodyRef} className="flex min-h-0 flex-1 overflow-y-auto bg-canvas">
         {/* Time gutter */}
-        <div className="relative w-12 shrink-0" style={{ height: TOTAL_PX }}>
+        <div className="relative w-12 shrink-0 bg-panel" style={{ height: TOTAL_PX }}>
           {HOURS.map((h) => (
             <div
               key={h}
-              className="absolute right-1 text-[10px] text-zinc-500"
+              className="absolute right-2 text-[10px] text-muted/50"
               style={{ top: (h - START_HOUR) * PX_PER_HOUR - 6 }}
             >
               {h.toString().padStart(2, "0")}:00
             </div>
           ))}
-          {/* Red dot for current time */}
-          {isSameDay(now, days[0] ?? new Date()) ||
-          days.some((d) => isSameDay(d, now)) ? (
+          {days.some((d) => isSameDay(d, now)) && (
             <div
-              className="absolute right-0 h-2.5 w-2.5 rounded-full bg-red-500"
+              className="absolute right-0 h-2 w-2 rounded-full bg-red-500"
               style={{
                 top:
                   (now.getHours() - START_HOUR) * PX_PER_HOUR +
-                  (now.getMinutes() / 60) * PX_PER_HOUR -
-                  5,
+                  (now.getMinutes() / 60) * PX_PER_HOUR - 4,
               }}
             />
-          ) : null}
+          )}
         </div>
 
         {/* Day columns */}
@@ -217,7 +210,6 @@ export function ReceptionWeekGrid({
             const dayAnchor = setHours(startOfDay(day), START_HOUR);
             const isToday = isSameDay(day, now);
 
-            // Appointments for this day, filtered by visible staff
             const dayAppts = appointments.filter((a) => {
               if (!visibleStaffIds.has(a.staff_id)) return false;
               const iv = appointmentInterval(a);
@@ -225,7 +217,6 @@ export function ReceptionWeekGrid({
               return isSameDay(iv.start, day);
             });
 
-            // Time-off blocks for visible staff on this day
             const dayTimeOff = timeOff.filter((to) => {
               if (!visibleStaffIds.has(to.staff_id)) return false;
               const iv = appointmentInterval({ start_time: to.start_time, end_time: to.end_time });
@@ -239,17 +230,17 @@ export function ReceptionWeekGrid({
               <div
                 key={day.toISOString()}
                 className={[
-                  "relative min-w-0 flex-1 cursor-pointer select-none border-l border-zinc-800",
-                  isToday ? "bg-blue-950/10" : "",
+                  "relative min-w-0 flex-1 cursor-pointer select-none border-l border-line/10",
+                  isToday ? "bg-gold/[0.03]" : "",
                 ].join(" ")}
                 style={{ height: TOTAL_PX }}
                 onClick={(e) => handleBodyClick(e, day)}
               >
-                {/* Hour grid lines */}
+                {/* Hour lines */}
                 {HOURS.map((h) => (
                   <div
                     key={h}
-                    className="pointer-events-none absolute inset-x-0 border-t border-zinc-800"
+                    className="pointer-events-none absolute inset-x-0 border-t border-line/12"
                     style={{ top: (h - START_HOUR) * PX_PER_HOUR }}
                   />
                 ))}
@@ -257,17 +248,14 @@ export function ReceptionWeekGrid({
                 {HOURS.map((h) => (
                   <div
                     key={`half-${h}`}
-                    className="pointer-events-none absolute inset-x-0 border-t border-zinc-800/50"
+                    className="pointer-events-none absolute inset-x-0 border-t border-line/6"
                     style={{ top: (h - START_HOUR) * PX_PER_HOUR + PX_PER_HOUR / 2 }}
                   />
                 ))}
 
-                {/* Time-off zones (diagonal stripes) */}
+                {/* Time-off zones */}
                 {dayTimeOff.map((to) => {
-                  const iv = appointmentInterval({
-                    start_time: to.start_time,
-                    end_time: to.end_time,
-                  });
+                  const iv = appointmentInterval({ start_time: to.start_time, end_time: to.end_time });
                   if (!iv) return null;
                   const topPx = timeToPx(iv.start, dayAnchor);
                   const heightPx = Math.max(timeToPx(iv.end, dayAnchor) - topPx, 8);
@@ -275,7 +263,7 @@ export function ReceptionWeekGrid({
                   return (
                     <div
                       key={to.id}
-                      className="pointer-events-none absolute inset-x-0 opacity-40"
+                      className="pointer-events-none absolute inset-x-0 opacity-30"
                       style={{
                         top: topPx,
                         height: heightPx,
@@ -304,10 +292,7 @@ export function ReceptionWeekGrid({
                   const iv = appointmentInterval(appt);
                   if (!iv) return null;
                   const topPx = timeToPx(iv.start, dayAnchor);
-                  const heightPx = Math.max(
-                    timeToPx(iv.end, dayAnchor) - topPx,
-                    20,
-                  );
+                  const heightPx = Math.max(timeToPx(iv.end, dayAnchor) - topPx, 20);
                   if (topPx < -20 || topPx > TOTAL_PX) return null;
 
                   const widthPct = 100 / totalCols;
@@ -319,14 +304,14 @@ export function ReceptionWeekGrid({
                     <div
                       key={appt.id}
                       data-appt="1"
-                      className="absolute overflow-hidden rounded-md border-l-[3px] px-1.5 py-0.5 text-left transition-opacity hover:opacity-80"
+                      className="absolute overflow-hidden rounded-md border-l-[3px] px-1.5 py-0.5 text-left transition-opacity hover:brightness-110 cursor-pointer"
                       style={{
                         top: topPx + 1,
                         height: heightPx - 2,
                         left: `calc(${leftPct}% + 1px)`,
                         width: `calc(${widthPct}% - 2px)`,
                         ...colorStyle,
-                        borderColor: (colorStyle.borderColor as string) ?? "#60a5fa",
+                        borderColor: (colorStyle.borderColor as string) ?? "#c4a574",
                       }}
                       onClick={(e) => {
                         e.stopPropagation();

@@ -43,27 +43,27 @@ export function ReceptionSidebar({
     const hex = member.calendar_color_hex?.trim();
     if (hex && /^#[0-9a-f]{6}$/i.test(hex)) return hex;
     const hue = staffHueMap.get(member.id) ?? (idx * 37) % 360;
-    return `hsl(${hue} 70% 50%)`;
+    return `hsl(${hue}, 65%, 45%)`;
   }
 
   return (
-    <div className="flex w-64 shrink-0 flex-col overflow-y-auto border-r border-zinc-800 bg-zinc-950 py-3">
+    <div className="flex w-64 shrink-0 flex-col overflow-y-auto border-r border-line/15 bg-panel py-3">
       {/* Mini calendar */}
       <div className="px-3">
         <div className="mb-1 flex items-center justify-between">
           <button
             onClick={() => setMiniCursor((d) => subMonths(d, 1))}
-            className="flex h-7 w-7 items-center justify-center rounded-full text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+            className="flex h-7 w-7 items-center justify-center rounded-full text-muted hover:bg-surface hover:text-fg"
             aria-label="Предыдущий месяц"
           >
             ‹
           </button>
-          <span className="text-xs font-medium capitalize text-zinc-300">
+          <span className="text-xs font-medium capitalize text-fg/70">
             {miniCursor.toLocaleString("ru-RU", { month: "long", year: "numeric" })}
           </span>
           <button
             onClick={() => setMiniCursor((d) => addMonths(d, 1))}
-            className="flex h-7 w-7 items-center justify-center rounded-full text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+            className="flex h-7 w-7 items-center justify-center rounded-full text-muted hover:bg-surface hover:text-fg"
             aria-label="Следующий месяц"
           >
             ›
@@ -73,7 +73,7 @@ export function ReceptionSidebar({
         {/* Day name headers */}
         <div className="grid grid-cols-7 text-center">
           {DAY_NAMES.map((d) => (
-            <div key={d} className="py-0.5 text-[10px] font-medium text-zinc-500">
+            <div key={d} className="py-0.5 text-[10px] font-medium text-muted/60">
               {d}
             </div>
           ))}
@@ -92,12 +92,12 @@ export function ReceptionSidebar({
                 className={[
                   "mx-auto flex h-7 w-7 items-center justify-center rounded-full text-[11px] transition-colors",
                   isToday
-                    ? "bg-blue-600 font-bold text-white hover:bg-blue-500"
+                    ? "bg-gold font-bold text-canvas"
                     : isSelected && !isToday
-                    ? "bg-zinc-700 text-zinc-100 hover:bg-zinc-600"
+                    ? "bg-surface text-fg"
                     : isCurrentMonth
-                    ? "text-zinc-300 hover:bg-zinc-800"
-                    : "text-zinc-600 hover:bg-zinc-900",
+                    ? "text-fg/70 hover:bg-surface/60"
+                    : "text-muted/40 hover:bg-surface/40",
                 ].join(" ")}
               >
                 {format(day, "d")}
@@ -107,18 +107,18 @@ export function ReceptionSidebar({
         </div>
       </div>
 
-      <div className="mx-3 my-3 border-t border-zinc-800" />
+      <div className="mx-3 my-3 border-t border-line/15" />
 
       {/* Staff list */}
       <div className="px-3">
-        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted/60">
           Мастера
         </p>
         <div className="space-y-0.5">
           {staff.map((member, idx) => (
             <label
               key={member.id}
-              className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-zinc-800/60"
+              className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-surface/50"
             >
               <input
                 type="checkbox"
@@ -126,9 +126,8 @@ export function ReceptionSidebar({
                 onChange={() => onToggleStaff(member.id)}
                 className="sr-only"
               />
-              {/* Custom checkbox square with staff color */}
               <span
-                className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-sm"
+                className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-sm transition-colors"
                 style={{
                   backgroundColor: visibleStaffIds.has(member.id)
                     ? staffColor(member, idx)
@@ -142,7 +141,7 @@ export function ReceptionSidebar({
                   </svg>
                 )}
               </span>
-              <span className="truncate text-sm text-zinc-200">{member.name}</span>
+              <span className="truncate text-sm text-fg/80">{member.name}</span>
             </label>
           ))}
         </div>
