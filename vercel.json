@@ -1,6 +1,18 @@
 {
-  "buildCommand": "cd work && npm install && npm run build",
-  "outputDirectory": "work/dist",
-  "installCommand": "true",
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "cleanUrls": true,
+  "trailingSlash": true,
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "SAMEORIGIN" }
+      ]
+    }
+  ],
+  "rewrites": [
+    { "source": "/ru", "destination": "/ru/" },
+    { "source": "/et", "destination": "/et/" },
+    { "source": "/en", "destination": "/en/" }
+  ]
 }
