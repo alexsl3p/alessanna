@@ -5,6 +5,8 @@
   "rewrites": [
     { "source": "/ru", "destination": "/ru/" },
     { "source": "/et", "destination": "/et/" },
-    { "source": "/en", "destination": "/en/" }
+    { "source": "/en", "destination": "/en/" },
+    { "source": "/gcal-test", "destination": "/gcal-test/index.html" },
+    { "source": "/gcal-test/(.*)", "destination": "/gcal-test/index.html" }
   ]
 }
