@@ -46,8 +46,8 @@ type AuthState = {
   isAdmin: boolean;
   /** True when real (non-preview) role is worker-only. */
   isWorkerOnly: boolean;
-  /** Legacy compatibility flag for shared UI components. Always false in current calendar-only workflow. */
   isReceptionMode: boolean;
+  setReceptionMode: (on: boolean) => void;
 };
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -100,6 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [staffMember, setStaffMember] = useState<StaffMember | null>(null);
   const [loading, setLoading] = useState(true);
   const [hasDeviceToken, setHasDeviceToken] = useState(false);
+  const [receptionMode, setReceptionMode] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -271,9 +272,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       canManage: hasStaffRole(staffMember, "admin") || hasStaffRole(staffMember, "manager"),
       isAdmin: hasStaffRole(staffMember, "admin"),
       isWorkerOnly: isWorkerOnlyView(staffMember?.roles),
-      isReceptionMode: false,
+      isReceptionMode: receptionMode,
+      setReceptionMode,
     }),
-    [staffMember, loading, login, logout, forgetThisDevice, hasDeviceToken]
+    [staffMember, loading, login, logout, forgetThisDevice, hasDeviceToken, receptionMode, setReceptionMode]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

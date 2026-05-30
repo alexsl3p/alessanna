@@ -21,6 +21,7 @@ import { MyHelpPage } from "./pages/MyHelpPage";
 import { ProfileSecurityPage } from "./pages/ProfileSecurityPage";
 import { PublicBookingPage } from "./pages/PublicBookingPage";
 import { SimplePublicBookingPage } from "./pages/SimplePublicBookingPage";
+import { ReceptionPage } from "./pages/ReceptionPage";
 import { PublicInvitePage } from "./pages/PublicInvitePage";
 import { AdminInvitesPage } from "./pages/AdminInvitesPage";
 
@@ -51,8 +52,8 @@ export default function App() {
       <Route path="/help" element={<MyHelpPage />} />
       <Route path="/book" element={<PublicBookingPage />} />
       <Route path="/book/simple" element={<SimplePublicBookingPage />} />
-      <Route path="/reception" element={<Navigate to="/calendar" replace />} />
-      <Route path="/quick-booking" element={<Navigate to="/calendar" replace />} />
+      <Route path="/reception" element={<ReceptionPage />} />
+      <Route path="/quick-booking" element={<ReceptionPage />} />
       <Route path="/invite/:token" element={<PublicInvitePage />} />
       <Route
         path="/"
