@@ -16,16 +16,26 @@ export default async function middleware(request) {
   // Requests already pointing at /_crm_dist/ (internal re-fetch) — serve directly
   if (pathname.startsWith("/_crm_dist/")) return;
 
-  // Build the internal URL pointing at the CRM build directory
   const internal = new URL(request.url);
-  internal.pathname = "/_crm_dist" + (pathname === "/" ? "/" : pathname);
 
+  // Static assets (have a file extension) — proxy directly to _crm_dist.
+  // Vercel may 308-redirect extensionless paths (e.g. /login → /login/), so
+  // SPA routes are served from index.html immediately to avoid that redirect
+  // being forwarded to the browser.
+  const isAsset = /\.[a-zA-Z0-9]+$/.test(pathname);
+
+  if (!isAsset) {
+    // SPA route — always serve the app shell; React Router handles the path.
+    internal.pathname = "/_crm_dist/index.html";
+    return fetch(internal.toString(), { headers: request.headers });
+  }
+
+  internal.pathname = "/_crm_dist" + pathname;
   const res = await fetch(internal.toString(), {
     headers: request.headers,
     redirect: "manual",
   });
 
-  // 404 = React Router client-side route → serve CRM's index.html (SPA fallback)
   if (res.status === 404) {
     internal.pathname = "/_crm_dist/index.html";
     return fetch(internal.toString());

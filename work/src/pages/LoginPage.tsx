@@ -37,8 +37,9 @@ export function LoginPage() {
   const [staffName, setStaffName] = useState<string>("");
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
+  const [redirectAfterLogin, setRedirectAfterLogin] = useState(nextAfterLogin);
 
-  if (staffMember) return <Navigate to={nextAfterLogin} replace />;
+  if (staffMember) return <Navigate to={redirectAfterLogin} replace />;
   /* Пока AuthContext пробует автологин по device_token — не показываем форму,
    * чтобы не моргала. Успешный автологин сам редиректнет выше по условию. */
   if (loading) {
@@ -165,13 +166,31 @@ export function LoginPage() {
                 Стандартный вход по телефону ниже
               </span>
             </button>
+            <button
+              type="button"
+              onClick={() => {
+                setRedirectAfterLogin("/reception");
+                setShowTrustedHint(true);
+                setShowWorkLoginForm(true);
+                setTimeout(() => {
+                  const el = document.getElementById("phone");
+                  if (el) (el as HTMLInputElement).focus();
+                }, 50);
+              }}
+              className="rounded-lg border border-emerald-700/50 bg-emerald-950/30 px-3 py-2 text-left text-sm text-emerald-100 hover:bg-emerald-900/40"
+            >
+              2. Ресепшен / Киоск
+              <span className="mt-0.5 block text-xs text-emerald-200/60">
+                Войдите, чтобы открыть режим самозаписи
+              </span>
+            </button>
             <a
               href={publicSiteUrl()}
               target="_blank"
               rel="noopener noreferrer"
               className="rounded-lg border border-zinc-700 bg-zinc-900/40 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-800/60"
             >
-              2. Сайт
+              3. Сайт
               <span className="mt-0.5 block text-xs text-zinc-400">
                 Открыть публичный сайт в новой вкладке
               </span>
