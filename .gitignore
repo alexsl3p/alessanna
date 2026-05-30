@@ -40,6 +40,9 @@ deployed-*.html
 # Supabase CLI temp (создаётся `supabase` CLI локально)
 supabase/.temp/
 
+# Google Calendar clone source (built output committed separately in gcal-test/)
+google-cal-clone/
+
 # Локальные payload’ы для MCP/CLI деплоя edge functions (не коммитить)
 _mcp_*.json
 _deploy_mcp_args.json
