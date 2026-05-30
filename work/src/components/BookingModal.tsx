@@ -80,6 +80,7 @@ export function BookingModal({
         name: s.name_et,
         durationMin: s.duration_min,
         priceEur: Number.isFinite(s.price_cents) ? s.price_cents / 100 : null,
+        priceMaxEur: (s.price_max_cents ?? 0) > 0 ? (s.price_max_cents ?? 0) / 100 : null,
         categoryName: s.category,
       })),
     [eligibleServices],

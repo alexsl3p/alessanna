@@ -5,7 +5,7 @@ import { supabase } from "../lib/supabase";
 import { useEffectiveRole } from "../context/EffectiveRoleContext";
 import { useServicesCatalogRealtime } from "../hooks/useSalonRealtime";
 import type { CategoryRow, ServiceRow, StaffMember } from "../types/database";
-import { eurFromCents } from "../lib/format";
+import { formatPriceEur } from "../lib/format";
 import { normalizeRoles } from "../lib/roles";
 import { ToggleSwitch } from "../components/ToggleSwitch";
 
@@ -276,6 +276,7 @@ export function ServicesPage() {
         duration_min: Number(r.duration || 0),
         buffer_after_min: Number(r.buffer_after_min || 10),
         price_cents: Number.isFinite(priceNum) ? Math.round(priceNum * 100) : 0,
+        price_max_cents: r.price_max != null ? Math.round(Number(r.price_max) * 100) : null,
         active: r.active !== false && r.is_active !== false,
         sort_order: idx,
         created_at: r.created_at != null ? String(r.created_at) : undefined,
@@ -314,9 +315,11 @@ export function ServicesPage() {
         }
       }
 
+      const syncPriceMax = (service.price_max_cents ?? 0) > 0 ? Number(service.price_max_cents ?? 0) / 100 : null;
       const payload = {
         name: serviceName,
         price: Number(service.price_cents || 0) / 100,
+        price_max: syncPriceMax,
         duration: Number(service.duration_min || 0),
         buffer_after_min: Number(service.buffer_after_min || 10),
         category_id: publicCategoryId,
@@ -325,6 +328,7 @@ export function ServicesPage() {
       const payloadNoBuffer = {
         name: serviceName,
         price: Number(service.price_cents || 0) / 100,
+        price_max: syncPriceMax,
         duration: Number(service.duration_min || 0),
         category_id: publicCategoryId,
         is_active: service.active !== false,
@@ -332,6 +336,7 @@ export function ServicesPage() {
       const payloadMinimal = {
         name: serviceName,
         price: Number(service.price_cents || 0) / 100,
+        price_max: syncPriceMax,
         duration: Number(service.duration_min || 0),
         category_id: publicCategoryId,
       };
@@ -626,9 +631,11 @@ export function ServicesPage() {
     if (rowFromServiceListings(s)) {
       const publicCategoryId =
         s.category_id != null && String(s.category_id).trim() !== "" ? String(s.category_id) : null;
+      const priceMax = (s.price_max_cents ?? 0) > 0 ? Number(s.price_max_cents ?? 0) / 100 : null;
       const payload = {
         name: String(s.name_et || "").trim(),
         price: Number(s.price_cents || 0) / 100,
+        price_max: priceMax,
         duration: Number(s.duration_min || 0),
         buffer_after_min: Number(s.buffer_after_min || 10),
         category_id: publicCategoryId,
@@ -637,6 +644,7 @@ export function ServicesPage() {
       const payloadNoBuffer = {
         name: String(s.name_et || "").trim(),
         price: Number(s.price_cents || 0) / 100,
+        price_max: priceMax,
         duration: Number(s.duration_min || 0),
         category_id: publicCategoryId,
         is_active: s.active !== false,
@@ -644,6 +652,7 @@ export function ServicesPage() {
       const payloadMinimal = {
         name: String(s.name_et || "").trim(),
         price: Number(s.price_cents || 0) / 100,
+        price_max: priceMax,
         duration: Number(s.duration_min || 0),
         category_id: publicCategoryId,
       };
@@ -1743,7 +1752,7 @@ export function ServicesPage() {
                       </span>
                       <span className="hidden sm:inline-flex shrink-0 items-center gap-2 text-[11px] text-zinc-400 tabular-nums">
                         <span className="rounded-md border border-zinc-800 bg-zinc-900/50 px-1.5 py-0.5 font-medium text-zinc-200">
-                          {eurFromCents(s.price_cents)}
+                          {formatPriceEur(s.price_cents, s.price_max_cents)}
                         </span>
                         <span title="Длительность">
                           {Number(s.duration_min || 0)} мин
@@ -1791,7 +1800,7 @@ export function ServicesPage() {
                   {/* === Mobile-only chips line (sm:hidden) === */}
                   <div className="flex flex-wrap items-center gap-1.5 px-4 pb-2 sm:hidden text-[11px] text-zinc-400 tabular-nums">
                     <span className="rounded-md border border-zinc-800 bg-zinc-900/50 px-1.5 py-0.5 font-medium text-zinc-200">
-                      {eurFromCents(s.price_cents)}
+                      {formatPriceEur(s.price_cents, s.price_max_cents)}
                     </span>
                     <span>{Number(s.duration_min || 0)} мин</span>
                     {Number(s.buffer_after_min || 0) > 0 && (
@@ -1822,25 +1831,47 @@ export function ServicesPage() {
                         className={`${fieldBase} text-sm font-medium ${canManage ? editableUi : "border border-zinc-700"}`}
                       />
                     </label>
-                    <label className="block text-[11px] uppercase tracking-wide text-zinc-500">
-                      {t("services.priceCents")}
-                      <div className="relative mt-1">
-                        <input
-                          type="number"
-                          disabled={!canManage}
-                          value={s.price_cents}
-                          onChange={(e) => {
-                            const price_cents = Number(e.target.value);
-                            setServices((prev) => prev.map((x) => (x.id === s.id ? { ...x, price_cents } : x)));
-                          }}
-                          onBlur={() => void saveService(s)}
-                          className={`w-full rounded-lg bg-black px-3 py-2 pr-12 text-sm text-white disabled:opacity-60 ${canManage ? editableUi : "border border-zinc-700"}`}
-                        />
-                        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-zinc-500">
-                          {eurFromCents(s.price_cents)}
-                        </span>
-                      </div>
-                    </label>
+                    <div className="flex gap-2">
+                      <label className="block flex-1 text-[11px] uppercase tracking-wide text-zinc-500">
+                        Цена от (€)
+                        <div className="relative mt-1">
+                          <input
+                            type="number"
+                            min={0}
+                            step={0.5}
+                            disabled={!canManage}
+                            value={s.price_cents / 100}
+                            onChange={(e) => {
+                              const price_cents = Math.round(Number(e.target.value) * 100);
+                              setServices((prev) => prev.map((x) => (x.id === s.id ? { ...x, price_cents } : x)));
+                            }}
+                            onBlur={() => void saveService(s)}
+                            className={`w-full rounded-lg bg-black px-3 py-2 pr-6 text-sm text-white disabled:opacity-60 ${canManage ? editableUi : "border border-zinc-700"}`}
+                          />
+                          <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-zinc-500">€</span>
+                        </div>
+                      </label>
+                      <label className="block flex-1 text-[11px] uppercase tracking-wide text-zinc-500">
+                        До (€)
+                        <div className="relative mt-1">
+                          <input
+                            type="number"
+                            min={0}
+                            step={0.5}
+                            disabled={!canManage}
+                            placeholder="—"
+                            value={(s.price_max_cents ?? 0) > 0 ? (s.price_max_cents ?? 0) / 100 : ""}
+                            onChange={(e) => {
+                              const price_max_cents = e.target.value ? Math.round(Number(e.target.value) * 100) : null;
+                              setServices((prev) => prev.map((x) => (x.id === s.id ? { ...x, price_max_cents } : x)));
+                            }}
+                            onBlur={() => void saveService(s)}
+                            className={`w-full rounded-lg bg-black px-3 py-2 pr-6 text-sm text-white placeholder-zinc-600 disabled:opacity-60 ${canManage ? editableUi : "border border-zinc-700"}`}
+                          />
+                          <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-zinc-500">€</span>
+                        </div>
+                      </label>
+                    </div>
                     <label className="block text-[11px] uppercase tracking-wide text-zinc-500">
                       {t("services.duration")}
                       <div className="relative mt-1">

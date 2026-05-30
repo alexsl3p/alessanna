@@ -6,6 +6,7 @@ export type ServicePickRow = {
   name: string;
   durationMin: number;
   priceEur: number | null;
+  priceMaxEur?: number | null;
   categoryName?: string | null;
   /** Публичный URL картинки услуги (если появится в каталоге). */
   thumbUrl?: string | null;
@@ -222,10 +223,14 @@ export function ServiceListPicker({
   const renderCard = (s: ServicePickRow) => {
     const sel = s.id === selectedId;
     const mark = markedIds?.has(s.id);
+    const fmtEur = (v: number) =>
+      Number.isInteger(v) ? `${v}` : v.toFixed(2).replace(".", ",");
     const priceStr = hidePrices
       ? ""
       : s.priceEur != null
-        ? `€${Number.isInteger(s.priceEur) ? s.priceEur : s.priceEur.toFixed(2)}`
+        ? s.priceMaxEur && s.priceMaxEur > s.priceEur
+          ? `${fmtEur(s.priceEur)}–${fmtEur(s.priceMaxEur)} €`
+          : `${fmtEur(s.priceEur)} €`
         : priceUnknownLabel;
     const emoji = (s.thumbEmoji?.trim() || "📋").slice(0, 4);
 

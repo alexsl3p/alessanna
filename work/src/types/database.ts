@@ -68,6 +68,8 @@ export type ServiceRow = {
   duration_min: number;
   buffer_after_min: number;
   price_cents: number;
+  /** Upper bound for range pricing (e.g. 15–25 €). Null = single price. */
+  price_max_cents?: number | null;
   active: boolean;
   sort_order: number;
   created_at?: string;
@@ -150,6 +152,7 @@ export type ServiceListingRow = {
   duration: number | null;
   buffer_after_min: number | null;
   price: number | null;
+  price_max: number | null;
   is_active: boolean;
   created_at?: string;
 };

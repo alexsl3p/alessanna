@@ -34,6 +34,7 @@ type ListingCatalogRow = {
   id: string;
   name?: string | null;
   price?: number | null;
+  price_max?: number | null;
   duration?: number | null;
   category_id?: string | null;
   buffer_after_min?: number | null;
@@ -60,7 +61,7 @@ async function fetchFromListings(): Promise<ServiceRow[]> {
   /* Schema-drift fallback: некоторые старые проекты не имеют buffer_after_min/is_active. */
   let res = await supabase
     .from("service_listings")
-    .select("id,name,price,duration,category_id,buffer_after_min,is_active,service_categories(name)")
+    .select("id,name,price,price_max,duration,category_id,buffer_after_min,is_active,service_categories(name)")
     .order("name", { ascending: true });
 
   if (res.error && String(res.error.message || "").includes("buffer_after_min")) {
@@ -89,6 +90,7 @@ async function fetchFromListings(): Promise<ServiceRow[]> {
       duration_min: Number(r.duration || 0),
       buffer_after_min: Number(r.buffer_after_min ?? 10),
       price_cents: Math.round(Number(r.price || 0) * 100),
+      price_max_cents: r.price_max != null ? Math.round(Number(r.price_max) * 100) : null,
       active: r.is_active !== false,
       sort_order: idx,
       catalogSource: "listing" as const,
