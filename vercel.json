@@ -1,15 +1,7 @@
 {
-  "cleanUrls": true,
-  "trailingSlash": true,
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "X-Frame-Options", "value": "SAMEORIGIN" }
-      ]
-    }
-  ],
+  "buildCommand": "node scripts/build-all.mjs",
+  "outputDirectory": "dist",
+  "installCommand": "true",
   "rewrites": [
     { "source": "/ru", "destination": "/ru/" },
     { "source": "/et", "destination": "/et/" },
