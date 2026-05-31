@@ -442,8 +442,8 @@ export function ReceptionWeekGrid({
                       key={appt.id}
                       data-appt="1"
                       className={[
-                        "absolute overflow-hidden rounded-md px-1.5 py-0.5 text-left shadow-sm transition-all",
-                        isResizing ? "touch-none shadow-lg ring-2 ring-white/60" : "hover:shadow-md",
+                        "absolute touch-none overflow-hidden rounded-md px-1.5 py-0.5 text-left shadow-sm transition-all",
+                        isResizing ? "shadow-lg ring-2 ring-white/60" : "hover:shadow-md",
                         isArming ? "opacity-70 ring-2 ring-white/40" : "",
                       ].join(" ")}
                       style={{
