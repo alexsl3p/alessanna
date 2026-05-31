@@ -21,6 +21,7 @@ type Props = {
   staff: StaffMember[];
   visibleStaffIds: Set<string>;
   onToggleStaff: (id: string) => void;
+  dark?: boolean;
 };
 
 const DAY_NAMES = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
@@ -31,33 +32,43 @@ export function ReceptionSidebar({
   staff,
   visibleStaffIds,
   onToggleStaff,
+  dark,
 }: Props) {
   const [miniCursor, setMiniCursor] = useState(() => new Date());
   const today = new Date();
   const staffHueMap = buildStaffHueMap(staff.map((m) => m.id));
+
+  const bg = dark ? "bg-panel" : "bg-white";
+  const borderCls = dark ? "border-line/15" : "border-[#dadce0]";
+  const mutedCls = dark ? "text-muted" : "text-[#70757a]";
+  const textCls = dark ? "text-fg" : "text-[#3c4043]";
+  const hoverCls = dark ? "hover:bg-white/5" : "hover:bg-[#f1f3f4]";
+  const navBtnCls = dark ? "text-muted hover:bg-white/5" : "text-[#5f6368] hover:bg-[#f1f3f4]";
+  const inactiveCls = dark ? "text-muted/40" : "text-[#bdc1c6]";
+  const weekSelCls = dark ? "bg-blue-500/15 text-blue-400" : "bg-[#e8f0fe] text-[#1a73e8]";
 
   const monthStart = startOfMonth(miniCursor);
   const gridStart = startOfWeek(monthStart, { weekStartsOn: 1 });
   const miniDays = eachDayOfInterval({ start: gridStart, end: addDays(gridStart, 41) });
 
   return (
-    <div className="flex w-64 shrink-0 flex-col overflow-y-auto border-r border-[#dadce0] bg-white py-3">
+    <div className={`flex w-64 shrink-0 flex-col overflow-y-auto border-r py-3 ${borderCls} ${bg}`}>
       {/* Mini calendar */}
       <div className="px-3">
         <div className="mb-1 flex items-center justify-between">
           <button
             onClick={() => setMiniCursor((d) => subMonths(d, 1))}
-            className="flex h-7 w-7 items-center justify-center rounded-full text-[#5f6368] hover:bg-[#f1f3f4]"
+            className={`flex h-7 w-7 items-center justify-center rounded-full ${navBtnCls}`}
             aria-label="Предыдущий месяц"
           >
             ‹
           </button>
-          <span className="text-xs font-medium capitalize text-[#3c4043]">
+          <span className={`text-xs font-medium capitalize ${textCls}`}>
             {miniCursor.toLocaleString("ru-RU", { month: "long", year: "numeric" })}
           </span>
           <button
             onClick={() => setMiniCursor((d) => addMonths(d, 1))}
-            className="flex h-7 w-7 items-center justify-center rounded-full text-[#5f6368] hover:bg-[#f1f3f4]"
+            className={`flex h-7 w-7 items-center justify-center rounded-full ${navBtnCls}`}
             aria-label="Следующий месяц"
           >
             ›
@@ -67,7 +78,7 @@ export function ReceptionSidebar({
         {/* Day name headers */}
         <div className="grid grid-cols-7 text-center">
           {DAY_NAMES.map((d) => (
-            <div key={d} className="py-0.5 text-[10px] font-medium text-[#70757a]">
+            <div key={d} className={`py-0.5 text-[10px] font-medium ${mutedCls}`}>
               {d}
             </div>
           ))}
@@ -88,10 +99,10 @@ export function ReceptionSidebar({
                   isToday
                     ? "bg-[#1a73e8] font-bold text-white"
                     : isSelected && !isToday
-                    ? "bg-[#e8f0fe] text-[#1a73e8]"
+                    ? weekSelCls
                     : isCurrentMonth
-                    ? "text-[#3c4043] hover:bg-[#f1f3f4]"
-                    : "text-[#bdc1c6] hover:bg-[#f1f3f4]",
+                    ? `${textCls} ${hoverCls}`
+                    : `${inactiveCls} ${hoverCls}`,
                 ].join(" ")}
               >
                 {format(day, "d")}
@@ -101,11 +112,11 @@ export function ReceptionSidebar({
         </div>
       </div>
 
-      <div className="mx-3 my-3 border-t border-[#dadce0]" />
+      <div className={`mx-3 my-3 border-t ${borderCls}`} />
 
       {/* Staff list */}
       <div className="px-3">
-        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[#70757a]">
+        <p className={`mb-2 text-[11px] font-semibold uppercase tracking-wider ${mutedCls}`}>
           Мастера
         </p>
         <div className="space-y-0.5">
@@ -115,7 +126,7 @@ export function ReceptionSidebar({
             return (
               <label
                 key={member.id}
-                className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-[#f1f3f4]"
+                className={`flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 ${hoverCls}`}
               >
                 <input
                   type="checkbox"
@@ -136,7 +147,7 @@ export function ReceptionSidebar({
                     </svg>
                   )}
                 </span>
-                <span className="truncate text-sm text-[#3c4043]">{member.name}</span>
+                <span className={`truncate text-sm ${textCls}`}>{member.name}</span>
               </label>
             );
           })}

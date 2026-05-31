@@ -80,6 +80,7 @@ type Props = {
   onSlotClick: (start: Date, anchorX: number, anchorY: number) => void;
   onApptClick: (appt: AppointmentRow, x: number, y: number) => void;
   onDayHeaderClick?: (day: Date, x: number, y: number) => void;
+  dark?: boolean;
 };
 
 export function ReceptionWeekGrid({
@@ -93,7 +94,18 @@ export function ReceptionWeekGrid({
   onSlotClick,
   onApptClick,
   onDayHeaderClick,
+  dark,
 }: Props) {
+  const bg = dark ? "bg-panel" : "bg-white";
+  const borderCls = dark ? "border-line/15" : "border-[#dadce0]";
+  const mutedCls = dark ? "text-muted" : "text-[#70757a]";
+  const textCls = dark ? "text-fg" : "text-[#3c4043]";
+  const hoverCls = dark ? "hover:bg-white/5" : "hover:bg-[#f1f3f4]";
+  const hrLine = dark ? "border-line/10" : "border-[#e8eaed]";
+  const todayBg = dark ? "bg-blue-500/[0.05]" : "bg-[#1a73e8]/[0.04]";
+  const stripes = dark
+    ? "repeating-linear-gradient(-45deg, rgba(255,255,255,0.12) 0, rgba(255,255,255,0.12) 1px, transparent 0, transparent 50%)"
+    : "repeating-linear-gradient(-45deg, #c0c4cc 0, #c0c4cc 1px, transparent 0, transparent 50%)";
   const [now, setNow] = useState(() => new Date());
   const bodyRef = useRef<HTMLDivElement>(null);
   const staffHueMap = useMemo(() => buildStaffHueMap(staff.map((m) => m.id)), [staff]);
@@ -129,10 +141,10 @@ export function ReceptionWeekGrid({
   }, [services]);
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white">
+    <div className={`flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden ${bg}`}>
       {/* Day header row */}
-      <div className="flex shrink-0 border-b border-[#dadce0] bg-white">
-        <div className="flex w-14 shrink-0 items-end justify-center pb-1 text-[10px] text-[#70757a]">
+      <div className={`flex shrink-0 border-b ${borderCls} ${bg}`}>
+        <div className={`flex w-14 shrink-0 items-end justify-center pb-1 text-[10px] ${mutedCls}`}>
           GMT+3
         </div>
         {days.map((day, i) => {
@@ -149,18 +161,18 @@ export function ReceptionWeekGrid({
             <div
               key={day.toISOString()}
               className={[
-                "flex min-w-0 flex-1 flex-col items-center border-l border-[#dadce0] py-1",
-                onDayHeaderClick ? "cursor-pointer hover:bg-[#f1f3f4]" : "",
+                `flex min-w-0 flex-1 flex-col items-center border-l ${borderCls} py-1`,
+                onDayHeaderClick ? `cursor-pointer ${hoverCls}` : "",
               ].join(" ")}
               onClick={onDayHeaderClick ? (e) => onDayHeaderClick(day, e.clientX, e.clientY) : undefined}
             >
-              <span className="text-[11px] font-medium uppercase tracking-wide text-[#70757a]">
+              <span className={`text-[11px] font-medium uppercase tracking-wide ${mutedCls}`}>
                 {ruDay}
               </span>
               <span
                 className={[
                   "flex h-8 w-8 items-center justify-center rounded-full text-lg font-medium",
-                  isToday ? "bg-[#1a73e8] text-white" : "text-[#3c4043]",
+                  isToday ? "bg-[#1a73e8] text-white" : textCls,
                 ].join(" ")}
               >
                 {format(day, "d")}
@@ -192,13 +204,13 @@ export function ReceptionWeekGrid({
       </div>
 
       {/* Scrollable time body */}
-      <div ref={bodyRef} className="flex min-h-0 flex-1 overflow-y-auto bg-white">
+      <div ref={bodyRef} className={`flex min-h-0 flex-1 overflow-y-auto ${bg}`}>
         {/* Time gutter */}
-        <div className="relative w-14 shrink-0 bg-white" style={{ height: TOTAL_PX }}>
+        <div className={`relative w-14 shrink-0 ${bg}`} style={{ height: TOTAL_PX }}>
           {HOURS.map((h) => (
             <div
               key={h}
-              className="absolute right-2 text-[10px] text-[#70757a]"
+              className={`absolute right-2 text-[10px] ${mutedCls}`}
               style={{ top: (h - START_HOUR) * PX_PER_HOUR - 6 }}
             >
               {h.toString().padStart(2, "0")}:00
@@ -242,8 +254,8 @@ export function ReceptionWeekGrid({
               <div
                 key={day.toISOString()}
                 className={[
-                  "relative min-w-0 flex-1 cursor-pointer select-none border-l border-[#dadce0]",
-                  isToday ? "bg-[#1a73e8]/[0.04]" : "",
+                  `relative min-w-0 flex-1 cursor-pointer select-none border-l ${borderCls}`,
+                  isToday ? todayBg : "",
                 ].join(" ")}
                 style={{ height: TOTAL_PX }}
                 onClick={(e) => handleBodyClick(e, day)}
@@ -252,7 +264,7 @@ export function ReceptionWeekGrid({
                 {HOURS.map((h) => (
                   <div
                     key={h}
-                    className="pointer-events-none absolute inset-x-0 border-t border-[#e8eaed]"
+                    className={`pointer-events-none absolute inset-x-0 border-t ${hrLine}`}
                     style={{ top: (h - START_HOUR) * PX_PER_HOUR }}
                   />
                 ))}
@@ -271,8 +283,7 @@ export function ReceptionWeekGrid({
                       style={{
                         top: topPx,
                         height: heightPx,
-                        backgroundImage:
-                          "repeating-linear-gradient(-45deg, #c0c4cc 0, #c0c4cc 1px, transparent 0, transparent 50%)",
+                        backgroundImage: stripes,
                         backgroundSize: "6px 6px",
                       }}
                     />
