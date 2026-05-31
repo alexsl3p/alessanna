@@ -522,6 +522,7 @@
     "colorSettings": "Настройки цветов мастеров",
     "worksOn": "Работает",
     "moreAppts": "+{{count}} ещё",
+    "toCrm": "Перейти в CRM",
     "colorNames": {
       "tomato": "Томат",
       "flamingo": "Фламинго",

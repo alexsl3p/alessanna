@@ -523,6 +523,7 @@
     "colorSettings": "Meistrite värvide seaded",
     "worksOn": "Töötab",
     "moreAppts": "+{{count}} veel",
+    "toCrm": "Mine CRM-i",
     "colorNames": {
       "tomato": "Tomat",
       "flamingo": "Flamingo",

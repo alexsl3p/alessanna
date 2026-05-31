@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import {
   addDays,
   addMonths,
@@ -42,6 +43,7 @@ export function ReceptionSidebar({
   onViewChange,
 }: Props) {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const currentLang = i18n.language.split("-")[0] ?? "ru";
   const uiLocale = currentLang === "et" ? "et-EE" : "ru-RU";
   const [miniCursor, setMiniCursor] = useState(() => new Date());
@@ -186,8 +188,8 @@ export function ReceptionSidebar({
         </div>
       </div>
 
-      {/* Language switcher */}
-      <div className={`mt-auto border-t px-3 pt-3 ${borderCls}`}>
+      {/* Language switcher + CRM link */}
+      <div className={`mt-auto border-t px-3 pt-3 pb-3 ${borderCls}`}>
         <p className={`mb-1.5 text-[11px] font-semibold uppercase tracking-wider ${mutedCls}`}>
           {t("common.language")}
         </p>
@@ -207,6 +209,16 @@ export function ReceptionSidebar({
             </button>
           ))}
         </div>
+
+        <button
+          onClick={() => navigate("/")}
+          className={`mt-3 flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm font-medium transition-colors ${mutedCls} ${hoverCls}`}
+        >
+          <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0" fill="currentColor">
+            <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h4a1 1 0 001-1v-3h2v3a1 1 0 001 1h4a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+          </svg>
+          {t("reception.toCrm")}
+        </button>
       </div>
     </div>
   );
