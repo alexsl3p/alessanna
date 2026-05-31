@@ -16,6 +16,7 @@ import {
 import type { StaffMember } from "../../types/database";
 import { buildStaffHueMap } from "../../lib/staffHue";
 import { googleStaffColor } from "./receptionColors";
+import { useTheme, type ThemeId } from "../../context/ThemeContext";
 
 type Props = {
   cursor: Date;
@@ -31,6 +32,13 @@ type Props = {
 
 const DAY_KEYS = [1, 2, 3, 4, 5, 6, 0] as const; // Mon→1 … Sun→0
 
+const RECEPTION_THEMES: { id: ThemeId; bg: string; ring: string }[] = [
+  { id: "white",     bg: "#ffffff", ring: "#dadce0" },
+  { id: "champagne", bg: "#fbfaf6", ring: "#d4c9b5" },
+  { id: "stone",     bg: "#2e2a25", ring: "#6b6254" },
+  { id: "onyx",      bg: "#141414", ring: "#444" },
+];
+
 export function ReceptionSidebar({
   cursor,
   onDateSelect,
@@ -44,19 +52,20 @@ export function ReceptionSidebar({
 }: Props) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const { theme, setTheme } = useTheme();
   const currentLang = i18n.language.split("-")[0] ?? "ru";
   const uiLocale = currentLang === "et" ? "et-EE" : "ru-RU";
   const [miniCursor, setMiniCursor] = useState(() => new Date());
   const today = new Date();
   const staffHueMap = buildStaffHueMap(staff.map((m) => m.id));
 
-  const bg = dark ? "bg-panel" : "bg-white";
-  const borderCls = dark ? "border-line/15" : "border-[#dadce0]";
-  const mutedCls = dark ? "text-muted" : "text-[#70757a]";
-  const textCls = dark ? "text-fg" : "text-[#3c4043]";
-  const hoverCls = dark ? "hover:bg-white/5" : "hover:bg-[#f1f3f4]";
-  const navBtnCls = dark ? "text-muted hover:bg-white/5" : "text-[#5f6368] hover:bg-[#f1f3f4]";
-  const inactiveCls = dark ? "text-muted/40" : "text-[#bdc1c6]";
+  // CSS variable-based classes work for all themes; only a few differences per dark/light
+  const borderCls = "border-line/15";
+  const mutedCls = "text-muted";
+  const textCls = "text-fg";
+  const hoverCls = dark ? "hover:bg-white/5" : "hover:bg-surface";
+  const navBtnCls = dark ? "text-muted hover:bg-white/5" : "text-muted hover:bg-surface";
+  const inactiveCls = "text-fg/30";
   const weekSelCls = dark ? "bg-blue-500/15 text-blue-400" : "bg-[#e8f0fe] text-[#1a73e8]";
 
   const monthStart = startOfMonth(miniCursor);
@@ -64,7 +73,7 @@ export function ReceptionSidebar({
   const miniDays = eachDayOfInterval({ start: gridStart, end: addDays(gridStart, 41) });
 
   return (
-    <div className={`flex h-full w-64 shrink-0 flex-col overflow-y-auto border-r py-3 ${borderCls} ${bg}`}>
+    <div className={`flex h-full w-64 shrink-0 flex-col overflow-y-auto border-r py-3 bg-canvas ${borderCls}`}>
       {/* View switcher — only shown on mobile (top bar hides it on sm) */}
       {onViewChange && view && (
         <div className={`mb-3 flex items-center rounded-lg border p-0.5 mx-3 md:hidden ${borderCls}`}>
@@ -188,8 +197,33 @@ export function ReceptionSidebar({
         </div>
       </div>
 
-      {/* Language switcher + CRM link */}
+      {/* Language switcher + Theme picker + CRM link */}
       <div className={`mt-auto border-t px-3 pt-3 pb-3 ${borderCls}`}>
+        {/* Theme picker */}
+        <p className={`mb-1.5 text-[11px] font-semibold uppercase tracking-wider ${mutedCls}`}>
+          {t("nav.themeLabel")}
+        </p>
+        <div className="mb-3 flex gap-2">
+          {RECEPTION_THEMES.map(({ id, bg, ring }) => {
+            const isActive = theme === id;
+            return (
+              <button
+                key={id}
+                onClick={() => setTheme(id)}
+                title={t(`nav.theme.${id}`)}
+                className="relative h-6 w-6 rounded-full transition-transform hover:scale-110"
+                style={{
+                  backgroundColor: bg,
+                  boxShadow: isActive
+                    ? `0 0 0 2px ${bg}, 0 0 0 4px #1a73e8`
+                    : `0 0 0 1.5px ${ring}`,
+                }}
+              />
+            );
+          })}
+        </div>
+
+        {/* Language switcher */}
         <p className={`mb-1.5 text-[11px] font-semibold uppercase tracking-wider ${mutedCls}`}>
           {t("common.language")}
         </p>

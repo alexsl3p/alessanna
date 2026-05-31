@@ -101,12 +101,12 @@ export function ReceptionWeekGrid({
   dark,
 }: Props) {
   const { t } = useTranslation();
-  const bg = dark ? "bg-panel" : "bg-white";
-  const borderCls = dark ? "border-line/15" : "border-[#dadce0]";
-  const mutedCls = dark ? "text-muted" : "text-[#70757a]";
-  const textCls = dark ? "text-fg" : "text-[#3c4043]";
-  const hoverCls = dark ? "hover:bg-white/5" : "hover:bg-[#f1f3f4]";
-  const hrLine = dark ? "border-line/10" : "border-[#e8eaed]";
+  const bg = dark ? "bg-panel" : "bg-canvas";
+  const borderCls = "border-line/15";
+  const mutedCls = "text-muted";
+  const textCls = "text-fg";
+  const hoverCls = dark ? "hover:bg-white/5" : "hover:bg-surface";
+  const hrLine = "border-line/10";
   const todayBg = dark ? "bg-blue-500/[0.05]" : "bg-[#1a73e8]/[0.04]";
   const stripes = dark
     ? "repeating-linear-gradient(-45deg, rgba(255,255,255,0.12) 0, rgba(255,255,255,0.12) 1px, transparent 0, transparent 50%)"

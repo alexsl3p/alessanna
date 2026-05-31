@@ -5,6 +5,7 @@ import { supabase } from "../lib/supabase";
 import { useCalendarDataRealtime } from "../hooks/useSalonRealtime";
 import { loadServicesCatalog } from "../lib/loadServicesCatalog";
 import { isStaffRowAdmin, normalizeStaffMember } from "../lib/roles";
+import { useTheme } from "../context/ThemeContext";
 import { ReceptionSidebar } from "../components/reception/ReceptionSidebar";
 import { ReceptionWeekGrid } from "../components/reception/ReceptionWeekGrid";
 import { ReceptionMonthView } from "../components/reception/ReceptionMonthView";
@@ -32,6 +33,8 @@ type BookingPopupState = {
 
 export function ReceptionCalendarPage() {
   const { t, i18n } = useTranslation();
+  const { theme } = useTheme();
+  const dark = theme === "onyx" || theme === "stone";
   const [view, setView] = useState<View>("week");
   const [cursor, setCursor] = useState(() => new Date());
   const [staff, setStaff] = useState<StaffMember[]>([]);
@@ -143,22 +146,25 @@ export function ReceptionCalendarPage() {
     ? cursor.toLocaleString(uiLocale, { weekday: "long", day: "numeric", month: "long", year: "numeric" })
     : cursor.toLocaleString(uiLocale, { month: "long", year: "numeric" });
 
+  const navHover = dark ? "hover:bg-white/5" : "hover:bg-surface";
+  const navText = dark ? "text-muted" : "text-muted";
+
   if (loading) {
     return (
-      <div className="flex h-[100dvh] items-center justify-center bg-white text-[#70757a]">
+      <div className="flex h-[100dvh] items-center justify-center bg-canvas text-muted">
         {t("common.loading")}
       </div>
     );
   }
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-white text-[#3c4043]">
+    <div className="fixed inset-0 flex flex-col bg-canvas text-fg">
       {/* Top navigation */}
-      <div className="flex shrink-0 items-center gap-1 border-b border-[#dadce0] bg-white px-2 py-2">
+      <div className="flex shrink-0 items-center gap-1 border-b border-line/15 bg-canvas px-2 py-2">
         {/* Hamburger — mobile only */}
         <button
           onClick={() => setShowSidebar((s) => !s)}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#5f6368] hover:bg-[#f1f3f4] md:hidden"
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${navText} ${navHover} md:hidden`}
           aria-label="Меню"
         >
           <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -169,20 +175,20 @@ export function ReceptionCalendarPage() {
         {/* Today */}
         <button
           onClick={() => setCursor(new Date())}
-          className="shrink-0 rounded-lg border border-[#dadce0] px-3 py-1.5 text-sm font-medium text-[#3c4043] hover:bg-[#f1f3f4]"
+          className={`shrink-0 rounded-lg border border-line/15 px-3 py-1.5 text-sm font-medium text-fg ${navHover}`}
         >
           {t("calendar.today")}
         </button>
 
         {/* View switcher — hidden on mobile (available in sidebar) */}
-        <div className="hidden items-center rounded-lg border border-[#dadce0] p-0.5 md:flex">
+        <div className="hidden items-center rounded-lg border border-line/15 p-0.5 md:flex">
           {(["day", "week", "month"] as const).map((v) => (
             <button
               key={v}
               onClick={() => setView(v)}
               className={[
                 "rounded-md px-3 py-1 text-sm font-medium transition-colors",
-                view === v ? "bg-[#e8f0fe] text-[#1a73e8]" : "text-[#5f6368] hover:bg-[#f1f3f4]",
+                view === v ? "bg-[#e8f0fe] text-[#1a73e8]" : `text-muted ${navHover}`,
               ].join(" ")}
             >
               {v === "day" ? t("calendar.day") : v === "week" ? t("calendar.week") : t("calendar.month")}
@@ -194,18 +200,18 @@ export function ReceptionCalendarPage() {
         <div className="flex min-w-0 flex-1 items-center justify-center gap-1">
           <button
             onClick={() => navigate(-1)}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#5f6368] hover:bg-[#f1f3f4]"
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${navText} ${navHover}`}
           >
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="15 18 9 12 15 6" />
             </svg>
           </button>
-          <span className="min-w-0 truncate text-center text-base font-normal capitalize text-[#3c4043] sm:text-lg">
+          <span className="min-w-0 truncate text-center text-base font-normal capitalize text-fg sm:text-lg">
             {periodLabel}
           </span>
           <button
             onClick={() => navigate(1)}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#5f6368] hover:bg-[#f1f3f4]"
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${navText} ${navHover}`}
           >
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="9 18 15 12 9 6" />
@@ -216,7 +222,7 @@ export function ReceptionCalendarPage() {
         {/* Settings gear */}
         <button
           onClick={() => setShowSettings(true)}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#5f6368] hover:bg-[#f1f3f4]"
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${navText} ${navHover}`}
           title={t("reception.colorSettings")}
         >
           <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
@@ -242,6 +248,7 @@ export function ReceptionCalendarPage() {
             onToggleStaff={handleToggleStaff}
             view={view}
             onViewChange={setView}
+            dark={dark}
           />
         </div>
 
@@ -262,6 +269,7 @@ export function ReceptionCalendarPage() {
               visibleStaffIds={visibleStaffIds}
               onDayClick={handleDayClick}
               onApptClick={handleApptClick}
+              dark={dark}
             />
           ) : (
             <ReceptionWeekGrid
@@ -276,6 +284,7 @@ export function ReceptionCalendarPage() {
               onApptClick={handleApptClick}
               onApptResize={handleApptResize}
               onDayHeaderClick={view === "week" ? handleDayHeaderClick : undefined}
+              dark={dark}
             />
           )}
         </div>
