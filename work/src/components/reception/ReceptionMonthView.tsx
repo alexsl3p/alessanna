@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import {
   addDays,
   eachDayOfInterval,
@@ -13,7 +14,7 @@ import type { AppointmentRow, StaffMember } from "../../types/database";
 import { buildStaffHueMap } from "../../lib/staffHue";
 import { googleStaffColor } from "./receptionColors";
 
-const RU_WEEK_DAYS_SHORT = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+const WEEKDAY_KEYS = [1, 2, 3, 4, 5, 6, 0] as const; // Mon→1 … Sun→0
 
 type Props = {
   cursor: Date;
@@ -32,6 +33,7 @@ export function ReceptionMonthView({
   onDayClick,
   onApptClick,
 }: Props) {
+  const { t } = useTranslation();
   const today = new Date();
   const staffHueMap = useMemo(() => buildStaffHueMap(staff.map((m) => m.id)), [staff]);
 
@@ -66,12 +68,12 @@ export function ReceptionMonthView({
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-white">
       {/* Column headers */}
       <div className="grid shrink-0 grid-cols-7 border-b border-[#dadce0] bg-white">
-        {RU_WEEK_DAYS_SHORT.map((d) => (
+        {WEEKDAY_KEYS.map((k) => (
           <div
-            key={d}
+            key={k}
             className="py-2 text-center text-[11px] font-medium uppercase tracking-wide text-[#70757a]"
           >
-            {d}
+            {t(`weekday.${k}`)}
           </div>
         ))}
       </div>
@@ -134,7 +136,7 @@ export function ReceptionMonthView({
                     onClick={() => onDayClick(day)}
                     className="text-left text-[10px] text-[#70757a] hover:text-[#3c4043]"
                   >
-                    +{hiddenCount} ещё
+                    {t("reception.moreAppts", { count: hiddenCount })}
                   </button>
                 )}
               </div>

@@ -519,7 +519,22 @@
       }
     },
     "mastersTitle": "Мастера",
-    "colorSettings": "Настройки цветов мастеров"
+    "colorSettings": "Настройки цветов мастеров",
+    "worksOn": "Работает",
+    "moreAppts": "+{{count}} ещё",
+    "colorNames": {
+      "tomato": "Томат",
+      "flamingo": "Фламинго",
+      "tangerine": "Мандарин",
+      "banana": "Банан",
+      "sage": "Шалфей",
+      "basil": "Базилик",
+      "peacock": "Павлин",
+      "blueberry": "Черника",
+      "lavender": "Лаванда",
+      "grape": "Виноград",
+      "graphite": "Графит"
+    }
   },
   "role": {
     "label": "Роль",

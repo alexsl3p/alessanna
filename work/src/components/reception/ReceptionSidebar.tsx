@@ -89,7 +89,7 @@ export function ReceptionSidebar({
           <button
             onClick={() => setMiniCursor((d) => subMonths(d, 1))}
             className={`flex h-7 w-7 items-center justify-center rounded-full ${navBtnCls}`}
-            aria-label="Предыдущий месяц"
+            aria-label={t("calendar.prevMonth") || "‹"}
           >
             ‹
           </button>
@@ -99,7 +99,7 @@ export function ReceptionSidebar({
           <button
             onClick={() => setMiniCursor((d) => addMonths(d, 1))}
             className={`flex h-7 w-7 items-center justify-center rounded-full ${navBtnCls}`}
-            aria-label="Следующий месяц"
+            aria-label={t("calendar.nextMonth") || "›"}
           >
             ›
           </button>

@@ -140,7 +140,7 @@ export function ReceptionCalendarPage() {
   if (loading) {
     return (
       <div className="flex h-[100dvh] items-center justify-center bg-white text-[#70757a]">
-        Загрузка…
+        {t("common.loading")}
       </div>
     );
   }

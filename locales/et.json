@@ -520,7 +520,22 @@
       }
     },
     "mastersTitle": "Meistrid",
-    "colorSettings": "Meistrite värvide seaded"
+    "colorSettings": "Meistrite värvide seaded",
+    "worksOn": "Töötab",
+    "moreAppts": "+{{count}} veel",
+    "colorNames": {
+      "tomato": "Tomat",
+      "flamingo": "Flamingo",
+      "tangerine": "Mandariin",
+      "banana": "Banaan",
+      "sage": "Salvei",
+      "basil": "Basiilik",
+      "peacock": "Paabulind",
+      "blueberry": "Mustikas",
+      "lavender": "Lavendel",
+      "grape": "Viinamari",
+      "graphite": "Grafiit"
+    }
   },
   "role": {
     "label": "Roll",
