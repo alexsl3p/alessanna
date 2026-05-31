@@ -83,6 +83,7 @@ type PublicService = {
   active: boolean;
   categoryName: string | null;
   price_eur: number | null;
+  price_max_eur: number | null;
 };
 
 const ANY_MASTER_ID = "any";
@@ -181,12 +182,12 @@ export function PublicBookingPage() {
      * для TS ниже всегда `as typeof sv`. На рантайме всё равно нормализуем. */
     let sv = await supabase
       .from("service_listings")
-      .select("id,name,duration,buffer_after_min,is_active,category_id,price,service_categories(name)")
+      .select("id,name,duration,buffer_after_min,is_active,category_id,price,price_max,service_categories(name)")
       .order("name");
     if (sv.error) {
       sv = (await supabase
         .from("service_listings")
-        .select("id,name,duration,buffer_after_min,is_active,price")
+        .select("id,name,duration,buffer_after_min,is_active,price,price_max")
         .order("name")) as typeof sv;
       if (sv.error) {
         sv = (await supabase
@@ -221,6 +222,7 @@ export function PublicBookingPage() {
         buffer_after_min?: number;
         is_active?: boolean;
         price?: number | null;
+        price_max?: number | null;
         service_categories?: { name?: string | null } | null;
       };
       const normalized = (sv.data as SvRow[]).map((s) => {
@@ -228,6 +230,11 @@ export function PublicBookingPage() {
         const priceRaw = s.price;
         const price_eur =
           priceRaw != null && Number.isFinite(Number(priceRaw)) ? Number(priceRaw) : null;
+        const priceMaxRaw = s.price_max;
+        const price_max_eur =
+          priceMaxRaw != null && Number.isFinite(Number(priceMaxRaw)) && Number(priceMaxRaw) > 0
+            ? Number(priceMaxRaw)
+            : null;
         return {
           id: String(s.id),
           name: String(s.name || "").trim(),
@@ -236,6 +243,7 @@ export function PublicBookingPage() {
           active: s.is_active !== false,
           categoryName: catName || null,
           price_eur,
+          price_max_eur,
         };
       });
       setServices(normalized);

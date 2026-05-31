@@ -48,6 +48,7 @@ export type PublicServiceMini = {
   duration_min: number;
   categoryName?: string | null;
   price_eur?: number | null;
+  price_max_eur?: number | null;
 };
 
 const WEEKDAY_MON_FIRST = ["1", "2", "3", "4", "5", "6", "0"] as const;
@@ -923,6 +924,7 @@ export function PublicBookingBookingSection({
         name: s.name,
         durationMin: s.duration_min,
         priceEur: s.price_eur ?? null,
+        priceMaxEur: s.price_max_eur ?? null,
         categoryName: s.categoryName ?? null,
       })),
     [selectServices],
@@ -948,7 +950,7 @@ export function PublicBookingBookingSection({
             priceUnknownLabel={t("quickBook.priceOnConfirm")}
             minLabel={t("quickBook.min")}
             listMaxClassName="max-h-[min(52vh,480px)]"
-            hidePrices={!isReceptionMode}
+            hidePrices={false}
           />
         </div>
         {listIsFiltered && (
