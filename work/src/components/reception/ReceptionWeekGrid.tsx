@@ -151,37 +151,31 @@ export function ReceptionWeekGrid({
     if (e.button !== 0 && e.pointerType === "mouse") return;
     const rect = e.currentTarget.getBoundingClientRect();
     const edge: "top" | "bottom" = e.clientY - rect.top < rect.height / 2 ? "top" : "bottom";
+    const el = e.currentTarget;
+    const pointerId = e.pointerId;
     dragRef.current = {
       appt, edge, origStart: start, origEnd: end,
       startClientY: e.clientY, startClientX: e.clientX,
       resizeActive: false, curStart: start, curEnd: end,
-      pointerId: e.pointerId, el: e.currentTarget,
+      pointerId, el,
     };
-    e.currentTarget.setPointerCapture(e.pointerId);
+    // Do NOT call setPointerCapture here — that would block browser scroll and
+    // prevent pointercancel from firing. Capture is deferred to the 2s timer.
     setArmingId(appt.id);
     longPressTimer.current = setTimeout(() => {
-      if (dragRef.current) {
+      if (dragRef.current && dragRef.current.appt.id === appt.id) {
         dragRef.current.resizeActive = true;
         setArmingId(null);
+        try { el.setPointerCapture(pointerId); } catch { /* ignore */ }
       }
     }, LONG_PRESS_MS);
   }
 
   function handleApptPointerMove(e: React.PointerEvent<HTMLDivElement>) {
     const d = dragRef.current;
-    if (!d) return;
-    const deltaY = e.clientY - d.startClientY;
-    const deltaX = e.clientX - d.startClientX;
-
-    if (!d.resizeActive) {
-      // Cancel long-press if user moves (they're scrolling)
-      if (Math.abs(deltaY) > 10 || Math.abs(deltaX) > 10) {
-        cancelLongPress();
-        try { d.el.releasePointerCapture(d.pointerId); } catch { /* ignore */ }
-        dragRef.current = null;
-      }
-      return;
-    }
+    // Before resize is active, let the browser handle scroll naturally.
+    // pointercancel will fire if the user scrolls, which cancels the timer.
+    if (!d || !d.resizeActive) return;
 
     // Resize is active — snap to step
     const stepPx = (RESIZE_STEP_MIN / 60) * PX_PER_HOUR;
@@ -440,8 +434,8 @@ export function ReceptionWeekGrid({
                       key={appt.id}
                       data-appt="1"
                       className={[
-                        "absolute touch-none overflow-hidden rounded-md px-1.5 py-0.5 text-left shadow-sm transition-all",
-                        isResizing ? "shadow-lg ring-2 ring-white/60" : "hover:shadow-md",
+                        "absolute overflow-hidden rounded-md px-1.5 py-0.5 text-left shadow-sm transition-all",
+                        isResizing ? "touch-none shadow-lg ring-2 ring-white/60" : "hover:shadow-md",
                         isArming ? "opacity-70 ring-2 ring-white/40" : "",
                       ].join(" ")}
                       style={{
