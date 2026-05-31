@@ -118,7 +118,7 @@ export function ReceptionWeekGrid({
   // the edit popup. Moving more than 10 px before 2 s cancels the long-press
   // so normal scroll still works.
   const RESIZE_STEP_MIN = 30;
-  const LONG_PRESS_MS = 2000;
+  const LONG_PRESS_MS = 1000;
 
   const dragRef = useRef<{
     appt: AppointmentRow;
@@ -151,31 +151,39 @@ export function ReceptionWeekGrid({
     if (e.button !== 0 && e.pointerType === "mouse") return;
     const rect = e.currentTarget.getBoundingClientRect();
     const edge: "top" | "bottom" = e.clientY - rect.top < rect.height / 2 ? "top" : "bottom";
-    const el = e.currentTarget;
-    const pointerId = e.pointerId;
     dragRef.current = {
       appt, edge, origStart: start, origEnd: end,
       startClientY: e.clientY, startClientX: e.clientX,
       resizeActive: false, curStart: start, curEnd: end,
-      pointerId, el,
+      pointerId: e.pointerId, el: e.currentTarget,
     };
-    // Do NOT call setPointerCapture here — that would block browser scroll and
-    // prevent pointercancel from firing. Capture is deferred to the 2s timer.
+    // Capture immediately so mobile browser doesn't fire pointercancel and
+    // claim the gesture. Scroll still works because there's no touch-none yet.
+    e.currentTarget.setPointerCapture(e.pointerId);
     setArmingId(appt.id);
     longPressTimer.current = setTimeout(() => {
       if (dragRef.current && dragRef.current.appt.id === appt.id) {
         dragRef.current.resizeActive = true;
         setArmingId(null);
-        try { el.setPointerCapture(pointerId); } catch { /* ignore */ }
       }
     }, LONG_PRESS_MS);
   }
 
   function handleApptPointerMove(e: React.PointerEvent<HTMLDivElement>) {
     const d = dragRef.current;
-    // Before resize is active, let the browser handle scroll naturally.
-    // pointercancel will fire if the user scrolls, which cancels the timer.
-    if (!d || !d.resizeActive) return;
+    if (!d) return;
+
+    if (!d.resizeActive) {
+      // Still arming — cancel if user moved significantly (scroll intent)
+      const deltaY = e.clientY - d.startClientY;
+      const deltaX = e.clientX - d.startClientX;
+      if (Math.abs(deltaY) > 12 || Math.abs(deltaX) > 12) {
+        cancelLongPress();
+        try { d.el.releasePointerCapture(d.pointerId); } catch { /* ignore */ }
+        dragRef.current = null;
+      }
+      return;
+    }
 
     // Resize is active — snap to step
     const stepPx = (RESIZE_STEP_MIN / 60) * PX_PER_HOUR;
