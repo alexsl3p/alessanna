@@ -1,5 +1,4 @@
-import React, { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   addMonths,
   eachDayOfInterval,
@@ -10,131 +9,50 @@ import {
   isSameMonth,
   startOfMonth,
   startOfWeek,
+  subMonths,
 } from "date-fns";
 import { supabase } from "../lib/supabase";
-import { ToggleSwitch } from "../components/ToggleSwitch";
-import { isStaffRowAdmin } from "../lib/roles";
-import type { StaffMember, StaffScheduleRow, StaffTableRow } from "../types/database";
-import { DaySchedulePopup } from "../components/reception/DaySchedulePopup";
+import { isStaffRowAdmin, normalizeStaffMember } from "../lib/roles";
+import type { StaffMember, StaffWorkDateRow } from "../types/database";
+import { AdminDaySchedulePopup } from "../components/reception/AdminDaySchedulePopup";
+import { googleStaffColor } from "../components/reception/receptionColors";
+import { buildStaffHueMap } from "../lib/staffHue";
 
-const DAYS = [1, 2, 3, 4, 5, 6, 0] as const;
-const WEEK_HEADER_DOW = [1, 2, 3, 4, 5, 6, 0] as const;
-
-/** Выбор в списке: применить график ко всем активным сотрудникам */
-const ALL_STAFF_VALUE = "__all_staff__";
-
-type DayRow = { day_of_week: number; start: string; end: string; working: boolean };
-
-function emptyWeek(): DayRow[] {
-  return DAYS.map((d) => ({ day_of_week: d, start: "09:00", end: "17:00", working: true }));
-}
-
-function rowForWeekday(rows: DayRow[], dow: number): DayRow | undefined {
-  return rows.find((r) => r.day_of_week === dow);
-}
+const RU_WEEK = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+const MON_FIRST_DOW = [1, 2, 3, 4, 5, 6, 0] as const;
 
 export function AdminSchedulePage() {
-  const { t } = useTranslation();
-  const [staffList, setStaffList] = useState<StaffTableRow[]>([]);
-  const [staffId, setStaffId] = useState<string>(ALL_STAFF_VALUE);
-  const [rows, setRows] = useState<DayRow[]>(emptyWeek);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
+  const [staff, setStaff] = useState<StaffMember[]>([]);
+  const [workDates, setWorkDates] = useState<StaffWorkDateRow[]>([]);
   const [viewMonth, setViewMonth] = useState(() => startOfMonth(new Date()));
-  const [focusedDow, setFocusedDow] = useState<number | null>(null);
-  const [allSchedules, setAllSchedules] = useState<StaffScheduleRow[]>([]);
+  const [loading, setLoading] = useState(true);
   const [dayPopup, setDayPopup] = useState<{ day: Date; x: number; y: number } | null>(null);
 
-  const loadAllSchedules = useCallback(async () => {
-    const { data } = await supabase.from("staff_schedule").select("*");
-    if (data) setAllSchedules(data as StaffScheduleRow[]);
-  }, []);
+  const hueMap = useMemo(() => buildStaffHueMap(staff.map((m) => m.id)), [staff]);
 
-  const loadStaff = useCallback(async () => {
-    const [staffRes] = await Promise.all([
+  const load = useCallback(async () => {
+    const monthStart = format(startOfMonth(viewMonth), "yyyy-MM-dd");
+    const monthEnd = format(endOfMonth(viewMonth), "yyyy-MM-dd");
+    const [staffRes, workRes] = await Promise.all([
       supabase.from("staff").select("*").eq("is_active", true).order("name"),
-      loadAllSchedules(),
+      supabase
+        .from("staff_work_dates")
+        .select("*")
+        .gte("work_date", monthStart)
+        .lte("work_date", monthEnd),
     ]);
-    const { data, error } = staffRes;
-    if (error) {
-      setErr(error.message);
-      setLoading(false);
-      return;
+    if (staffRes.data) {
+      setStaff(
+        (staffRes.data as Record<string, unknown>[])
+          .filter((r) => !isStaffRowAdmin(r))
+          .map((r) => normalizeStaffMember(r as StaffMember)),
+      );
     }
-    const list = ((data ?? []) as StaffTableRow[]).filter((row) => !isStaffRowAdmin(row));
-    setStaffList(list);
-    setStaffId((prev) => {
-      if (list.length === 0) return "";
-      if (prev === ALL_STAFF_VALUE) return ALL_STAFF_VALUE;
-      if (prev && list.some((s) => s.id === prev)) return prev;
-      return ALL_STAFF_VALUE;
-    });
+    setWorkDates((workRes.data ?? []) as StaffWorkDateRow[]);
     setLoading(false);
-  }, [loadAllSchedules]);
+  }, [viewMonth]);
 
-  const loadSchedule = useCallback(async (sid: string) => {
-    if (!sid) return;
-    const { data, error } = await supabase.from("staff_schedule").select("*").eq("staff_id", sid);
-    if (error) {
-      setErr(error.message);
-      return;
-    }
-    const list = (data ?? []) as StaffScheduleRow[];
-    const map = new Map(list.map((r) => [r.day_of_week, r]));
-    const hasAnySaved = list.length > 0;
-    setRows(
-      DAYS.map((d) => {
-        const ex = map.get(d);
-        if (ex) {
-          return {
-            day_of_week: d,
-            start: ex.start_time.slice(0, 5),
-            end: ex.end_time.slice(0, 5),
-            working: true,
-          };
-        }
-        return {
-          day_of_week: d,
-          start: "09:00",
-          end: "17:00",
-          working: !hasAnySaved,
-        };
-      }),
-    );
-  }, []);
-
-  useEffect(() => {
-    void loadStaff();
-  }, [loadStaff]);
-
-  useEffect(() => {
-    setFocusedDow(null);
-    if (staffId === ALL_STAFF_VALUE) {
-      setRows(emptyWeek());
-      return;
-    }
-    if (staffId) void loadSchedule(staffId);
-  }, [staffId, loadSchedule]);
-
-  function setDayField(day: number, field: "start" | "end", value: string) {
-    setRows((prev) => prev.map((r) => (r.day_of_week === day ? { ...r, [field]: value } : r)));
-  }
-
-  function setDayWorking(day: number, working: boolean) {
-    setRows((prev) => prev.map((r) => (r.day_of_week === day ? { ...r, working } : r)));
-  }
-
-  function buildInsertsForStaff(targetStaffId: string) {
-    return rows
-      .filter((r) => r.working)
-      .map((r) => ({
-        staff_id: targetStaffId,
-        day_of_week: r.day_of_week,
-        start_time: r.start.length === 5 ? `${r.start}:00` : r.start,
-        end_time: r.end.length === 5 ? `${r.end}:00` : r.end,
-      }));
-  }
+  useEffect(() => { void load(); }, [load]);
 
   const calendarDays = useMemo(() => {
     const from = startOfWeek(startOfMonth(viewMonth), { weekStartsOn: 1 });
@@ -144,254 +62,134 @@ export function AdminSchedulePage() {
 
   const today = useMemo(() => new Date(), []);
 
-  function onCalendarDayClick(d: Date, e: React.MouseEvent) {
-    setDayPopup({ day: d, x: e.clientX, y: e.clientY });
+  const monthLabel = viewMonth.toLocaleString("ru-RU", { month: "long", year: "numeric" });
+
+  function staffForDay(day: Date): StaffMember[] {
+    const dateStr = format(day, "yyyy-MM-dd");
+    const ids = new Set(workDates.filter((r) => r.work_date === dateStr).map((r) => r.staff_id));
+    return staff.filter((m) => ids.has(m.id));
   }
 
-  function onCalendarDayDoubleClick(d: Date) {
-    const dow = d.getDay();
-    const row = rowForWeekday(rows, dow);
-    if (!row) return;
-    setDayWorking(dow, !row.working);
-    setFocusedDow(dow);
+  if (loading) {
+    return <p className="text-zinc-500">Загрузка…</p>;
   }
-
-  async function onSave(e: FormEvent) {
-    e.preventDefault();
-    if (!staffId) return;
-    setSaving(true);
-    setErr(null);
-
-    if (staffId === ALL_STAFF_VALUE) {
-      if (staffList.length === 0) {
-        setSaving(false);
-        return;
-      }
-      if (!window.confirm(t("adminSchedule.saveAllConfirm"))) {
-        setSaving(false);
-        return;
-      }
-      const ids = staffList.map((s) => s.id);
-      const { error: delErr } = await supabase.from("staff_schedule").delete().in("staff_id", ids);
-      if (delErr) {
-        setErr(delErr.message);
-        setSaving(false);
-        return;
-      }
-      const inserts = ids.flatMap((id) => buildInsertsForStaff(id));
-      if (inserts.length > 0) {
-        const { error: insErr } = await supabase.from("staff_schedule").insert(inserts);
-        if (insErr) {
-          setErr(insErr.message);
-          setSaving(false);
-          return;
-        }
-      }
-      setSaving(false);
-      return;
-    }
-
-    const bad = rows.find((r) => r.working && r.start >= r.end);
-    if (bad) {
-      setSaving(false);
-      setErr(t("adminSchedule.invalidInterval"));
-      return;
-    }
-
-    const { error: delErr } = await supabase.from("staff_schedule").delete().eq("staff_id", staffId);
-    if (delErr) {
-      setErr(delErr.message);
-      setSaving(false);
-      return;
-    }
-    const inserts = buildInsertsForStaff(staffId);
-    if (inserts.length > 0) {
-      const { error } = await supabase.from("staff_schedule").insert(inserts);
-      if (error) {
-        setSaving(false);
-        setErr(error.message);
-        return;
-      }
-    }
-    setSaving(false);
-    void loadSchedule(staffId);
-  }
-
-  if (loading) return <p className="text-zinc-500">{t("common.loading")}</p>;
 
   return (
-    <div className="max-w-5xl space-y-6 text-zinc-200">
+    <div className="space-y-4">
       <header>
-        <h1 className="text-xl font-semibold text-white">{t("nav.adminSchedule")}</h1>
-        <p className="mt-1 text-sm text-zinc-500">{t("adminSchedule.subtitle")}</p>
+        <h1 className="text-xl font-semibold text-white">График</h1>
+        <p className="mt-1 text-sm text-zinc-500">
+          Нажмите на день чтобы назначить мастеров на эту дату.
+        </p>
       </header>
-      {err && <p className="text-sm text-red-400">{err}</p>}
-      <label className="block text-sm text-zinc-400">
-        {t("calendar.staff")}
-        <select
-          value={staffId}
-          onChange={(e) => setStaffId(e.target.value)}
-          className="mt-1 block w-full max-w-md rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-white"
+
+      {/* Month navigation */}
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => setViewMonth((m) => subMonths(m, 1))}
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-zinc-700 text-zinc-300 hover:bg-zinc-800"
         >
-          {staffList.length > 0 ? <option value={ALL_STAFF_VALUE}>{t("adminSchedule.allStaff")}</option> : null}
-          {staffList.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      {staffId === ALL_STAFF_VALUE && (
-        <p className="text-xs text-amber-200/90">{t("adminSchedule.allStaffHint")}</p>
-      )}
+          ←
+        </button>
+        <span className="min-w-[160px] text-center text-base font-medium capitalize text-white">
+          {monthLabel}
+        </span>
+        <button
+          type="button"
+          onClick={() => setViewMonth((m) => addMonths(m, 1))}
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+        >
+          →
+        </button>
+        <button
+          type="button"
+          onClick={() => setViewMonth(startOfMonth(new Date()))}
+          className="rounded-lg border border-zinc-700 px-3 py-1.5 text-sm text-zinc-300 hover:bg-zinc-800"
+        >
+          Сегодня
+        </button>
+      </div>
 
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(300px,420px)] lg:items-start">
-        <section className="rounded-xl border border-zinc-800 bg-zinc-950/80 p-4 shadow-lg">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold text-white">{t("adminSchedule.calendarTitle")}</h2>
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setViewMonth((m) => addMonths(m, -1))}
-                className="rounded-lg border border-zinc-700 bg-black/50 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-900"
-                aria-label={t("adminSchedule.prevMonth")}
-              >
-                ←
-              </button>
-              <span className="min-w-[10rem] text-center text-sm font-medium text-zinc-100">
-                {format(viewMonth, "LLLL yyyy")}
-              </span>
-              <button
-                type="button"
-                onClick={() => setViewMonth((m) => addMonths(m, 1))}
-                className="rounded-lg border border-zinc-700 bg-black/50 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-900"
-                aria-label={t("adminSchedule.nextMonth")}
-              >
-                →
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMonth(startOfMonth(new Date()))}
-                className="rounded-lg border border-emerald-800/60 bg-emerald-950/40 px-3 py-2 text-xs font-semibold text-emerald-200 hover:bg-emerald-950/60"
-              >
-                {t("adminSchedule.today")}
-              </button>
-            </div>
-          </div>
-          <p className="mt-2 text-xs leading-relaxed text-zinc-500">{t("adminSchedule.calendarHint")}</p>
-
-          <div className="mt-4 grid grid-cols-7 gap-1 text-center text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-            {WEEK_HEADER_DOW.map((d) => (
-              <div key={d} className="py-1">
-                {t(`weekday.${d}`)}
-              </div>
-            ))}
-          </div>
-          <div className="mt-1 grid grid-cols-7 gap-1.5">
-            {calendarDays.map((d) => {
-              const inMonth = isSameMonth(d, viewMonth);
-              const dow = d.getDay();
-              const row = rowForWeekday(rows, dow);
-              const working = row?.working ?? false;
-              const isToday = isSameDay(d, today);
-              const isFocused = focusedDow === dow;
-              const focusRing = isFocused
-                ? "ring-2 ring-amber-400/80 ring-offset-2 ring-offset-zinc-950"
-                : isToday
-                  ? "ring-2 ring-sky-500/70 ring-offset-2 ring-offset-zinc-950"
-                  : "";
-              return (
-                <button
-                  key={d.toISOString()}
-                  type="button"
-                  onClick={(e) => onCalendarDayClick(d, e)}
-                  onDoubleClick={() => onCalendarDayDoubleClick(d)}
-                  className={[
-                    "flex min-h-[4.5rem] flex-col items-center justify-center rounded-xl border-2 px-1 py-2 text-center transition",
-                    inMonth ? "opacity-100" : "opacity-35",
-                    working
-                      ? "border-emerald-800/50 bg-emerald-950/25 text-emerald-50 hover:border-emerald-600/60"
-                      : "border-zinc-800 bg-zinc-900/40 text-zinc-500 hover:border-zinc-600",
-                    focusRing,
-                  ].join(" ")}
-                >
-                  <span className="text-base font-bold tabular-nums">{format(d, "d")}</span>
-                  <span className="mt-0.5 line-clamp-2 text-[10px] font-medium leading-tight text-zinc-400">
-                    {working && row ? `${row.start}–${row.end}` : "—"}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-
-        <div className="space-y-3">
-          <p className="text-xs text-zinc-500">{t("adminSchedule.weekTemplateHint")}</p>
-          <form onSubmit={onSave} className="space-y-3 rounded-xl border border-zinc-800 bg-zinc-950 p-4">
-            {rows.map((r) => {
-              const k = String(r.day_of_week) as "0" | "1" | "2" | "3" | "4" | "5" | "6";
-              const isFocused = focusedDow === r.day_of_week;
-              return (
-                <div
-                  id={`schedule-day-${r.day_of_week}`}
-                  key={r.day_of_week}
-                  className={[
-                    "flex flex-wrap items-center gap-3 rounded-lg p-2 text-sm transition",
-                    isFocused ? "bg-sky-950/35 ring-1 ring-sky-500/40" : "",
-                  ].join(" ")}
-                >
-                  <div className="flex w-48 shrink-0 items-center gap-2 text-zinc-300">
-                    <ToggleSwitch
-                      size="sm"
-                      checked={r.working}
-                      onCheckedChange={(v) => setDayWorking(r.day_of_week, v)}
-                      aria-label={`${t(`weekday.${k}`)}: рабочий день`}
-                    />
-                    <span className="w-24 text-zinc-400">{t(`weekday.${k}`)}</span>
-                  </div>
-                  <input
-                    type="time"
-                    value={r.start}
-                    disabled={!r.working}
-                    onChange={(e) => setDayField(r.day_of_week, "start", e.target.value)}
-                    className="rounded border border-zinc-700 bg-black px-2 py-1 disabled:cursor-not-allowed disabled:opacity-40"
-                  />
-                  <span className="text-zinc-600">–</span>
-                  <input
-                    type="time"
-                    value={r.end}
-                    disabled={!r.working}
-                    onChange={(e) => setDayField(r.day_of_week, "end", e.target.value)}
-                    className="rounded border border-zinc-700 bg-black px-2 py-1 disabled:cursor-not-allowed disabled:opacity-40"
-                  />
-                  {!r.working && <span className="text-xs text-zinc-600">{t("calendar.dayOff")}</span>}
-                </div>
-              );
-            })}
-            <button
-              type="submit"
-              disabled={saving || !staffId || (staffId === ALL_STAFF_VALUE && staffList.length === 0)}
-              className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+      {/* Calendar grid */}
+      <div className="overflow-hidden rounded-xl border border-zinc-800">
+        {/* Weekday headers */}
+        <div className="grid grid-cols-7 border-b border-zinc-800 bg-zinc-900">
+          {MON_FIRST_DOW.map((dow, i) => (
+            <div
+              key={dow}
+              className={[
+                "py-2 text-center text-xs font-semibold uppercase tracking-wide text-zinc-500",
+                i < 6 ? "border-r border-zinc-800" : "",
+              ].join(" ")}
             >
-              {staffId === ALL_STAFF_VALUE ? t("adminSchedule.saveForAll") : t("common.save")}
-            </button>
-          </form>
+              {RU_WEEK[i]}
+            </div>
+          ))}
+        </div>
+
+        {/* Day cells */}
+        <div className="grid grid-cols-7">
+          {calendarDays.map((day, idx) => {
+            const inMonth = isSameMonth(day, viewMonth);
+            const isToday = isSameDay(day, today);
+            const working = staffForDay(day);
+            const colPos = idx % 7;
+
+            return (
+              <button
+                key={day.toISOString()}
+                type="button"
+                onClick={(e) => setDayPopup({ day, x: e.clientX, y: e.clientY })}
+                className={[
+                  "group relative flex min-h-[90px] flex-col gap-1 p-2 text-left transition hover:bg-zinc-800/60",
+                  colPos < 6 ? "border-r border-zinc-800" : "",
+                  idx < calendarDays.length - 7 ? "border-b border-zinc-800" : "",
+                  inMonth ? "" : "opacity-35",
+                ].join(" ")}
+              >
+                {/* Date number */}
+                <span
+                  className={[
+                    "flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold",
+                    isToday
+                      ? "bg-[#1a73e8] text-white"
+                      : "text-zinc-300 group-hover:bg-zinc-700",
+                  ].join(" ")}
+                >
+                  {format(day, "d")}
+                </span>
+
+                {/* Staff badges */}
+                <div className="flex flex-col gap-0.5">
+                  {working.map((m) => {
+                    const c = googleStaffColor(m, hueMap);
+                    return (
+                      <span
+                        key={m.id}
+                        className="truncate rounded px-1.5 py-0.5 text-[11px] font-medium leading-tight"
+                        style={{ backgroundColor: c.bg, color: c.fg }}
+                      >
+                        {m.name.split(" ")[0]}
+                      </span>
+                    );
+                  })}
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {dayPopup && (
-        <DaySchedulePopup
+        <AdminDaySchedulePopup
           day={dayPopup.day}
           anchorX={dayPopup.x}
           anchorY={dayPopup.y}
-          allStaff={staffList as unknown as StaffMember[]}
-          schedules={allSchedules}
+          allStaff={staff}
+          workDates={workDates}
           onClose={() => setDayPopup(null)}
-          onSaved={() => {
-            setDayPopup(null);
-            void loadAllSchedules();
-            if (staffId && staffId !== ALL_STAFF_VALUE) void loadSchedule(staffId);
-          }}
+          onSaved={() => { setDayPopup(null); void load(); }}
         />
       )}
     </div>

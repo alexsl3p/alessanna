@@ -137,6 +137,12 @@ export type StaffTimeOffRow = {
   time_off_type?: TimeOffType | null;
 };
 
+export type StaffWorkDateRow = {
+  id: string;
+  staff_id: string;
+  work_date: string; // "YYYY-MM-DD"
+};
+
 export type StaffServiceRow = {
   staff_id: string;
   service_id: string | number;
