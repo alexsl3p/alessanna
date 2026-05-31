@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   addMinutes,
   format,
@@ -24,7 +25,8 @@ const PX_PER_HOUR = 64;
 const TOTAL_PX = (END_HOUR - START_HOUR) * PX_PER_HOUR;
 const HOURS = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i);
 
-const RU_WEEK_DAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+// Mon=1..Sat=6, Sun=0 — maps array index (0=Mon…6=Sun) to weekday key
+const WEEKDAY_KEYS = [1, 2, 3, 4, 5, 6, 0] as const;
 
 function timeToPx(date: Date, dayAnchor: Date): number {
   const diffMs = date.getTime() - dayAnchor.getTime();
@@ -98,6 +100,7 @@ export function ReceptionWeekGrid({
   onDayHeaderClick,
   dark,
 }: Props) {
+  const { t } = useTranslation();
   const bg = dark ? "bg-panel" : "bg-white";
   const borderCls = dark ? "border-line/15" : "border-[#dadce0]";
   const mutedCls = dark ? "text-muted" : "text-[#70757a]";
@@ -264,7 +267,7 @@ export function ReceptionWeekGrid({
           const workingStaff = staff
             .filter((m) => workingIds.has(m.id) && visibleStaffIds.has(m.id))
             .sort((a, b) => a.name.localeCompare(b.name, "et", { sensitivity: "base" }));
-          const ruDay = RU_WEEK_DAYS[i] ?? "";
+          const ruDay = t(`weekday.${WEEKDAY_KEYS[i] ?? 1}`);
           return (
             <div
               key={day.toISOString()}

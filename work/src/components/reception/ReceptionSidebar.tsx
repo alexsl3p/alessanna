@@ -24,6 +24,8 @@ type Props = {
   onToggleStaff: (id: string) => void;
   dark?: boolean;
   hideMiniCalendar?: boolean;
+  view?: "week" | "month";
+  onViewChange?: (v: "week" | "month") => void;
 };
 
 const DAY_NAMES = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
@@ -36,8 +38,10 @@ export function ReceptionSidebar({
   onToggleStaff,
   dark,
   hideMiniCalendar,
+  view,
+  onViewChange,
 }: Props) {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const currentLang = i18n.language.split("-")[0] ?? "ru";
   const [miniCursor, setMiniCursor] = useState(() => new Date());
   const today = new Date();
@@ -58,6 +62,24 @@ export function ReceptionSidebar({
 
   return (
     <div className={`flex h-full w-64 shrink-0 flex-col overflow-y-auto border-r py-3 ${borderCls} ${bg}`}>
+      {/* View switcher — only shown on mobile (top bar hides it on sm) */}
+      {onViewChange && view && (
+        <div className={`mb-3 flex items-center rounded-lg border p-0.5 mx-3 md:hidden ${borderCls}`}>
+          {(["week", "month"] as const).map((v) => (
+            <button
+              key={v}
+              onClick={() => onViewChange(v)}
+              className={[
+                "flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                view === v ? "bg-[#e8f0fe] text-[#1a73e8]" : `${mutedCls} ${hoverCls}`,
+              ].join(" ")}
+            >
+              {v === "week" ? t("calendar.week") : t("calendar.month")}
+            </button>
+          ))}
+        </div>
+      )}
+
       {!hideMiniCalendar && (
       <>
       {/* Mini calendar */}
@@ -126,7 +148,7 @@ export function ReceptionSidebar({
       {/* Staff list */}
       <div className="px-3">
         <p className={`mb-2 text-[11px] font-semibold uppercase tracking-wider ${mutedCls}`}>
-          Мастера
+          {t("reception.mastersTitle")}
         </p>
         <div className="space-y-0.5">
           {staff.map((member) => {

@@ -14,7 +14,12 @@
     "language": "Keel",
     "hShort": "h"
   },
-  "lang": { "ru": "RU", "et": "ET", "fi": "FI", "en": "EN" },
+  "lang": {
+    "ru": "RU",
+    "et": "ET",
+    "fi": "FI",
+    "en": "EN"
+  },
   "login": {
     "title": "Töötaja sisselogimine",
     "subtitle": "Kasuta profiilis olevat telefoninumbrit.",
@@ -513,7 +518,9 @@
         "pairFull": "Pool ekraani",
         "density": "Kirje rea suurus"
       }
-    }
+    },
+    "mastersTitle": "Meistrid",
+    "colorSettings": "Meistrite värvide seaded"
   },
   "role": {
     "label": "Roll",
@@ -581,7 +588,13 @@
     "workloadSoon": "Peaaegu täis"
   },
   "weekday": {
-    "0": "P", "1": "E", "2": "T", "3": "K", "4": "N", "5": "R", "6": "L"
+    "0": "P",
+    "1": "E",
+    "2": "T",
+    "3": "K",
+    "4": "N",
+    "5": "R",
+    "6": "L"
   },
   "proCalendar": {
     "noStaff": "Aktiivseid töötajaid pole.",
@@ -875,9 +888,48 @@
       "errMissingStart": "Valige päev ja aeg.",
       "errEmptyItems": "Valige teenus hinnakirjast.",
       "errTooManyItems": "Praegu saab broneerida ühe teenuse kaupa.",
-      "monthsTitle": ["Jaanuar", "Veebruar", "Märts", "Aprill", "Mai", "Juuni", "Juuli", "August", "September", "Oktoober", "November", "Detsember"],
-      "monthsGenitive": ["jaanuar", "veebruar", "märts", "aprill", "mai", "juuni", "juuli", "august", "september", "oktoober", "november", "detsember"],
-      "monthsLower": ["jaanuar", "veebruar", "märts", "aprill", "mai", "juuni", "juuli", "august", "september", "oktoober", "november", "detsember"]
+      "monthsTitle": [
+        "Jaanuar",
+        "Veebruar",
+        "Märts",
+        "Aprill",
+        "Mai",
+        "Juuni",
+        "Juuli",
+        "August",
+        "September",
+        "Oktoober",
+        "November",
+        "Detsember"
+      ],
+      "monthsGenitive": [
+        "jaanuar",
+        "veebruar",
+        "märts",
+        "aprill",
+        "mai",
+        "juuni",
+        "juuli",
+        "august",
+        "september",
+        "oktoober",
+        "november",
+        "detsember"
+      ],
+      "monthsLower": [
+        "jaanuar",
+        "veebruar",
+        "märts",
+        "aprill",
+        "mai",
+        "juuni",
+        "juuli",
+        "august",
+        "september",
+        "oktoober",
+        "november",
+        "detsember"
+      ]
     }
   }
 }

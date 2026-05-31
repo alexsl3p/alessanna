@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { addDays, addMonths, addWeeks, startOfWeek, subMonths, subWeeks } from "date-fns";
 import { supabase } from "../lib/supabase";
 import { useCalendarDataRealtime } from "../hooks/useSalonRealtime";
@@ -30,6 +31,7 @@ type BookingPopupState = {
 };
 
 export function ReceptionCalendarPage() {
+  const { t, i18n } = useTranslation();
   const [view, setView] = useState<View>("week");
   const [cursor, setCursor] = useState(() => new Date());
   const [staff, setStaff] = useState<StaffMember[]>([]);
@@ -132,7 +134,8 @@ export function ReceptionCalendarPage() {
     else setCursor((d) => (dir === 1 ? addMonths(d, 1) : subMonths(d, 1)));
   }
 
-  const periodLabel = cursor.toLocaleString("ru-RU", { month: "long", year: "numeric" });
+  const uiLocale = i18n.language === "et" ? "et-EE" : "ru-RU";
+  const periodLabel = cursor.toLocaleString(uiLocale, { month: "long", year: "numeric" });
 
   if (loading) {
     return (
@@ -145,61 +148,58 @@ export function ReceptionCalendarPage() {
   return (
     <div className="fixed inset-0 flex flex-col bg-white text-[#3c4043]">
       {/* Top navigation */}
-      <div className="flex shrink-0 items-center border-b border-[#dadce0] bg-white px-2 py-2">
-        {/* Left: hamburger (mobile) + Today + view switcher */}
-        <div className="flex items-center gap-1.5">
-          {/* Hamburger — only on mobile */}
-          <button
-            onClick={() => setShowSidebar((s) => !s)}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#5f6368] hover:bg-[#f1f3f4] md:hidden"
-            aria-label="Мастера и календарь"
-          >
-            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
-            </svg>
-          </button>
-          <button
-            onClick={() => setCursor(new Date())}
-            className="rounded-lg border border-[#dadce0] px-3 py-1.5 text-sm font-medium text-[#3c4043] hover:bg-[#f1f3f4]"
-          >
-            Сегодня
-          </button>
-          <div className="flex items-center rounded-lg border border-[#dadce0] p-0.5">
-            {(["week", "month"] as const).map((v) => (
-              <button
-                key={v}
-                onClick={() => setView(v)}
-                className={[
-                  "rounded-md px-3 py-1 text-sm font-medium transition-colors",
-                  view === v
-                    ? "bg-[#e8f0fe] text-[#1a73e8]"
-                    : "text-[#5f6368] hover:bg-[#f1f3f4]",
-                ].join(" ")}
-              >
-                {v === "week" ? "Неделя" : "Месяц"}
-              </button>
-            ))}
-          </div>
+      <div className="flex shrink-0 items-center gap-1 border-b border-[#dadce0] bg-white px-2 py-2">
+        {/* Hamburger — mobile only */}
+        <button
+          onClick={() => setShowSidebar((s) => !s)}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#5f6368] hover:bg-[#f1f3f4] md:hidden"
+          aria-label="Меню"
+        >
+          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
+
+        {/* Today */}
+        <button
+          onClick={() => setCursor(new Date())}
+          className="shrink-0 rounded-lg border border-[#dadce0] px-3 py-1.5 text-sm font-medium text-[#3c4043] hover:bg-[#f1f3f4]"
+        >
+          {t("calendar.today")}
+        </button>
+
+        {/* View switcher — hidden on mobile (available in sidebar) */}
+        <div className="hidden items-center rounded-lg border border-[#dadce0] p-0.5 md:flex">
+          {(["week", "month"] as const).map((v) => (
+            <button
+              key={v}
+              onClick={() => setView(v)}
+              className={[
+                "rounded-md px-3 py-1 text-sm font-medium transition-colors",
+                view === v ? "bg-[#e8f0fe] text-[#1a73e8]" : "text-[#5f6368] hover:bg-[#f1f3f4]",
+              ].join(" ")}
+            >
+              {v === "week" ? t("calendar.week") : t("calendar.month")}
+            </button>
+          ))}
         </div>
 
-        {/* Center: prev / month-year / next */}
-        <div className="flex flex-1 items-center justify-center gap-1">
+        {/* Prev / period label / Next — centered */}
+        <div className="flex min-w-0 flex-1 items-center justify-center gap-1">
           <button
             onClick={() => navigate(-1)}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-[#5f6368] hover:bg-[#f1f3f4]"
-            aria-label={view === "week" ? "Предыдущая неделя" : "Предыдущий месяц"}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#5f6368] hover:bg-[#f1f3f4]"
           >
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="15 18 9 12 15 6" />
             </svg>
           </button>
-          <span className="min-w-[160px] text-center text-lg font-normal capitalize text-[#3c4043]">
+          <span className="min-w-0 truncate text-center text-base font-normal capitalize text-[#3c4043] sm:text-lg">
             {periodLabel}
           </span>
           <button
             onClick={() => navigate(1)}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-[#5f6368] hover:bg-[#f1f3f4]"
-            aria-label={view === "week" ? "Следующая неделя" : "Следующий месяц"}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#5f6368] hover:bg-[#f1f3f4]"
           >
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="9 18 15 12 9 6" />
@@ -207,18 +207,16 @@ export function ReceptionCalendarPage() {
           </button>
         </div>
 
-        {/* Right: settings gear */}
-        <div className="flex items-center">
-          <button
-            onClick={() => setShowSettings(true)}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-[#5f6368] hover:bg-[#f1f3f4]"
-            title="Настройки цветов мастеров"
-          >
-            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
-              <path d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96a7.01 7.01 0 00-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.48.48 0 00-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.11.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
-            </svg>
-          </button>
-        </div>
+        {/* Settings gear */}
+        <button
+          onClick={() => setShowSettings(true)}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#5f6368] hover:bg-[#f1f3f4]"
+          title={t("reception.colorSettings")}
+        >
+          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
+            <path d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96a7.01 7.01 0 00-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.48.48 0 00-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.11.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+          </svg>
+        </button>
       </div>
 
       {/* Main layout */}
@@ -236,6 +234,8 @@ export function ReceptionCalendarPage() {
             staff={staff}
             visibleStaffIds={visibleStaffIds}
             onToggleStaff={handleToggleStaff}
+            view={view}
+            onViewChange={setView}
           />
         </div>
 
