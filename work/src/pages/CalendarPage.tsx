@@ -366,6 +366,7 @@ export function CalendarPage() {
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <ReceptionSidebar
           dark
+          hideMiniCalendar
           cursor={cursor}
           onDateSelect={(date) => { setCursor(date); setView("week"); }}
           staff={activeStaffForCalendar}
@@ -386,6 +387,7 @@ export function CalendarPage() {
               appointments={filteredAppointments}
               services={services}
               timeOff={timeOff}
+              workDates={workDates}
               visibleStaffIds={effectiveVisibleIds}
               onSlotClick={(start) => {
                 if (!canUseCalendar) return;

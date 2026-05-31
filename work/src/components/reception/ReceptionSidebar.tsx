@@ -22,6 +22,7 @@ type Props = {
   visibleStaffIds: Set<string>;
   onToggleStaff: (id: string) => void;
   dark?: boolean;
+  hideMiniCalendar?: boolean;
 };
 
 const DAY_NAMES = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
@@ -33,6 +34,7 @@ export function ReceptionSidebar({
   visibleStaffIds,
   onToggleStaff,
   dark,
+  hideMiniCalendar,
 }: Props) {
   const [miniCursor, setMiniCursor] = useState(() => new Date());
   const today = new Date();
@@ -53,6 +55,8 @@ export function ReceptionSidebar({
 
   return (
     <div className={`flex w-64 shrink-0 flex-col overflow-y-auto border-r py-3 ${borderCls} ${bg}`}>
+      {!hideMiniCalendar && (
+      <>
       {/* Mini calendar */}
       <div className="px-3">
         <div className="mb-1 flex items-center justify-between">
@@ -113,6 +117,8 @@ export function ReceptionSidebar({
       </div>
 
       <div className={`mx-3 my-3 border-t ${borderCls}`} />
+      </>
+      )}
 
       {/* Staff list */}
       <div className="px-3">
