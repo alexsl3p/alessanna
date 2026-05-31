@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import React, { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   addMonths,
@@ -14,7 +14,8 @@ import {
 import { supabase } from "../lib/supabase";
 import { ToggleSwitch } from "../components/ToggleSwitch";
 import { isStaffRowAdmin } from "../lib/roles";
-import type { StaffScheduleRow, StaffTableRow } from "../types/database";
+import type { StaffMember, StaffScheduleRow, StaffTableRow } from "../types/database";
+import { DaySchedulePopup } from "../components/reception/DaySchedulePopup";
 
 const DAYS = [1, 2, 3, 4, 5, 6, 0] as const;
 const WEEK_HEADER_DOW = [1, 2, 3, 4, 5, 6, 0] as const;
@@ -35,16 +36,27 @@ function rowForWeekday(rows: DayRow[], dow: number): DayRow | undefined {
 export function AdminSchedulePage() {
   const { t } = useTranslation();
   const [staffList, setStaffList] = useState<StaffTableRow[]>([]);
-  const [staffId, setStaffId] = useState<string>("");
+  const [staffId, setStaffId] = useState<string>(ALL_STAFF_VALUE);
   const [rows, setRows] = useState<DayRow[]>(emptyWeek);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [viewMonth, setViewMonth] = useState(() => startOfMonth(new Date()));
   const [focusedDow, setFocusedDow] = useState<number | null>(null);
+  const [allSchedules, setAllSchedules] = useState<StaffScheduleRow[]>([]);
+  const [dayPopup, setDayPopup] = useState<{ day: Date; x: number; y: number } | null>(null);
+
+  const loadAllSchedules = useCallback(async () => {
+    const { data } = await supabase.from("staff_schedule").select("*");
+    if (data) setAllSchedules(data as StaffScheduleRow[]);
+  }, []);
 
   const loadStaff = useCallback(async () => {
-    const { data, error } = await supabase.from("staff").select("*").eq("is_active", true).order("name");
+    const [staffRes] = await Promise.all([
+      supabase.from("staff").select("*").eq("is_active", true).order("name"),
+      loadAllSchedules(),
+    ]);
+    const { data, error } = staffRes;
     if (error) {
       setErr(error.message);
       setLoading(false);
@@ -56,10 +68,10 @@ export function AdminSchedulePage() {
       if (list.length === 0) return "";
       if (prev === ALL_STAFF_VALUE) return ALL_STAFF_VALUE;
       if (prev && list.some((s) => s.id === prev)) return prev;
-      return list[0]!.id;
+      return ALL_STAFF_VALUE;
     });
     setLoading(false);
-  }, []);
+  }, [loadAllSchedules]);
 
   const loadSchedule = useCallback(async (sid: string) => {
     if (!sid) return;
@@ -132,16 +144,8 @@ export function AdminSchedulePage() {
 
   const today = useMemo(() => new Date(), []);
 
-  function focusWeekdayFromDate(d: Date) {
-    const dow = d.getDay();
-    setFocusedDow(dow);
-    window.requestAnimationFrame(() => {
-      document.getElementById(`schedule-day-${dow}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
-    });
-  }
-
-  function onCalendarDayClick(d: Date) {
-    focusWeekdayFromDate(d);
+  function onCalendarDayClick(d: Date, e: React.MouseEvent) {
+    setDayPopup({ day: d, x: e.clientX, y: e.clientY });
   }
 
   function onCalendarDayDoubleClick(d: Date) {
@@ -300,7 +304,7 @@ export function AdminSchedulePage() {
                 <button
                   key={d.toISOString()}
                   type="button"
-                  onClick={() => onCalendarDayClick(d)}
+                  onClick={(e) => onCalendarDayClick(d, e)}
                   onDoubleClick={() => onCalendarDayDoubleClick(d)}
                   className={[
                     "flex min-h-[4.5rem] flex-col items-center justify-center rounded-xl border-2 px-1 py-2 text-center transition",
@@ -374,6 +378,22 @@ export function AdminSchedulePage() {
           </form>
         </div>
       </div>
+
+      {dayPopup && (
+        <DaySchedulePopup
+          day={dayPopup.day}
+          anchorX={dayPopup.x}
+          anchorY={dayPopup.y}
+          allStaff={staffList as unknown as StaffMember[]}
+          schedules={allSchedules}
+          onClose={() => setDayPopup(null)}
+          onSaved={() => {
+            setDayPopup(null);
+            void loadAllSchedules();
+            if (staffId && staffId !== ALL_STAFF_VALUE) void loadSchedule(staffId);
+          }}
+        />
+      )}
     </div>
   );
 }
