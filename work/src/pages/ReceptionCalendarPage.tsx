@@ -208,29 +208,31 @@ export function ReceptionCalendarPage() {
           onToggleStaff={handleToggleStaff}
         />
 
-        {view === "week" ? (
-          <ReceptionWeekGrid
-            days={days}
-            staff={staff}
-            appointments={appointments}
-            services={services}
-            timeOff={timeOff}
-            workDates={workDates}
-            visibleStaffIds={visibleStaffIds}
-            onSlotClick={handleSlotClick}
-            onApptClick={handleApptClick}
-            onDayHeaderClick={handleDayHeaderClick}
-          />
-        ) : (
-          <ReceptionMonthView
-            cursor={cursor}
-            staff={staff}
-            appointments={appointments}
-            visibleStaffIds={visibleStaffIds}
-            onDayClick={handleDayClick}
-            onApptClick={handleApptClick}
-          />
-        )}
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          {view === "week" ? (
+            <ReceptionWeekGrid
+              days={days}
+              staff={staff}
+              appointments={appointments}
+              services={services}
+              timeOff={timeOff}
+              workDates={workDates}
+              visibleStaffIds={visibleStaffIds}
+              onSlotClick={handleSlotClick}
+              onApptClick={handleApptClick}
+              onDayHeaderClick={handleDayHeaderClick}
+            />
+          ) : (
+            <ReceptionMonthView
+              cursor={cursor}
+              staff={staff}
+              appointments={appointments}
+              visibleStaffIds={visibleStaffIds}
+              onDayClick={handleDayClick}
+              onApptClick={handleApptClick}
+            />
+          )}
+        </div>
       </div>
 
       {popup && (
