@@ -125,6 +125,7 @@ export function ReceptionWeekGrid({
 
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressFired = useRef(false);
+  const pointerDownY = useRef(0);
   const [resizeModeId, setResizeModeId] = useState<string | null>(null);
   const [preview, setPreview] = useState<{ id: string; start: Date; end: Date } | null>(null);
 
@@ -146,8 +147,9 @@ export function ReceptionWeekGrid({
   // ---- Long-press a booking card -> enter resize mode ----
   function handleCardPointerDown(e: React.PointerEvent<HTMLDivElement>, appt: AppointmentRow) {
     if (e.button !== 0 && e.pointerType === "mouse") return;
-    if (resizeModeId === appt.id) return; // already in resize mode; handles take over
+    if (resizeModeId === appt.id) return;
     longPressFired.current = false;
+    pointerDownY.current = e.clientY;
     clearLongPress();
     longPressTimer.current = setTimeout(() => {
       longPressFired.current = true;
@@ -157,12 +159,16 @@ export function ReceptionWeekGrid({
 
   function handleCardPointerUp(e: React.PointerEvent<HTMLDivElement>, appt: AppointmentRow) {
     clearLongPress();
-    if (longPressFired.current) { longPressFired.current = false; return; } // just entered resize mode
-    if (resizeModeId === appt.id) return; // tap on a card already in resize mode -> ignore
+    if (longPressFired.current) { longPressFired.current = false; return; }
+    if (resizeModeId === appt.id) return;
+    // If finger moved > 8 px it was a scroll attempt — don't open popup
+    if (Math.abs(e.clientY - pointerDownY.current) > 8) return;
     onApptClick(appt, e.clientX, e.clientY);
   }
 
   function handleCardPointerCancel() {
+    // Browser fired pointercancel — it took over the gesture for scrolling.
+    // Cancel the long-press timer; pointerup won't fire so no popup either.
     clearLongPress();
   }
 
@@ -442,8 +448,9 @@ export function ReceptionWeekGrid({
                       key={appt.id}
                       data-appt="1"
                       className={[
-                        "absolute touch-none overflow-hidden rounded-md px-1.5 py-0.5 text-left shadow-sm transition-all",
-                        isResizing || inResizeMode ? "shadow-lg ring-2 ring-white/70" : "hover:shadow-md",
+                        "absolute overflow-hidden rounded-md px-1.5 py-0.5 text-left shadow-sm transition-all",
+                        inResizeMode ? "touch-none shadow-lg ring-2 ring-white/70" : "hover:shadow-md",
+                        isResizing ? "touch-none" : "",
                       ].join(" ")}
                       style={{
                         top: topPx + 1,
