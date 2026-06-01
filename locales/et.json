@@ -69,6 +69,7 @@
     "myHelp": "Abi",
     "analytics": "Analüütika",
     "logout": "Logi välja",
+    "toReception": "Mine retseptsiooni",
     "workerHint": "Meistri režiim: ainult oma broneeringud ja kalender. Täielik juurdepääs juhil.",
     "unreadBadgeAria": "Lugemata: {{count}}",
     "publicSite": "Ava sait administraatorina",
