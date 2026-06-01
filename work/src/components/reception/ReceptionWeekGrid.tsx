@@ -226,7 +226,12 @@ export function ReceptionWeekGrid({
     const changed =
       d.curStart.getTime() !== d.origStart.getTime() ||
       d.curEnd.getTime() !== d.origEnd.getTime();
-    if (changed && onApptResize) onApptResize(d.appt, d.curStart, d.curEnd);
+    if (!changed) {
+      // No drag — treat as a regular click to open the appointment
+      onApptClick(d.appt, e.clientX, e.clientY);
+      return;
+    }
+    if (onApptResize) onApptResize(d.appt, d.curStart, d.curEnd);
   }
 
   // ---- Touch: dragging a resize handle (only when card is in resize mode) ----
