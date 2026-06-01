@@ -278,10 +278,13 @@ export function ReceptionSidebar({
 
       {/* CRM password modal */}
       {crmPrompt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-6">
-          <div className="w-full max-w-xs overflow-hidden rounded-2xl bg-white shadow-2xl">
-            <div className="bg-[#1a73e8] px-5 py-4">
-              <p className="text-sm font-semibold text-white">{t("reception.crmPasswordTitle")}</p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-6">
+          <div className="w-full max-w-xs overflow-hidden rounded-2xl bg-panel shadow-2xl ring-1 ring-line/15">
+            {/* Header */}
+            <div className={`px-5 py-4 ${useGold ? "bg-gold/10 border-b border-gold/20" : "bg-[#1a73e8]/10 border-b border-[#1a73e8]/20"}`}>
+              <p className={`text-sm font-semibold ${useGold ? "text-gold" : "text-[#1a73e8]"}`}>
+                {t("reception.crmPasswordTitle")}
+              </p>
             </div>
             <form
               className="p-5"
@@ -301,22 +304,34 @@ export function ReceptionSidebar({
                 value={pwValue}
                 onChange={(e) => { setPwValue(e.target.value); setPwError(false); }}
                 placeholder={t("reception.crmPasswordPlaceholder")}
-                className="w-full rounded-lg border border-[#dadce0] px-3 py-2.5 text-sm text-[#3c4043] outline-none focus:border-[#1a73e8] focus:ring-1 focus:ring-[#1a73e8]"
+                className={[
+                  "w-full rounded-lg border bg-canvas px-3 py-2.5 text-sm text-fg outline-none transition",
+                  pwError
+                    ? "border-red-400 focus:border-red-400 focus:ring-1 focus:ring-red-400"
+                    : useGold
+                    ? "border-line/20 focus:border-gold focus:ring-1 focus:ring-gold/40"
+                    : "border-line/20 focus:border-[#1a73e8] focus:ring-1 focus:ring-[#1a73e8]/40",
+                ].join(" ")}
               />
               {pwError && (
-                <p className="mt-1.5 text-xs text-red-500">{t("reception.crmPasswordError")}</p>
+                <p className="mt-1.5 text-xs text-red-400">{t("reception.crmPasswordError")}</p>
               )}
               <div className="mt-4 flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setCrmPrompt(false)}
-                  className="rounded-lg px-4 py-2 text-sm font-medium text-[#5f6368] hover:bg-[#f1f3f4]"
+                  className={`rounded-lg px-4 py-2 text-sm font-medium text-muted transition-colors ${hoverCls}`}
                 >
                   {t("common.cancel")}
                 </button>
                 <button
                   type="submit"
-                  className="rounded-lg bg-[#1a73e8] px-4 py-2 text-sm font-medium text-white hover:bg-[#1557b0]"
+                  className={[
+                    "rounded-lg px-4 py-2 text-sm font-medium transition-colors",
+                    useGold
+                      ? "bg-gold text-canvas hover:bg-gold/90"
+                      : "bg-[#1a73e8] text-white hover:bg-[#1557b0]",
+                  ].join(" ")}
                 >
                   {t("common.confirm")}
                 </button>
