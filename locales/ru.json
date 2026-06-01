@@ -530,17 +530,22 @@
     "crmPasswordPlaceholder": "Пароль",
     "crmPasswordError": "Неверный пароль",
     "colorNames": {
-      "tomato": "Томат",
-      "flamingo": "Фламинго",
-      "tangerine": "Мандарин",
-      "banana": "Банан",
-      "sage": "Шалфей",
-      "basil": "Базилик",
-      "peacock": "Павлин",
-      "blueberry": "Черника",
-      "lavender": "Лаванда",
-      "grape": "Виноград",
-      "graphite": "Графит"
+      "deepRed":    "Бордовый",
+      "raspberry":  "Малиновый",
+      "cranberry":  "Клюква",
+      "mauve":      "Сиреневый",
+      "grape":      "Сливовый",
+      "sienna":     "Терракота",
+      "amber":      "Янтарный",
+      "chartreuse": "Лимонный",
+      "sage":       "Оливковый",
+      "forest":     "Изумрудный",
+      "teal":       "Бирюзовый",
+      "navy":       "Морской",
+      "periwinkle": "Васильковый",
+      "indigo":     "Индиго",
+      "violet":     "Фиолетовый",
+      "slate":      "Стальной"
     }
   },
   "role": {

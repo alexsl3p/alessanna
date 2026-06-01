@@ -531,17 +531,22 @@
     "crmPasswordPlaceholder": "Parool",
     "crmPasswordError": "Vale parool",
     "colorNames": {
-      "tomato": "Tomat",
-      "flamingo": "Flamingo",
-      "tangerine": "Mandariin",
-      "banana": "Banaan",
-      "sage": "Salvei",
-      "basil": "Basiilik",
-      "peacock": "Paabulind",
-      "blueberry": "Mustikas",
-      "lavender": "Lavendel",
-      "grape": "Viinamari",
-      "graphite": "Grafiit"
+      "deepRed":    "Bordoo",
+      "raspberry":  "Vaarikas",
+      "cranberry":  "Jõhvikas",
+      "mauve":      "Lilla",
+      "grape":      "Ploom",
+      "sienna":     "Terrakota",
+      "amber":      "Merevaik",
+      "chartreuse": "Sidrun",
+      "sage":       "Oliiv",
+      "forest":     "Smaragd",
+      "teal":       "Türkiis",
+      "navy":       "Mereväesinine",
+      "periwinkle": "Rukkilill",
+      "indigo":     "Indigo",
+      "violet":     "Violett",
+      "slate":      "Terassinе"
     }
   },
   "role": {

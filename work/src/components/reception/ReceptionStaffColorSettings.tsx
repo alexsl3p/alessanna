@@ -6,17 +6,22 @@ import { buildStaffHueMap } from "../../lib/staffHue";
 import { googleStaffColor } from "./receptionColors";
 
 const GCAL_COLORS = [
-  { key: "tomato",     hex: "#d50000" },
-  { key: "flamingo",   hex: "#e67c73" },
-  { key: "tangerine",  hex: "#f4511e" },
-  { key: "banana",     hex: "#f6bf26" },
-  { key: "sage",       hex: "#33b679" },
-  { key: "basil",      hex: "#0b8043" },
-  { key: "peacock",    hex: "#039be5" },
-  { key: "blueberry",  hex: "#3f51b5" },
-  { key: "lavender",   hex: "#7986cb" },
-  { key: "grape",      hex: "#8e24aa" },
-  { key: "graphite",   hex: "#616161" },
+  { key: "deepRed",     hex: "#b71c1c" },
+  { key: "raspberry",   hex: "#ba0968" },
+  { key: "cranberry",   hex: "#b11956" },
+  { key: "mauve",       hex: "#cb8ba5" },
+  { key: "grape",       hex: "#7b1fa2" },
+  { key: "sienna",      hex: "#bf360c" },
+  { key: "amber",       hex: "#e99715" },
+  { key: "chartreuse",  hex: "#bfc501" },
+  { key: "sage",        hex: "#7cb338" },
+  { key: "forest",      hex: "#2e7d32" },
+  { key: "teal",        hex: "#00695c" },
+  { key: "navy",        hex: "#1565c0" },
+  { key: "periwinkle",  hex: "#3f4dc7" },
+  { key: "indigo",      hex: "#283593" },
+  { key: "violet",      hex: "#4527a0" },
+  { key: "slate",       hex: "#546e7a" },
 ];
 
 type Props = {
