@@ -217,7 +217,7 @@ export function ReceptionSidebar({
         <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
           {t("nav.themeLabel")}
         </p>
-        <div className="mb-3 grid grid-cols-2 gap-1">
+        <div className="mb-3 flex gap-2">
           {RECEPTION_THEME_IDS.map((id) => {
             const active = theme === id;
             const sw = SWATCHES[id];
@@ -228,23 +228,14 @@ export function ReceptionSidebar({
                 onClick={() => setTheme(id)}
                 aria-pressed={active}
                 title={t(`nav.theme.${id}`)}
-                className={[
-                  "flex flex-col items-center gap-1 rounded-lg border px-1.5 py-1.5 text-[10px] font-medium uppercase tracking-wide transition",
-                  active
-                    ? "border-gold/60 bg-surface text-gold shadow-gold"
-                    : "border-line/10 bg-canvas/40 text-muted hover:border-gold/30 hover:text-fg",
-                ].join(" ")}
-              >
-                <span
-                  aria-hidden="true"
-                  className="flex h-3 w-7 overflow-hidden rounded-full border border-line/10"
-                >
-                  <span style={{ background: sw[0] }} className="flex-1" />
-                  <span style={{ background: sw[1] }} className="flex-1" />
-                  <span style={{ background: sw[2] }} className="flex-1" />
-                </span>
-                <span className="truncate">{t(`nav.theme.${id}`)}</span>
-              </button>
+                className="relative flex h-6 w-6 items-center justify-center rounded-full transition-transform hover:scale-110"
+                style={{
+                  background: `linear-gradient(135deg, ${sw[0]} 0%, ${sw[1]} 60%, ${sw[2]} 100%)`,
+                  boxShadow: active
+                    ? `0 0 0 2px ${sw[0]}, 0 0 0 3.5px rgb(var(--c-gold))`
+                    : "0 0 0 1px rgba(128,128,128,0.25)",
+                }}
+              />
             );
           })}
         </div>
