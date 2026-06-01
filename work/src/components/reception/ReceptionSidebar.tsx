@@ -79,6 +79,17 @@ export function ReceptionSidebar({
 
   return (
     <div className={`flex h-full w-64 shrink-0 flex-col overflow-y-auto border-r py-3 bg-canvas ${borderCls}`}>
+      {/* Logo */}
+      <div className="mb-2 px-5 pt-1">
+        <img
+          src="/alessanna-logo.png"
+          alt="AlesSanna"
+          className="w-full object-contain"
+          style={{ maxHeight: 72 }}
+          draggable={false}
+        />
+      </div>
+
       {/* View switcher — mobile only */}
       {onViewChange && view && (
         <div className={`mb-3 mx-3 flex items-center rounded-lg border p-0.5 md:hidden ${borderCls}`}>
