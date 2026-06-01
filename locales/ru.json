@@ -4,6 +4,7 @@
     "loading": "Загрузка…",
     "save": "Сохранить",
     "cancel": "Отмена",
+    "confirm": "Войти",
     "add": "Добавить",
     "service": "Услуга",
     "staff": "Сотрудник",
@@ -525,6 +526,9 @@
     "worksOn": "Работает",
     "moreAppts": "+{{count}} ещё",
     "toCrm": "Перейти в CRM",
+    "crmPasswordTitle": "Введите пароль для входа в CRM",
+    "crmPasswordPlaceholder": "Пароль",
+    "crmPasswordError": "Неверный пароль",
     "colorNames": {
       "tomato": "Томат",
       "flamingo": "Фламинго",

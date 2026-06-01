@@ -59,6 +59,9 @@ export function ReceptionSidebar({
   const currentLang = i18n.language.split("-")[0] ?? "ru";
   const uiLocale = currentLang === "et" ? "et-EE" : "ru-RU";
   const [miniCursor, setMiniCursor] = useState(() => new Date());
+  const [crmPrompt, setCrmPrompt] = useState(false);
+  const [pwValue, setPwValue] = useState("");
+  const [pwError, setPwError] = useState(false);
   const today = new Date();
   const staffHueMap = buildStaffHueMap(staff.map((m) => m.id));
 
@@ -260,7 +263,7 @@ export function ReceptionSidebar({
         </div>
 
         <button
-          onClick={() => navigate("/")}
+          onClick={() => { setCrmPrompt(true); setPwValue(""); setPwError(false); }}
           className={[
             "flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm font-medium transition-colors",
             dark ? "text-muted hover:bg-white/5 hover:text-gold" : `text-muted ${hoverCls}`,
@@ -272,6 +275,56 @@ export function ReceptionSidebar({
           {t("reception.toCrm")}
         </button>
       </div>
+
+      {/* CRM password modal */}
+      {crmPrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-6">
+          <div className="w-full max-w-xs overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="bg-[#1a73e8] px-5 py-4">
+              <p className="text-sm font-semibold text-white">{t("reception.crmPasswordTitle")}</p>
+            </div>
+            <form
+              className="p-5"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (pwValue === "2025alessanna") {
+                  navigate("/");
+                } else {
+                  setPwError(true);
+                  setPwValue("");
+                }
+              }}
+            >
+              <input
+                type="password"
+                autoFocus
+                value={pwValue}
+                onChange={(e) => { setPwValue(e.target.value); setPwError(false); }}
+                placeholder={t("reception.crmPasswordPlaceholder")}
+                className="w-full rounded-lg border border-[#dadce0] px-3 py-2.5 text-sm text-[#3c4043] outline-none focus:border-[#1a73e8] focus:ring-1 focus:ring-[#1a73e8]"
+              />
+              {pwError && (
+                <p className="mt-1.5 text-xs text-red-500">{t("reception.crmPasswordError")}</p>
+              )}
+              <div className="mt-4 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCrmPrompt(false)}
+                  className="rounded-lg px-4 py-2 text-sm font-medium text-[#5f6368] hover:bg-[#f1f3f4]"
+                >
+                  {t("common.cancel")}
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-lg bg-[#1a73e8] px-4 py-2 text-sm font-medium text-white hover:bg-[#1557b0]"
+                >
+                  {t("common.confirm")}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

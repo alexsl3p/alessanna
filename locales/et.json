@@ -4,6 +4,7 @@
     "loading": "Laadin…",
     "save": "Salvesta",
     "cancel": "Tühista",
+    "confirm": "Sisene",
     "add": "Lisa",
     "service": "Teenus",
     "staff": "Töötaja",
@@ -526,6 +527,9 @@
     "worksOn": "Töötab",
     "moreAppts": "+{{count}} veel",
     "toCrm": "Mine CRM-i",
+    "crmPasswordTitle": "Sisesta CRM-i parool",
+    "crmPasswordPlaceholder": "Parool",
+    "crmPasswordError": "Vale parool",
     "colorNames": {
       "tomato": "Tomat",
       "flamingo": "Flamingo",
