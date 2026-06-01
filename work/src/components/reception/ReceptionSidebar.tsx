@@ -213,7 +213,26 @@ export function ReceptionSidebar({
 
       {/* Bottom section: theme + language + CRM link */}
       <div className={`mt-auto border-t px-3 pt-3 pb-3 ${borderCls}`}>
-        {/* Theme picker — CRM style */}
+        {/* Language switcher */}
+        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
+          {t("common.language")}
+        </p>
+        <div className="mb-3 flex gap-1">
+          {(["ru", "et"] as const).map((code) => (
+            <button
+              key={code}
+              onClick={() => void i18n.changeLanguage(code)}
+              className={[
+                "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                currentLang === code ? accentSel : `${mutedCls} ${hoverCls}`,
+              ].join(" ")}
+            >
+              {code.toUpperCase()}
+            </button>
+          ))}
+        </div>
+
+        {/* Theme picker */}
         <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
           {t("nav.themeLabel")}
         </p>
@@ -238,25 +257,6 @@ export function ReceptionSidebar({
               />
             );
           })}
-        </div>
-
-        {/* Language switcher */}
-        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
-          {t("common.language")}
-        </p>
-        <div className="mb-3 flex gap-1">
-          {(["ru", "et"] as const).map((code) => (
-            <button
-              key={code}
-              onClick={() => void i18n.changeLanguage(code)}
-              className={[
-                "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-                currentLang === code ? accentSel : `${mutedCls} ${hoverCls}`,
-              ].join(" ")}
-            >
-              {code.toUpperCase()}
-            </button>
-          ))}
         </div>
 
         <button
