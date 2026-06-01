@@ -17,15 +17,6 @@ import type { StaffMember } from "../../types/database";
 import { buildStaffHueMap } from "../../lib/staffHue";
 import { googleStaffColor } from "./receptionColors";
 import { useTheme, type ThemeId } from "../../context/ThemeContext";
-import { useEffectiveRole } from "../../context/EffectiveRoleContext";
-
-const SWATCHES: Record<ThemeId, [string, string, string]> = {
-  white:     ["#ffffff", "#f1f3f4", "#1a73e8"],
-  champagne: ["#fbfaf6", "#f4f1eb", "#a3855e"],
-  stone:     ["#25221e", "#38332d", "#d4b896"],
-  onyx:      ["#0a0a0a", "#1a1a1a", "#c4a574"],
-};
-const RECEPTION_THEME_IDS: ThemeId[] = ["white", "champagne", "stone", "onyx"];
 
 type Props = {
   cursor: Date;
@@ -37,11 +28,19 @@ type Props = {
   hideMiniCalendar?: boolean;
   view?: "day" | "week" | "month";
   onViewChange?: (v: "day" | "week" | "month") => void;
-  desktopMode?: boolean;
-  onToggleDesktopMode?: () => void;
 };
 
 const DAY_KEYS = [1, 2, 3, 4, 5, 6, 0] as const;
+
+// [left, middle, right] color stops for the swatch strip
+const SWATCHES: Record<ThemeId, [string, string, string]> = {
+  white:     ["#ffffff", "#f1f3f4", "#1a73e8"],
+  champagne: ["#fbfaf6", "#f4f1eb", "#a3855e"],
+  stone:     ["#25221e", "#38332d", "#d4b896"],
+  onyx:      ["#0a0a0a", "#1a1a1a", "#c4a574"],
+};
+
+const RECEPTION_THEME_IDS: ThemeId[] = ["white", "champagne", "stone", "onyx"];
 
 export function ReceptionSidebar({
   cursor,
@@ -53,13 +52,10 @@ export function ReceptionSidebar({
   hideMiniCalendar,
   view,
   onViewChange,
-  desktopMode,
-  onToggleDesktopMode,
 }: Props) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
-  const { canManage } = useEffectiveRole();
   const currentLang = i18n.language.split("-")[0] ?? "ru";
   const uiLocale = currentLang === "et" ? "et-EE" : "ru-RU";
   const [miniCursor, setMiniCursor] = useState(() => new Date());
@@ -190,13 +186,12 @@ export function ReceptionSidebar({
             return (
               <label
                 key={member.id}
-                className={`flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors ${canManage ? `cursor-pointer ${hoverCls}` : "cursor-default"}`}
+                className={`flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 transition-colors ${hoverCls}`}
               >
                 <input
                   type="checkbox"
                   checked={checked}
-                  onChange={() => { if (canManage) onToggleStaff(member.id); }}
-                  readOnly={!canManage}
+                  onChange={() => onToggleStaff(member.id)}
                   className="sr-only"
                 />
                 <span
@@ -219,10 +214,10 @@ export function ReceptionSidebar({
         </div>
       </div>
 
-      {/* Bottom section: language + theme + CRM */}
+      {/* Bottom section: theme + language + CRM link */}
       <div className={`mt-auto border-t px-3 pt-3 pb-3 ${borderCls}`}>
         {/* Language switcher */}
-        <p className={`mb-1.5 text-[10px] font-semibold uppercase tracking-wide ${mutedCls}`}>
+        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
           {t("common.language")}
         </p>
         <div className="mb-3 flex gap-1">
@@ -240,38 +235,8 @@ export function ReceptionSidebar({
           ))}
         </div>
 
-        {/* Desktop / Mobile view toggle */}
-        {onToggleDesktopMode !== undefined && (
-          <button
-            type="button"
-            onClick={onToggleDesktopMode}
-            className={[
-              "mb-3 flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
-              dark
-                ? "border-white/10 text-muted hover:border-white/20 hover:text-fg"
-                : "border-line/20 text-muted hover:border-line/30 hover:text-fg",
-            ].join(" ")}
-          >
-            {desktopMode ? (
-              <>
-                <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="5" y="2" width="14" height="20" rx="2" /><line x1="12" y1="18" x2="12.01" y2="18" />
-                </svg>
-                Мобильная версия
-              </>
-            ) : (
-              <>
-                <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="2" y="3" width="20" height="14" rx="2" /><polyline points="8 21 12 17 16 21" /><line x1="12" y1="17" x2="12" y2="21" />
-                </svg>
-                Версия для ПК
-              </>
-            )}
-          </button>
-        )}
-
         {/* Theme picker */}
-        <p className={`mb-1.5 text-[10px] font-semibold uppercase tracking-wide ${mutedCls}`}>
+        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
           {t("nav.themeLabel")}
         </p>
         <div className="mb-3 flex gap-2">
@@ -297,7 +262,6 @@ export function ReceptionSidebar({
           })}
         </div>
 
-        {/* CRM button */}
         <button
           onClick={() => { setCrmPrompt(true); setPwValue(""); setPwError(false); }}
           className={[
@@ -316,6 +280,7 @@ export function ReceptionSidebar({
       {crmPrompt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-6">
           <div className="w-full max-w-xs overflow-hidden rounded-2xl bg-panel shadow-2xl ring-1 ring-line/15">
+            {/* Header */}
             <div className={`px-5 py-4 ${useGold ? "bg-gold/10 border-b border-gold/20" : "bg-[#1a73e8]/10 border-b border-[#1a73e8]/20"}`}>
               <p className={`text-sm font-semibold ${useGold ? "text-gold" : "text-[#1a73e8]"}`}>
                 {t("reception.crmPasswordTitle")}
@@ -325,8 +290,12 @@ export function ReceptionSidebar({
               className="p-5"
               onSubmit={(e) => {
                 e.preventDefault();
-                if (pwValue === "2025alessanna") { navigate("/"); }
-                else { setPwError(true); setPwValue(""); }
+                if (pwValue === "2025alessanna") {
+                  navigate("/");
+                } else {
+                  setPwError(true);
+                  setPwValue("");
+                }
               }}
             >
               <input
@@ -344,7 +313,9 @@ export function ReceptionSidebar({
                     : "border-line/20 focus:border-[#1a73e8] focus:ring-1 focus:ring-[#1a73e8]/40",
                 ].join(" ")}
               />
-              {pwError && <p className="mt-1.5 text-xs text-red-400">{t("reception.crmPasswordError")}</p>}
+              {pwError && (
+                <p className="mt-1.5 text-xs text-red-400">{t("reception.crmPasswordError")}</p>
+              )}
               <div className="mt-4 flex justify-end gap-2">
                 <button
                   type="button"
@@ -357,7 +328,9 @@ export function ReceptionSidebar({
                   type="submit"
                   className={[
                     "rounded-lg px-4 py-2 text-sm font-medium transition-colors",
-                    useGold ? "bg-gold text-canvas hover:bg-gold/90" : "bg-[#1a73e8] text-white hover:bg-[#1557b0]",
+                    useGold
+                      ? "bg-gold text-canvas hover:bg-gold/90"
+                      : "bg-[#1a73e8] text-white hover:bg-[#1557b0]",
                   ].join(" ")}
                 >
                   {t("common.confirm")}
