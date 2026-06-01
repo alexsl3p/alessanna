@@ -3,23 +3,39 @@
 import type { CSSProperties } from "react";
 import { staffHueFromMap } from "./staffHue";
 
+/**
+ * Канонические цвета мастеров — источник истины в коде.
+ * Синхронизированы с полем calendar_color_hex в таблице staff.
+ */
+export const CANONICAL_STAFF_HEX_COLORS: Record<string, string> = {
+  Aleksander: "#7b1fa2",
+  Alesja:     "#bfc501",
+  Aljona:     "#ba0968",
+  Anne:       "#e99715",
+  Galina:     "#3f4dc7",
+  Irina:      "#cb8ba5",
+  Liza:       "#b11956",
+  Natalja:    "#1565c0",
+  Viktoria:   "#7cb338",
+};
+
 export const STAFF_CALENDAR_PALETTE = [
-  { dot: "bg-sky-400", strip: "border-l-4 border-sky-400", bar: "bg-sky-500/85", border: "border-sky-400/60", text: "text-sky-100", soft: "bg-sky-500/25" },
-  { dot: "bg-violet-400", strip: "border-l-4 border-violet-400", bar: "bg-violet-500/85", border: "border-violet-400/60", text: "text-violet-100", soft: "bg-violet-500/25" },
-  { dot: "bg-amber-400", strip: "border-l-4 border-amber-400", bar: "bg-amber-500/85", border: "border-amber-400/60", text: "text-amber-100", soft: "bg-amber-500/25" },
-  { dot: "bg-emerald-400", strip: "border-l-4 border-emerald-400", bar: "bg-emerald-500/85", border: "border-emerald-400/60", text: "text-emerald-100", soft: "bg-emerald-500/25" },
-  { dot: "bg-rose-400", strip: "border-l-4 border-rose-400", bar: "bg-rose-500/85", border: "border-rose-400/60", text: "text-rose-100", soft: "bg-rose-500/25" },
-  { dot: "bg-cyan-400", strip: "border-l-4 border-cyan-400", bar: "bg-cyan-500/85", border: "border-cyan-400/60", text: "text-cyan-100", soft: "bg-cyan-500/25" },
-  { dot: "bg-fuchsia-400", strip: "border-l-4 border-fuchsia-400", bar: "bg-fuchsia-500/85", border: "border-fuchsia-400/60", text: "text-fuchsia-100", soft: "bg-fuchsia-500/25" },
-  { dot: "bg-lime-400", strip: "border-l-4 border-lime-400", bar: "bg-lime-500/85", border: "border-lime-400/60", text: "text-lime-950", soft: "bg-lime-500/25" },
-  { dot: "bg-orange-400", strip: "border-l-4 border-orange-400", bar: "bg-orange-500/85", border: "border-orange-400/60", text: "text-orange-100", soft: "bg-orange-500/25" },
-  { dot: "bg-teal-400", strip: "border-l-4 border-teal-400", bar: "bg-teal-500/85", border: "border-teal-400/60", text: "text-teal-100", soft: "bg-teal-500/25" },
-  { dot: "bg-indigo-400", strip: "border-l-4 border-indigo-400", bar: "bg-indigo-500/85", border: "border-indigo-400/60", text: "text-indigo-100", soft: "bg-indigo-500/25" },
-  { dot: "bg-pink-400", strip: "border-l-4 border-pink-400", bar: "bg-pink-500/85", border: "border-pink-400/60", text: "text-pink-100", soft: "bg-pink-500/25" },
-  { dot: "bg-red-400", strip: "border-l-4 border-red-400", bar: "bg-red-500/85", border: "border-red-400/60", text: "text-red-100", soft: "bg-red-500/25" },
-  { dot: "bg-yellow-400", strip: "border-l-4 border-yellow-400", bar: "bg-yellow-500/85", border: "border-yellow-400/60", text: "text-yellow-950", soft: "bg-yellow-500/25" },
-  { dot: "bg-blue-500", strip: "border-l-4 border-blue-500", bar: "bg-blue-600/85", border: "border-blue-500/60", text: "text-blue-100", soft: "bg-blue-600/25" },
-  { dot: "bg-purple-400", strip: "border-l-4 border-purple-400", bar: "bg-purple-500/85", border: "border-purple-400/60", text: "text-purple-100", soft: "bg-purple-500/25" },
+  { dot: "bg-rose-700",    strip: "border-l-4 border-rose-700",    bar: "bg-rose-700/85",    border: "border-rose-700/60",    text: "text-rose-50",    soft: "bg-rose-700/25" },
+  { dot: "bg-amber-600",   strip: "border-l-4 border-amber-600",   bar: "bg-amber-600/85",   border: "border-amber-600/60",   text: "text-amber-50",   soft: "bg-amber-600/25" },
+  { dot: "bg-indigo-600",  strip: "border-l-4 border-indigo-600",  bar: "bg-indigo-600/85",  border: "border-indigo-600/60",  text: "text-indigo-50",  soft: "bg-indigo-600/25" },
+  { dot: "bg-lime-700",    strip: "border-l-4 border-lime-700",    bar: "bg-lime-700/85",    border: "border-lime-700/60",    text: "text-lime-50",    soft: "bg-lime-700/25" },
+  { dot: "bg-pink-700",    strip: "border-l-4 border-pink-700",    bar: "bg-pink-700/85",    border: "border-pink-700/60",    text: "text-pink-50",    soft: "bg-pink-700/25" },
+  { dot: "bg-purple-700",  strip: "border-l-4 border-purple-700",  bar: "bg-purple-700/85",  border: "border-purple-700/60",  text: "text-purple-50",  soft: "bg-purple-700/25" },
+  { dot: "bg-yellow-600",  strip: "border-l-4 border-yellow-600",  bar: "bg-yellow-600/85",  border: "border-yellow-600/60",  text: "text-yellow-50",  soft: "bg-yellow-600/25" },
+  { dot: "bg-blue-700",    strip: "border-l-4 border-blue-700",    bar: "bg-blue-700/85",    border: "border-blue-700/60",    text: "text-blue-50",    soft: "bg-blue-700/25" },
+  { dot: "bg-teal-700",    strip: "border-l-4 border-teal-700",    bar: "bg-teal-700/85",    border: "border-teal-700/60",    text: "text-teal-50",    soft: "bg-teal-700/25" },
+  { dot: "bg-orange-700",  strip: "border-l-4 border-orange-700",  bar: "bg-orange-700/85",  border: "border-orange-700/60",  text: "text-orange-50",  soft: "bg-orange-700/25" },
+  { dot: "bg-violet-700",  strip: "border-l-4 border-violet-700",  bar: "bg-violet-700/85",  border: "border-violet-700/60",  text: "text-violet-50",  soft: "bg-violet-700/25" },
+  { dot: "bg-cyan-700",    strip: "border-l-4 border-cyan-700",    bar: "bg-cyan-700/85",    border: "border-cyan-700/60",    text: "text-cyan-50",    soft: "bg-cyan-700/25" },
+  { dot: "bg-emerald-700", strip: "border-l-4 border-emerald-700", bar: "bg-emerald-700/85", border: "border-emerald-700/60", text: "text-emerald-50", soft: "bg-emerald-700/25" },
+  { dot: "bg-fuchsia-700", strip: "border-l-4 border-fuchsia-700", bar: "bg-fuchsia-700/85", border: "border-fuchsia-700/60", text: "text-fuchsia-50", soft: "bg-fuchsia-700/25" },
+  { dot: "bg-sky-700",     strip: "border-l-4 border-sky-700",     bar: "bg-sky-700/85",     border: "border-sky-700/60",     text: "text-sky-50",     soft: "bg-sky-700/25" },
+  { dot: "bg-red-700",     strip: "border-l-4 border-red-700",     bar: "bg-red-700/85",     border: "border-red-700/60",     text: "text-red-50",     soft: "bg-red-700/25" },
 ] as const;
 
 export type StaffCalendarColor = (typeof STAFF_CALENDAR_PALETTE)[number];
