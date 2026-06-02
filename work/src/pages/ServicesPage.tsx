@@ -1948,7 +1948,7 @@ export function ServicesPage() {
               <button
                 type="button"
                 onClick={() => void createServiceFromQuickForm()}
-                className="rounded-md bg-sky-600 px-3 py-2 text-xs font-medium text-fg hover:bg-sky-500"
+                className="rounded-md border border-line/20 bg-surface/40 px-3 py-2 text-xs font-medium text-fg transition hover:border-gold/35 hover:bg-surface hover:text-gold"
               >
                 Создать услугу
               </button>

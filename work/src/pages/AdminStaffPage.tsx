@@ -1192,7 +1192,7 @@ export function AdminStaffPage() {
         </div>
           <button
             type="submit"
-            className="inline-flex h-9 items-center justify-center rounded-md bg-sky-600 px-4 text-sm font-semibold text-fg shadow-sm shadow-sky-950/40 transition hover:bg-sky-500 active:bg-sky-700"
+            className="inline-flex h-9 items-center justify-center rounded-md border border-line/20 bg-surface/40 px-4 text-sm font-semibold text-fg transition hover:border-gold/35 hover:bg-surface hover:text-gold active:bg-canvas/80"
           >
           {t("common.add")}
         </button>
