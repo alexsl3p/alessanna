@@ -80,7 +80,7 @@ export type ServiceRow = {
 export type AppointmentRow = {
   id: string;
   staff_id: string;
-  service_id: string | number;
+  service_id: string | number | null;
   client_name: string;
   client_phone: string | null;
   start_time: string;

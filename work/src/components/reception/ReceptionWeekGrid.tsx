@@ -504,7 +504,8 @@ export function ReceptionWeekGrid({
                   const c = member
                     ? googleStaffColor(member, staffHueMap)
                     : { bg: "#7986cb", fg: "#ffffff", border: "#5c6bc0" };
-                  const svc = serviceMap.get(String(appt.service_id));
+                  const isBlockTime = !appt.service_id || appt.note === "block_time";
+                  const svc = appt.service_id ? serviceMap.get(String(appt.service_id)) : undefined;
                   const isPast = effEnd.getTime() < now.getTime();
 
                   return (
@@ -522,8 +523,9 @@ export function ReceptionWeekGrid({
                         height: heightPx - 2,
                         left: `calc(${leftPct}% + 1px)`,
                         width: `calc(${widthPct}% - 2px)`,
-                        backgroundColor: c.bg,
-                        color: c.fg,
+                        backgroundColor: isBlockTime ? "#e8eaed" : c.bg,
+                        backgroundImage: isBlockTime ? "repeating-linear-gradient(45deg,transparent,transparent 4px,rgba(0,0,0,0.06) 4px,rgba(0,0,0,0.06) 8px)" : undefined,
+                        color: isBlockTime ? "#5f6368" : c.fg,
                         opacity: isPast && !inResizeMode ? 0.45 : 1,
                         cursor: "pointer",
                         zIndex: isResizing || inResizeMode ? 20 : undefined,
@@ -539,7 +541,7 @@ export function ReceptionWeekGrid({
                       onPointerCancel={handleCardPointerCancel}
                     >
                       <p className="truncate text-[11px] font-semibold leading-tight">
-                        {appt.client_name}
+                        {isBlockTime ? `🔒 ${appt.client_name && appt.client_name !== "— Закрыто —" ? appt.client_name : "Закрыто"}` : appt.client_name}
                       </p>
                       {heightPx > 28 && (
                         <p className="truncate text-[10px] leading-tight opacity-90">

@@ -20,7 +20,9 @@ type Props = {
 };
 
 const POPUP_W = 340;
-const POPUP_H = 460;
+const POPUP_H = 480;
+
+const BLOCK_DURATIONS = [15, 30, 45, 60, 90, 120];
 
 function timeToStr(date: Date): string {
   return format(date, "HH:mm");
@@ -49,10 +51,17 @@ export function ReceptionBookingPopup({
   const { t, i18n } = useTranslation();
   const popupRef = useRef<HTMLDivElement>(null);
   const isEdit = editAppt != null;
+
+  // Detect if existing appt is a block-time entry (no service_id)
+  const isExistingBlock = isEdit && !editAppt!.service_id;
+
+  const [isBlock, setIsBlock] = useState(() => isExistingBlock);
+  const [blockDuration, setBlockDuration] = useState(30);
+
   const [clientName, setClientName] = useState(() => editAppt?.client_name ?? "");
   const [clientPhone, setClientPhone] = useState(() => editAppt?.client_phone ?? "");
   const [staffId, setStaffId] = useState<string>(() => editAppt?.staff_id ?? defaultStaffId ?? staff[0]?.id ?? "");
-  const [serviceId, setServiceId] = useState<string>(() => (editAppt ? String(editAppt.service_id) : ""));
+  const [serviceId, setServiceId] = useState<string>(() => (editAppt && !isExistingBlock ? String(editAppt.service_id) : ""));
   const [startStr, setStartStr] = useState(() => timeToStr(editAppt ? new Date(editAppt.start_time) : initialStart));
   const [endStr, setEndStr] = useState(() =>
     timeToStr(editAppt ? new Date(editAppt.end_time) : addMinutes(initialStart, 60)),
@@ -80,27 +89,31 @@ export function ReceptionBookingPopup({
   );
 
   useEffect(() => {
-    if (!serviceId && eligibleServices.length > 0) {
+    if (!isBlock && !serviceId && eligibleServices.length > 0) {
       setServiceId(String(eligibleServices[0]!.id));
     }
-  }, [eligibleServices, serviceId]);
+  }, [eligibleServices, serviceId, isBlock]);
 
   useEffect(() => {
-    if (serviceId && !eligibleServices.some((s) => String(s.id) === serviceId)) {
+    if (!isBlock && serviceId && !eligibleServices.some((s) => String(s.id) === serviceId)) {
       setServiceId(eligibleServices[0] ? String(eligibleServices[0].id) : "");
     }
-  }, [staffId, eligibleServices, serviceId]);
+  }, [staffId, eligibleServices, serviceId, isBlock]);
 
+  // Auto-update end time
   useEffect(() => {
     if (endManual) return;
-    const dur = svc ? svc.duration_min + svc.buffer_after_min : 60;
-    setEndStr(timeToStr(addMinutes(applyTimeStr(initialStart, startStr), dur)));
-  }, [svc, startStr, initialStart, endManual]);
+    if (isBlock) {
+      setEndStr(timeToStr(addMinutes(applyTimeStr(initialStart, startStr), blockDuration)));
+    } else if (svc) {
+      setEndStr(timeToStr(addMinutes(applyTimeStr(initialStart, startStr), svc.duration_min)));
+    }
+  }, [svc, startStr, initialStart, endManual, isBlock, blockDuration]);
 
   function handleStartChange(val: string) {
     setStartStr(val);
-    if (!endManual && svc) {
-      const dur = svc.duration_min + svc.buffer_after_min;
+    if (!endManual) {
+      const dur = isBlock ? blockDuration : (svc ? svc.duration_min : 60);
       setEndStr(timeToStr(addMinutes(applyTimeStr(initialStart, val), dur)));
     }
   }
@@ -108,6 +121,12 @@ export function ReceptionBookingPopup({
   function handleEndChange(val: string) {
     setEndStr(val);
     setEndManual(true);
+  }
+
+  function handleModeToggle(block: boolean) {
+    setIsBlock(block);
+    setEndManual(false);
+    setError("");
   }
 
   useEffect(() => {
@@ -130,7 +149,7 @@ export function ReceptionBookingPopup({
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!svc) { setError(t("modal.pickService")); return; }
+    if (!isBlock && !svc) { setError(t("modal.pickService")); return; }
     if (!staffId) { setError(t("modal.selectStaff")); return; }
 
     const start = applyTimeStr(initialStart, startStr);
@@ -157,16 +176,27 @@ export function ReceptionBookingPopup({
       return;
     }
 
-    const payload = {
-      client_name: clientName.trim() || t("modal.defaultClient"),
-      client_phone: clientPhone.trim() || null,
-      note: null,
-      staff_id: staffId,
-      service_id: svc.id,
-      start_time: start.toISOString(),
-      end_time: end.toISOString(),
-      status: "confirmed",
-    };
+    const payload = isBlock
+      ? {
+          client_name: clientName.trim() || "— Закрыто —",
+          client_phone: null as null,
+          note: "block_time",
+          staff_id: staffId,
+          service_id: null as null,
+          start_time: start.toISOString(),
+          end_time: end.toISOString(),
+          status: "confirmed" as const,
+        }
+      : {
+          client_name: clientName.trim() || t("modal.defaultClient"),
+          client_phone: clientPhone.trim() || null,
+          note: null as null,
+          staff_id: staffId,
+          service_id: svc!.id,
+          start_time: start.toISOString(),
+          end_time: end.toISOString(),
+          status: "confirmed" as const,
+        };
 
     const { error: writeErr } = isEdit
       ? await supabase.from("appointments").update(payload).eq("id", editAppt!.id)
@@ -210,15 +240,44 @@ export function ReceptionBookingPopup({
         </button>
       </div>
 
+      {/* Mode toggle (only for new bookings) */}
+      {!isEdit && (
+        <div className="flex border-b border-[#e8eaed]">
+          <button
+            type="button"
+            onClick={() => handleModeToggle(false)}
+            className={`flex-1 py-2 text-xs font-medium transition-colors ${!isBlock ? "bg-[#e8f0fe] text-[#1a73e8]" : "text-[#70757a] hover:bg-[#f1f3f4]"}`}
+          >
+            Запись клиента
+          </button>
+          <button
+            type="button"
+            onClick={() => handleModeToggle(true)}
+            className={`flex-1 py-2 text-xs font-medium transition-colors ${isBlock ? "bg-[#fce8e6] text-[#d93025]" : "text-[#70757a] hover:bg-[#f1f3f4]"}`}
+          >
+            🔒 Закрыть время
+          </button>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-3 p-4">
-        {/* Client name */}
-        <input
-          autoFocus
-          value={clientName}
-          onChange={(e) => setClientName(e.target.value)}
-          placeholder={t("modal.addClient")}
-          className="w-full border-0 border-b border-[#dadce0] bg-transparent pb-1 text-base font-medium text-[#3c4043] placeholder:text-[#9aa0a6] focus:border-[#1a73e8] focus:outline-none"
-        />
+        {/* Client name — optional for block mode */}
+        {!isBlock ? (
+          <input
+            autoFocus
+            value={clientName}
+            onChange={(e) => setClientName(e.target.value)}
+            placeholder={t("modal.addClient")}
+            className="w-full border-0 border-b border-[#dadce0] bg-transparent pb-1 text-base font-medium text-[#3c4043] placeholder:text-[#9aa0a6] focus:border-[#1a73e8] focus:outline-none"
+          />
+        ) : (
+          <input
+            value={clientName}
+            onChange={(e) => setClientName(e.target.value)}
+            placeholder="Причина (необязательно)"
+            className="w-full border-0 border-b border-[#dadce0] bg-transparent pb-1 text-base font-medium text-[#3c4043] placeholder:text-[#9aa0a6] focus:border-[#d93025] focus:outline-none"
+          />
+        )}
 
         {/* Date + time */}
         <div className="flex items-start gap-3">
@@ -265,34 +324,53 @@ export function ReceptionBookingPopup({
           </select>
         </div>
 
-        {/* Service */}
-        <div className="flex items-center gap-3">
-          <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0 text-[#5f6368]" fill="currentColor">
-            <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
-          </svg>
-          <select value={serviceId} onChange={(e) => { setServiceId(e.target.value); setEndManual(false); }} className={inputCls}>
-            <option value="">{t("modal.selectService")}</option>
-            {eligibleServices.map((s) => (
-              <option key={String(s.id)} value={String(s.id)}>
-                {s.name_et} ({s.duration_min} {t("common.min")})
-              </option>
-            ))}
-          </select>
-        </div>
+        {/* Service OR block duration */}
+        {isBlock ? (
+          <div className="flex items-center gap-3">
+            <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0 text-[#d93025]" fill="currentColor">
+              <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+            </svg>
+            <select
+              value={blockDuration}
+              onChange={(e) => { setBlockDuration(Number(e.target.value)); setEndManual(false); }}
+              className="flex-1 rounded-lg border border-[#dadce0] bg-white px-2 py-1.5 text-sm text-[#3c4043] focus:border-[#d93025] focus:outline-none focus:ring-1 focus:ring-[#d93025]"
+            >
+              {BLOCK_DURATIONS.map((d) => (
+                <option key={d} value={d}>{d} мин</option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <div className="flex items-center gap-3">
+            <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0 text-[#5f6368]" fill="currentColor">
+              <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+            </svg>
+            <select value={serviceId} onChange={(e) => { setServiceId(e.target.value); setEndManual(false); }} className={inputCls}>
+              <option value="">{t("modal.selectService")}</option>
+              {eligibleServices.map((s) => (
+                <option key={String(s.id)} value={String(s.id)}>
+                  {s.name_et} ({s.duration_min} {t("common.min")})
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
-        {/* Phone */}
-        <div className="flex items-center gap-3">
-          <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0 text-[#5f6368]" fill="currentColor">
-            <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
-          </svg>
-          <input
-            value={clientPhone}
-            onChange={(e) => setClientPhone(e.target.value)}
-            placeholder={t("modal.phoneOptional")}
-            type="tel"
-            className={inputCls + " placeholder:text-[#9aa0a6]"}
-          />
-        </div>
+        {/* Phone — only for regular bookings */}
+        {!isBlock && (
+          <div className="flex items-center gap-3">
+            <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0 text-[#5f6368]" fill="currentColor">
+              <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+            </svg>
+            <input
+              value={clientPhone}
+              onChange={(e) => setClientPhone(e.target.value)}
+              placeholder={t("modal.phoneOptional")}
+              type="tel"
+              className={inputCls + " placeholder:text-[#9aa0a6]"}
+            />
+          </div>
+        )}
 
         {error && <p className="text-xs text-[#d93025]">{error}</p>}
 
@@ -305,8 +383,12 @@ export function ReceptionBookingPopup({
           <button type="button" onClick={onClose} className="rounded-lg px-3 py-1.5 text-sm font-medium text-[#1a73e8] hover:bg-[#f1f3f4]">
             {t("common.cancel")}
           </button>
-          <button type="submit" disabled={saving || !serviceId || !staffId} className="rounded-lg bg-[#1a73e8] px-4 py-1.5 text-sm font-medium text-white hover:bg-[#1765cc] disabled:opacity-40">
-            {saving ? t("modal.saving") : t("common.save")}
+          <button
+            type="submit"
+            disabled={saving || (!isBlock && !serviceId) || !staffId}
+            className={`rounded-lg px-4 py-1.5 text-sm font-medium text-white disabled:opacity-40 ${isBlock ? "bg-[#d93025] hover:bg-[#b31412]" : "bg-[#1a73e8] hover:bg-[#1765cc]"}`}
+          >
+            {saving ? t("modal.saving") : (isBlock ? "Закрыть время" : t("common.save"))}
           </button>
         </div>
       </form>
