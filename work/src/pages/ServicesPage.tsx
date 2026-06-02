@@ -1753,28 +1753,6 @@ export function ServicesPage() {
                         </span>
                       </div>
                     </label>
-                    <label className="block text-[11px] uppercase tracking-wide text-muted md:col-span-2 lg:col-span-5">
-                      {t("services.category")}
-                      <select
-                        disabled={!canManage}
-                        value={String(s.category_id ?? s.category ?? "")}
-                        onChange={(e) => {
-                          const category_id = e.target.value || null;
-                          const selectedCategory = categories.find((c) => String(c.id) === String(category_id));
-                          const next = { ...s, category_id, category: selectedCategory?.name ?? null };
-                          setServices((prev) => prev.map((x) => (x.id === s.id ? next : x)));
-                          void saveService(next);
-                        }}
-                        className={`${fieldBase} ${canManage ? editableUi : "border border-line/20"}`}
-                      >
-                        <option value="">{t("common.dash")}</option>
-                        {categories.map((c) => (
-                          <option key={String(c.id)} value={String(c.id)}>
-                            {c.name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
                   </div>
                   {/* Masters block */}
                   <div className="mt-3 rounded-lg border border-gold/10 bg-canvas/20 p-3">
