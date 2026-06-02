@@ -784,7 +784,6 @@ export function ServicesPage() {
     setQuickName(i18n.t("services.newServiceDefault"));
     setQuickPriceEur("30");
     setQuickDuration("60");
-    setQuickBuffer("10");
     setQuickActive(true);
     setQuickStaffIds([]);
   }
@@ -794,7 +793,6 @@ export function ServicesPage() {
     setQuickName("");
     setQuickPriceEur("30");
     setQuickDuration("60");
-    setQuickBuffer("10");
     setQuickActive(true);
     setQuickStaffIds([]);
   }
