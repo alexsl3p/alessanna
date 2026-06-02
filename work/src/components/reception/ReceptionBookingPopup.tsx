@@ -135,9 +135,12 @@ export function ReceptionBookingPopup({
       if (popupRef.current && !popupRef.current.contains(e.target as Node)) onClose();
     }
     document.addEventListener("keydown", onKey);
-    document.addEventListener("mousedown", onMouseDown);
+    // Delay mousedown listener so synthesized mouse events from the opening
+    // touch/pointer don't immediately close the popup on mobile.
+    const timerId = setTimeout(() => document.addEventListener("mousedown", onMouseDown), 250);
     return () => {
       document.removeEventListener("keydown", onKey);
+      clearTimeout(timerId);
       document.removeEventListener("mousedown", onMouseDown);
     };
   }, [onClose]);
