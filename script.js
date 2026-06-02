@@ -3112,6 +3112,8 @@
         p_client_phone: phoneVal || "",
         p_client_note: noteVal || "",
         p_start_at: startIso,
+        p_source: "public_site",
+        p_created_by_staff_id: null,
         p_items: items.map(function (it) {
           return {
             service_id: it.serviceId,
@@ -3196,78 +3198,6 @@
         "\n\n" +
         pubT("site.ui.priceDisclaimer", "Prices are indicative.")
       );
-    }
-
-    /** Одна услуга + конкретный мастер → Edge Function `website_booking` (сразу Google Calendar, затем CRM).
-     *  Без endTime: сервер считает конец по duration+buffer из service_listings.
-     *  Возвращает { handled, ok } или null → тогда вызывать public_book_chain. */
-    function trySubmitWebsiteBookingDirect(nameVal, phoneVal, noteVal) {
-      var chainApi = globalThis.__SITE_BOOKING_CHAIN__;
-      var items = chainApi && typeof chainApi.getItems === "function" ? chainApi.getItems() : [];
-      if (!items.length) {
-        var fb = resolveFallbackItemFromForm();
-        if (fb && fb.serviceId) items = [fb];
-      }
-      if (items.length !== 1) return Promise.resolve(null);
-      var it = items[0];
-      if (!it || !it.serviceId) return Promise.resolve(null);
-      var staffId = resolveSubmitStaffId(it, 1);
-      if (!staffId || staffId === ANY_MASTER_ID) return Promise.resolve(null);
-
-      var cfg = getSalonSupabaseCfg();
-      if (!cfg.url || !cfg.key) return Promise.resolve(null);
-
-      var startIso = buildChainStartIso(selectedKey, timeSelect.value);
-      if (!startIso) return Promise.resolve(null);
-
-      var fnUrl = cfg.url + "/functions/v1/google-calendar-sync";
-      return fetch(fnUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: cfg.key,
-          Authorization: "Bearer " + cfg.key,
-        },
-        body: JSON.stringify({
-          mode: "website_booking",
-          staffId: String(staffId),
-          serviceId: String(it.serviceId),
-          clientName: nameVal || "",
-          clientPhone: phoneVal || "",
-          startTime: startIso,
-          note: noteVal || "",
-        }),
-      })
-        .then(function (r) {
-          return r.json().then(
-            function (j) {
-              return { status: r.status, j: j };
-            },
-            function () {
-              return { status: r.status, j: null };
-            }
-          );
-        })
-        .then(function (res) {
-          var j = res.j || {};
-          if (j.ok === true) {
-            showToast(bookingSuccessMessageWithPriceNote(), "ok");
-            bookingForm.reset();
-            if (chainApi && chainApi.clear) chainApi.clear();
-            invalidateMonthCache();
-            clearSelection();
-            renderCalendar();
-            return { handled: true, ok: true };
-          }
-          if (j.ok === false && j.error) {
-            showToast(chainHumanErrorMessage(null, String(j.error)) || String(j.error), "err");
-            return { handled: true, ok: false };
-          }
-          return null;
-        })
-        .catch(function () {
-          return null;
-        });
     }
 
     /** Цепочка услуг (picked[] в dock) + Supabase RPC. Возвращает Promise, который резолвится
@@ -3373,13 +3303,10 @@
         return;
       }
 
-      /* 1) Один мастер + одна услуга → прямой Google Calendar (Edge). 2) Иначе RPC цепочка. 3) Legacy API/mailto. */
-      trySubmitWebsiteBookingDirect(nameVal, phoneVal, noteVal).then(function (directRes) {
-        if (directRes && directRes.handled) return;
-        trySubmitViaBookChain(nameVal, phoneVal, noteVal).then(function (res) {
-          if (res && res.handled) return;
-          continueLegacySubmit();
-        });
+      /* 1) RPC public_book_chain → наш CRM-календарь. 2) Legacy API/mailto, если Supabase недоступен. */
+      trySubmitViaBookChain(nameVal, phoneVal, noteVal).then(function (res) {
+        if (res && res.handled) return;
+        continueLegacySubmit();
       });
 
       function continueLegacySubmit() {

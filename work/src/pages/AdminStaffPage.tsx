@@ -156,162 +156,6 @@ function isMissingStaffMarketingColumnError(err: { message?: string } | null | u
   );
 }
 
-/** Базовая проверка e-mail — синхронизирована с CHECK-constraint миграции 025. */
-function isPlausibleEmail(raw: string): boolean {
-  const v = String(raw || "").trim();
-  if (!v) return true;
-  return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v);
-}
-
-/**
- * Инлайновое поле «календарь сотрудника»: сохраняется по blur/Enter.
- * Пишем сразу в `staff.calendar_email`; миграция 025 добавляет колонку и
- * CHECK-валидатор. Ошибка валидации показывается через `onError`.
- */
-function StaffCalendarEmailField(props: {
-  row: StaffTableRow;
-  onSaved: () => void;
-  onError: (msg: string | null) => void;
-}) {
-  const initial = (props.row as StaffTableRow & { calendar_email?: string | null }).calendar_email ?? "";
-  const [value, setValue] = useState<string>(initial ?? "");
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    setValue(initial ?? "");
-  }, [initial]);
-
-  async function commit() {
-    const trimmed = value.trim();
-    if (trimmed === (initial ?? "").trim()) return;
-    if (!isPlausibleEmail(trimmed)) {
-      props.onError("Проверьте формат e-mail или очистите поле.");
-      return;
-    }
-    props.onError(null);
-    setSaving(true);
-    const { error } = await supabase
-      .from("staff")
-      .update({ calendar_email: trimmed === "" ? null : trimmed })
-      .eq("id", props.row.id);
-    setSaving(false);
-    if (error) {
-      props.onError(error.message);
-      return;
-    }
-    props.onSaved();
-  }
-
-  return (
-    <input
-      type="email"
-      autoComplete="email"
-      spellCheck={false}
-      disabled={saving}
-      placeholder="master@gmail.com"
-      value={value}
-      onChange={(e) => setValue(e.target.value)}
-      onBlur={() => void commit()}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          (e.currentTarget as HTMLInputElement).blur();
-        }
-      }}
-      className="w-full rounded border border-line/20 bg-canvas px-2 py-1 text-xs text-fg focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold/30 disabled:opacity-60"
-    />
-  );
-}
-
-/**
- * Общий Google-календарь салона: храним в `salon_settings` под ключом
- * `salon_calendar_email`. Этот адрес — целевой календарь, куда будущая
- * интеграция будет записывать все брони салона.
- */
-function SalonCalendarSettingsCard(props: { onError: (msg: string | null) => void }) {
-  const [value, setValue] = useState<string>("");
-  const [initial, setInitial] = useState<string>("");
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-
-  const load = useCallback(async () => {
-    const { data, error } = await supabase
-      .from("salon_settings")
-      .select("value")
-      .eq("key", "salon_calendar_email")
-      .maybeSingle();
-    if (error) {
-      props.onError(error.message);
-      setLoading(false);
-      return;
-    }
-    const v = (data?.value ?? "") as string;
-    setInitial(v);
-    setValue(v);
-    setLoading(false);
-  }, [props]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  async function save() {
-    const trimmed = value.trim();
-    if (!isPlausibleEmail(trimmed)) {
-      props.onError("Проверьте формат e-mail или очистите поле.");
-      return;
-    }
-    props.onError(null);
-    setSaving(true);
-    const { error } = await supabase
-      .from("salon_settings")
-      .upsert({ key: "salon_calendar_email", value: trimmed === "" ? null : trimmed }, { onConflict: "key" });
-    setSaving(false);
-    if (error) {
-      props.onError(error.message);
-      return;
-    }
-    setInitial(trimmed);
-  }
-
-  const dirty = value.trim() !== initial.trim();
-
-  return (
-    <section className="mt-4 rounded-lg border border-line/15 bg-panel/60 p-3">
-      <header className="mb-1 flex items-baseline justify-between gap-2">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
-          Общий Google-календарь салона
-        </p>
-        <span className="text-[10px] text-muted">salon_settings.salon_calendar_email</span>
-      </header>
-      <p className="mb-2 text-[11px] leading-snug text-muted">
-        Рабочая почта салона — в этот календарь попадут все записи (сейчас только хранится,
-        реальная синхронизация с Google Calendar будет подключена отдельным шагом).
-      </p>
-      <div className="flex gap-2">
-        <input
-          type="email"
-          autoComplete="email"
-          spellCheck={false}
-          disabled={loading || saving}
-          placeholder="salon@gmail.com"
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          className="flex-1 rounded border border-line/20 bg-canvas px-2 py-1 text-sm text-fg focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold/30 disabled:opacity-60"
-        />
-        <button
-          type="button"
-          onClick={() => void save()}
-          disabled={loading || saving || !dirty}
-          className="rounded bg-sky-600 px-3 py-1 text-xs font-medium text-fg hover:bg-sky-500 disabled:opacity-40"
-        >
-          Сохранить
-        </button>
-      </div>
-    </section>
-  );
-}
-
 export function AdminStaffPage() {
   const { t } = useTranslation();
   const { staffMember } = useAuth();
@@ -1224,7 +1068,6 @@ export function AdminStaffPage() {
       <header>
         <h1 className="text-xl font-semibold text-fg">{t("nav.adminStaff")}</h1>
         <p className="mt-1 text-sm text-muted">{t("adminStaff.subtitle")}</p>
-        <SalonCalendarSettingsCard onError={setErr} />
       </header>
 
       {staffMarketingColumnMissing && (
@@ -1515,16 +1358,6 @@ export function AdminStaffPage() {
                       );
                     })}
                   </div>
-                          </div>
-                          <div className="flex flex-col gap-1 rounded border border-line/15/80 p-2">
-                            <span className="text-[11px] font-medium uppercase text-muted">
-                              Календарь сотрудника
-                            </span>
-                            <StaffCalendarEmailField row={r} onSaved={() => void load()} onError={setErr} />
-                            <span className="text-[10px] leading-snug text-muted">
-                              Персональный e-mail для Google/Apple/Outlook календаря. На него будут
-                              приходить приглашения и ICS-файлы записей, когда подключим интеграцию.
-                            </span>
                           </div>
                           <div className="flex flex-col gap-1 rounded border border-line/15/80 p-2">
                             <span className="text-[11px] font-medium uppercase text-muted">

@@ -13,7 +13,6 @@ import { AdminStaffPage } from "./pages/AdminStaffPage";
 import { AdminSchedulePage } from "./pages/AdminSchedulePage";
 import { AdminTimeOffPage } from "./pages/AdminTimeOffPage";
 import { AdminSupportPage } from "./pages/AdminSupportPage";
-import { AdminIntegrationsPage } from "./pages/AdminIntegrationsPage";
 import { AdminInventoryPage } from "./pages/AdminInventoryPage";
 import { AdminCommunicationsPage } from "./pages/AdminCommunicationsPage";
 import { AdminSiteSettingsPage } from "./pages/AdminSiteSettingsPage";
@@ -111,14 +110,6 @@ export default function App() {
           element={
             <RequireManage>
               <AdminSupportPage />
-            </RequireManage>
-          }
-        />
-        <Route
-          path="admin/integrations"
-          element={
-            <RequireManage>
-              <AdminIntegrationsPage />
             </RequireManage>
           }
         />

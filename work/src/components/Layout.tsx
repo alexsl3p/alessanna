@@ -25,7 +25,7 @@ import { CommandPalette } from "./CommandPalette";
  *   • Расписание:            График, Выходные
  *   • Отчёты:                Аналитика
  *   • Поддержка:             Входящие (manage), Моя помощь
- *   • Настройки (внизу):     Интеграции
+ *   • Настройки (внизу):     Профиль, сайт
  * ================================================================ */
 
 type NavKey =
@@ -38,7 +38,6 @@ type NavKey =
   | "adminTimeOff"
   | "analytics"
   | "adminSupport"
-  | "adminIntegrations"
   | "adminSiteSettings"
   | "adminInventory"
   | "adminCommunications"
@@ -52,7 +51,7 @@ type NavItem = {
   end?: boolean;
   /** Виден admin + manager. */
   manageOnly?: boolean;
-  /** Виден ТОЛЬКО admin. Менеджер не должен лазить в технические интеграции. */
+  /** Виден ТОЛЬКО admin. */
   adminOnly?: boolean;
   badge?: "supportUnread" | "myHelpUnread";
   icon: () => JSX.Element;
@@ -100,7 +99,6 @@ const ICONS: Record<NavKey, () => JSX.Element> = {
   adminTimeOff: () => <NavIcon path="M5 7h14M5 12h14M5 17h14M8 4v3M16 4v3" />,
   analytics: () => <NavIcon path="M3 3v18h18M7 15l4-4 4 4 5-6" />,
   adminSupport: () => <NavIcon path="M21 12a8 8 0 1 0-16 0v3a2 2 0 0 0 2 2h1v-5H5a6 6 0 1 1 12 0h-3v5h1a2 2 0 0 0 2-2Zm-4 7a2 2 0 0 1-2 2h-2v-2h4Z" />,
-  adminIntegrations: () => <NavIcon path="M10 13a5 5 0 0 0 7.07 0l3.54-3.54a5 5 0 0 0-7.07-7.07L11.83 4.1M14 11a5 5 0 0 0-7.07 0l-3.54 3.54a5 5 0 0 0 7.07 7.07L12.17 19.9" />,
   adminSiteSettings: () => <NavIcon path="M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0Zm9-5v5l3 3" />,
   myHelp: () => <NavIcon path="M12 17v.01M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />,
   profileSecurity: () => <NavIcon path="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />,
@@ -183,7 +181,6 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: "/profile/security", key: "profileSecurity", icon: ICONS.profileSecurity },
       { to: "/admin/site-settings", key: "adminSiteSettings", manageOnly: true, icon: ICONS.adminSiteSettings },
-      { to: "/admin/integrations", key: "adminIntegrations", adminOnly: true, icon: ICONS.adminIntegrations },
     ],
   },
 ];
