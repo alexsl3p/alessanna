@@ -1110,7 +1110,7 @@ export function ServicesPage() {
     if (noFilters) {
       for (const c of categories) {
         const name = String(c.name || "").trim();
-        if (name && !map.has(name)) map.set(name, []);
+        if (name && name !== "Все услуги" && !map.has(name)) map.set(name, []);
       }
     }
     for (const list of map.values()) list.sort(compare);
