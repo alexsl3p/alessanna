@@ -553,16 +553,23 @@ export function ServicesPage() {
   async function renameCategory(category: CategoryRow) {
     if (!canManage) return;
     const key = String(category.id);
-    const nextName = String(categoryDrafts[key] ?? category.name).trim();
-    if (!nextName || nextName === String(category.name).trim()) return;
+    await renameCategoryTo(category, String(categoryDrafts[key] ?? category.name).trim());
+  }
+
+  async function renameCategoryTo(category: CategoryRow, nextNameInput: string) {
+    if (!canManage) return;
+    const key = String(category.id);
+    const oldName = String(category.name || "").trim();
+    const nextName = String(nextNameInput || "").trim();
+    if (!nextName || nextName === oldName) return;
 
     let updated = false;
-    const legacy = await supabase.from("categories").update({ name: nextName }).eq("id", category.id);
+    const legacy = await supabase.from("categories").update({ name: nextName }).eq("name", oldName);
     if (!legacy.error) {
       updated = true;
     }
 
-    const modern = await supabase.from("service_categories").update({ name: nextName }).eq("id", category.id);
+    const modern = await supabase.from("service_categories").update({ name: nextName }).eq("name", oldName);
     if (!modern.error) {
       updated = true;
     }
@@ -572,6 +579,10 @@ export function ServicesPage() {
       return;
     }
 
+    const servicesInCategory = services.filter((s) => categoryNameFromService(s) === oldName);
+    for (const service of servicesInCategory) {
+      await saveService({ ...service, category: nextName });
+    }
     setCategoryDrafts((prev) => ({ ...prev, [key]: nextName }));
     load();
   }
@@ -1659,15 +1670,28 @@ export function ServicesPage() {
               {canManage && (
                 <div className="flex items-center gap-2">
                   {categoryForGroup && (
-                    <button
-                      type="button"
-                      onClick={() => void deleteCategory(categoryForGroup)}
-                      className="inline-flex items-center gap-1 rounded-md border border-rose-800/50 bg-rose-950/20 px-2.5 py-1 text-xs text-rose-200 transition hover:border-rose-600/70 hover:bg-rose-950/40"
-                      title="Удалить категорию"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /></svg>
-                      Удалить
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const nextName = window.prompt("Новое название категории", categoryName);
+                          if (nextName != null) void renameCategoryTo(categoryForGroup, nextName);
+                        }}
+                        className="inline-flex items-center gap-1 rounded-md border border-line/20 bg-black/30 px-2.5 py-1 text-xs text-fg transition hover:border-sky-600/60 hover:bg-sky-950/30 hover:text-sky-200"
+                        title="Переименовать категорию"
+                      >
+                        Переименовать
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void deleteCategory(categoryForGroup)}
+                        className="inline-flex items-center gap-1 rounded-md border border-rose-800/50 bg-rose-950/20 px-2.5 py-1 text-xs text-rose-200 transition hover:border-rose-600/70 hover:bg-rose-950/40"
+                        title="Удалить категорию"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /></svg>
+                        Удалить
+                      </button>
+                    </>
                   )}
                   <button
                     type="button"
@@ -1823,15 +1847,27 @@ export function ServicesPage() {
                     <label className="block text-[11px] uppercase tracking-wide text-muted lg:col-span-2">
                       {t("services.name")}
                       <input
-                        disabled={!canManage}
+                        disabled={!canManage || s.active}
                         value={s.name_et}
                         onChange={(e) => {
                           const v = e.target.value;
                           setServices((prev) => prev.map((x) => (x.id === s.id ? { ...x, name_et: v } : x)));
                         }}
-                        onBlur={() => void saveService(s)}
-                        className={`${fieldBase} text-sm font-medium ${canManage ? editableUi : "border border-line/20"}`}
+                        onBlur={(e) => void saveService({ ...s, name_et: e.currentTarget.value })}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            (e.currentTarget as HTMLInputElement).blur();
+                          }
+                        }}
+                        title={s.active ? "Выключите услугу, чтобы изменить название" : undefined}
+                        className={`${fieldBase} text-sm font-medium ${canManage && !s.active ? editableUi : "border border-line/20"}`}
                       />
+                      {s.active && (
+                        <span className="mt-1 block text-[10px] normal-case tracking-normal text-muted">
+                          Название можно менять только у выключенной услуги.
+                        </span>
+                      )}
                     </label>
                     <div className="flex gap-2">
                       <label className="block flex-1 text-[11px] uppercase tracking-wide text-muted">
