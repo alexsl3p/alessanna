@@ -1607,7 +1607,7 @@ export function ServicesPage() {
                       <button
                         type="button"
                         onClick={() => { setHeaderEditCatId(String(categoryForGroup.id)); setHeaderEditDraft(categoryName); }}
-                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted opacity-0 transition-opacity group-hover:opacity-100 hover:bg-white/[0.08] hover:text-fg"
+                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted transition hover:bg-white/[0.08] hover:text-fg"
                         title="Переименовать категорию"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5">
@@ -1650,11 +1650,10 @@ export function ServicesPage() {
                       <button
                         type="button"
                         onClick={() => void deleteCategory(categoryForGroup)}
-                        className="inline-flex items-center gap-1 rounded-md border border-rose-800/50 bg-rose-950/20 px-2.5 py-1 text-xs text-rose-200 transition hover:border-rose-600/70 hover:bg-rose-950/40"
+                        className="flex h-7 w-7 items-center justify-center rounded text-rose-400 transition hover:bg-rose-950/40 hover:text-rose-300"
                         title="Удалить категорию"
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /></svg>
-                        Удалить
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /></svg>
                       </button>
                     </>
                   )}
