@@ -233,7 +233,7 @@
   "adminStaff": {
     "subtitle": "Таблица staff: телефон, имя, роль, активность, услуги.",
     "name": "Имя",
-    "roleBrief": "Кто",
+    "roleBrief": "Роль",
     "expandRow": "Подробнее",
     "collapseRow": "Свернуть",
     "assignedNone": "Нет явных привязок",
