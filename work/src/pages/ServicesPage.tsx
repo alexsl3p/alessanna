@@ -1125,7 +1125,7 @@ export function ServicesPage() {
   return (
     <div className="space-y-8">
       {/* ───── Page header ───── */}
-      <header className="rounded-2xl border border-gold/15 bg-gradient-to-br from-zinc-900/60 via-zinc-950 to-black/70 p-5 shadow-sm shadow-black/30">
+      <header className="rounded-2xl border border-gold/15 p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
             <h1 className="text-2xl font-semibold tracking-tight text-fg">{t("services.title")}</h1>
@@ -1752,28 +1752,6 @@ export function ServicesPage() {
                           мин
                         </span>
                       </div>
-                    </label>
-                    <label className="block text-[11px] uppercase tracking-wide text-muted md:col-span-2 lg:col-span-5">
-                      {t("services.category")}
-                      <select
-                        disabled={!canManage}
-                        value={String(s.category_id ?? s.category ?? "")}
-                        onChange={(e) => {
-                          const category_id = e.target.value || null;
-                          const selectedCategory = categories.find((c) => String(c.id) === String(category_id));
-                          const next = { ...s, category_id, category: selectedCategory?.name ?? null };
-                          setServices((prev) => prev.map((x) => (x.id === s.id ? next : x)));
-                          void saveService(next);
-                        }}
-                        className={`${fieldBase} ${canManage ? editableUi : "border border-line/20"}`}
-                      >
-                        <option value="">{t("common.dash")}</option>
-                        {categories.map((c) => (
-                          <option key={String(c.id)} value={String(c.id)}>
-                            {c.name}
-                          </option>
-                        ))}
-                      </select>
                     </label>
                   </div>
                   {/* Masters block */}
