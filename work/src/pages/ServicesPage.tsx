@@ -579,18 +579,22 @@ export function ServicesPage() {
   async function deleteCategory(category: CategoryRow) {
     if (!canManage) return;
     const categoryName = String(category.name || "").trim();
-    const hasServices = services.some((s) => categoryNameFromService(s) === categoryName);
-    if (hasServices) {
-      window.alert("Сначала перенесите или удалите услуги из этой категории.");
-      return;
+    const servicesInCategory = services.filter((s) => categoryNameFromService(s) === categoryName);
+    const extra =
+      servicesInCategory.length > 0
+        ? `\n\n${servicesInCategory.length} услуг перейдут в "Без категории".`
+        : "";
+    if (!window.confirm(`Удалить категорию "${categoryName}"?${extra}`)) return;
+
+    for (const service of servicesInCategory) {
+      await saveService({ ...service, category: null, category_id: null });
     }
-    if (!window.confirm(`Удалить категорию "${categoryName}"?`)) return;
 
     let removed = false;
-    const legacy = await supabase.from("categories").delete().eq("id", category.id);
+    const legacy = await supabase.from("categories").delete().eq("name", categoryName);
     if (!legacy.error) removed = true;
 
-    const modern = await supabase.from("service_categories").delete().eq("id", category.id);
+    const modern = await supabase.from("service_categories").delete().eq("name", categoryName);
     if (!modern.error) removed = true;
 
     if (!removed) {
@@ -1587,6 +1591,11 @@ export function ServicesPage() {
               !publicListingNames.has(String(s.name_et || "").trim().toLowerCase()),
           ).length;
           const isCatCollapsed = !openCats.has(categoryName);
+          const categoryForGroup =
+            categoryName === "Без категории"
+              ? null
+              : categories.find((c) => String(c.name || "").trim() === categoryName) ??
+                ({ id: categoryName as unknown as number, name: categoryName } as CategoryRow);
           return (
           <section
             key={categoryName}
@@ -1646,14 +1655,27 @@ export function ServicesPage() {
                 )}
               </button>
               {canManage && (
-                <button
-                  type="button"
-                  onClick={() => openQuickCreate(categoryName === "Без категории" ? "" : categoryName)}
-                  className="inline-flex items-center gap-1 rounded-md border border-line/20 bg-black/30 px-2.5 py-1 text-xs text-fg transition hover:border-emerald-700/60 hover:bg-emerald-950/30 hover:text-emerald-200"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5"><path d="M12 5v14M5 12h14" /></svg>
-                  Добавить услугу
-                </button>
+                <div className="flex items-center gap-2">
+                  {categoryForGroup && (
+                    <button
+                      type="button"
+                      onClick={() => void deleteCategory(categoryForGroup)}
+                      className="inline-flex items-center gap-1 rounded-md border border-rose-800/50 bg-rose-950/20 px-2.5 py-1 text-xs text-rose-200 transition hover:border-rose-600/70 hover:bg-rose-950/40"
+                      title="Удалить категорию"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /></svg>
+                      Удалить
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => openQuickCreate(categoryName === "Без категории" ? "" : categoryName)}
+                    className="inline-flex items-center gap-1 rounded-md border border-line/20 bg-black/30 px-2.5 py-1 text-xs text-fg transition hover:border-emerald-700/60 hover:bg-emerald-950/30 hover:text-emerald-200"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5"><path d="M12 5v14M5 12h14" /></svg>
+                    Добавить услугу
+                  </button>
+                </div>
               )}
             </header>
 
