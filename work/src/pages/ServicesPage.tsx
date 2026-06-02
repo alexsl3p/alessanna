@@ -109,6 +109,11 @@ export function ServicesPage() {
   const [categoryDrafts, setCategoryDrafts] = useState<Record<string, string>>({});
   const [headerEditCatId, setHeaderEditCatId] = useState<string | null>(null);
   const [headerEditDraft, setHeaderEditDraft] = useState("");
+  /* Черновик имени услуги. Пишем сюда во время набора, чтобы НЕ трогать
+   * `services` на каждый символ — иначе groupedServices пересортируется по
+   * имени, DOM переупорядочивается, инпут теряет фокус и срабатывает blur.
+   * Коммит в БД — только на blur/Enter. */
+  const [nameDrafts, setNameDrafts] = useState<Record<string, string>>({});
   const [serviceSearch, setServiceSearch] = useState("");
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [quickCreateCategory, setQuickCreateCategory] = useState<string | null>(null);
@@ -1812,12 +1817,22 @@ export function ServicesPage() {
                       {t("services.name")}
                       <input
                         disabled={!canManage}
-                        value={s.name_et}
+                        value={nameDrafts[String(s.id)] ?? s.name_et}
                         onChange={(e) => {
                           const v = e.target.value;
-                          setServices((prev) => prev.map((x) => (x.id === s.id ? { ...x, name_et: v } : x)));
+                          setNameDrafts((prev) => ({ ...prev, [String(s.id)]: v }));
                         }}
-                        onBlur={(e) => void saveService({ ...s, name_et: e.currentTarget.value })}
+                        onBlur={(e) => {
+                          const v = e.currentTarget.value;
+                          setNameDrafts((prev) => {
+                            const next = { ...prev };
+                            delete next[String(s.id)];
+                            return next;
+                          });
+                          if (v.trim() !== String(s.name_et || "").trim()) {
+                            void saveService({ ...s, name_et: v });
+                          }
+                        }}
                         onKeyDown={(e) => {
                           if (e.key === "Enter") {
                             e.preventDefault();
