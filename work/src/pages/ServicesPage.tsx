@@ -1660,7 +1660,7 @@ export function ServicesPage() {
                   <button
                     type="button"
                     onClick={() => openQuickCreate(categoryName === "Без категории" ? "" : categoryName)}
-                    className="flex h-7 w-7 items-center justify-center rounded border border-line/20 bg-black/30 text-fg transition hover:border-emerald-700/60 hover:bg-emerald-950/30 hover:text-emerald-200"
+                    className="flex h-7 w-7 items-center justify-center rounded text-muted transition hover:bg-white/[0.07] hover:text-fg"
                     title="Добавить услугу"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M12 5v14M5 12h14" /></svg>
