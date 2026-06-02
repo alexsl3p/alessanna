@@ -127,7 +127,6 @@ export function ServicesPage() {
   const [quickName, setQuickName] = useState("");
   const [quickPriceEur, setQuickPriceEur] = useState("30");
   const [quickDuration, setQuickDuration] = useState("60");
-  const [quickBuffer, setQuickBuffer] = useState("10");
   const [quickActive, setQuickActive] = useState(true);
   const [quickStaffIds, setQuickStaffIds] = useState<string[]>([]);
   const [serviceStaffLinksMap, setServiceStaffLinksMap] = useState<
@@ -949,17 +948,12 @@ export function ServicesPage() {
 
     const priceEur = Number(quickPriceEur);
     const durationMin = Number(quickDuration);
-    const bufferMin = Number(quickBuffer);
     if (!Number.isFinite(priceEur) || priceEur < 0) {
       window.alert("Цена должна быть числом >= 0.");
       return;
     }
     if (!Number.isFinite(durationMin) || durationMin <= 0) {
       window.alert("Длительность должна быть больше 0 минут.");
-      return;
-    }
-    if (!Number.isFinite(bufferMin) || bufferMin < 0) {
-      window.alert("Пауза должна быть числом >= 0.");
       return;
     }
 
@@ -972,7 +966,6 @@ export function ServicesPage() {
       .insert({
         name_et: serviceName,
         duration_min: Math.round(durationMin),
-        buffer_after_min: Math.round(bufferMin),
         price_cents: Math.round(priceEur * 100),
         active: quickActive,
         sort_order: services.length,
@@ -988,7 +981,6 @@ export function ServicesPage() {
         .insert({
           name: serviceName,
           duration: Math.round(durationMin),
-          buffer_after_min: Math.round(bufferMin),
           price: Number(priceEur.toFixed(2)),
           category: categoryName || null,
         })
@@ -1593,11 +1585,6 @@ export function ServicesPage() {
                         <span title="Длительность">
                           {Number(s.duration_min || 0)} мин
                         </span>
-                        {Number(s.buffer_after_min || 0) > 0 && (
-                          <span className="text-muted" title="Пауза после услуги">
-                            +{Number(s.buffer_after_min || 0)}
-                          </span>
-                        )}
                         {noMasters ? (
                           <span className="text-[10px] text-gold/50" title="Услугу никто не выполняет">без мастеров</span>
                         ) : (
@@ -1631,7 +1618,6 @@ export function ServicesPage() {
                   <div className="flex flex-wrap items-center gap-2 px-4 pb-2 sm:hidden text-[11px] text-muted tabular-nums">
                     <span className="font-medium text-fg">{formatPriceEur(s.price_cents, s.price_max_cents)}</span>
                     <span>{Number(s.duration_min || 0)} мин</span>
-                    {Number(s.buffer_after_min || 0) > 0 && <span>+{Number(s.buffer_after_min || 0)}</span>}
                     {noMasters ? (
                       <span className="text-gold/50">без мастеров</span>
                     ) : (
@@ -1726,27 +1712,6 @@ export function ServicesPage() {
                           onChange={(e) => {
                             const duration_min = Number(e.target.value);
                             setServices((prev) => prev.map((x) => (x.id === s.id ? { ...x, duration_min } : x)));
-                          }}
-                          onBlur={() => void saveService(s)}
-                          className={`w-full rounded-lg bg-surface px-3 py-2 pr-10 text-sm text-fg disabled:opacity-60 ${canManage ? editableUi : "border border-line/20"}`}
-                        />
-                        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-medium text-muted">
-                          мин
-                        </span>
-                      </div>
-                    </label>
-                    <label className="block text-[11px] uppercase tracking-wide text-muted" title="Пауза после услуги блокирует следующий слот у мастера (уборка, отдых).">
-                      Пауза после
-                      <div className="relative mt-1">
-                        <input
-                          type="number"
-                          min={0}
-                          step={5}
-                          disabled={!canManage}
-                          value={s.buffer_after_min}
-                          onChange={(e) => {
-                            const buffer_after_min = Number(e.target.value);
-                            setServices((prev) => prev.map((x) => (x.id === s.id ? { ...x, buffer_after_min } : x)));
                           }}
                           onBlur={() => void saveService(s)}
                           className={`w-full rounded-lg bg-surface px-3 py-2 pr-10 text-sm text-fg disabled:opacity-60 ${canManage ? editableUi : "border border-line/20"}`}
@@ -1922,17 +1887,6 @@ export function ServicesPage() {
                   step={5}
                   value={quickDuration}
                   onChange={(e) => setQuickDuration(e.target.value)}
-                  className={`${fieldBase} border border-line/20`}
-                />
-              </label>
-              <label className="block text-xs text-muted">
-                Пауза после (мин)
-                <input
-                  type="number"
-                  min={0}
-                  step={5}
-                  value={quickBuffer}
-                  onChange={(e) => setQuickBuffer(e.target.value)}
                   className={`${fieldBase} border border-line/20`}
                 />
               </label>
