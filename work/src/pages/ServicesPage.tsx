@@ -107,6 +107,8 @@ export function ServicesPage() {
   const [loading, setLoading] = useState(true);
   const [newCat, setNewCat] = useState("");
   const [categoryDrafts, setCategoryDrafts] = useState<Record<string, string>>({});
+  const [headerEditCatId, setHeaderEditCatId] = useState<string | null>(null);
+  const [headerEditDraft, setHeaderEditDraft] = useState("");
   const [serviceSearch, setServiceSearch] = useState("");
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [quickCreateCategory, setQuickCreateCategory] = useState<string | null>(null);
@@ -598,6 +600,15 @@ export function ServicesPage() {
     }
 
     setCategoryDrafts((prev) => ({ ...prev, [key]: nextName }));
+    load();
+  }
+
+  async function saveHeaderRename(category: CategoryRow) {
+    setHeaderEditCatId(null);
+    const nextName = headerEditDraft.trim();
+    if (!nextName || nextName === String(category.name || "").trim()) return;
+    await supabase.from("categories").update({ name: nextName }).eq("id", category.id);
+    await supabase.from("service_categories").update({ name: nextName }).eq("id", category.id);
     load();
   }
 
@@ -1612,64 +1623,94 @@ export function ServicesPage() {
               !publicListingNames.has(String(s.name_et || "").trim().toLowerCase()),
           ).length;
           const isCatCollapsed = collapsedCats.has(categoryName);
+          const sectionCat = categories.find((c) => String(c.name || "").trim() === categoryName) ?? null;
+          const isHeaderEditing = canManage && sectionCat !== null && headerEditCatId === String(sectionCat.id);
           return (
           <section
             key={categoryName}
             className="overflow-hidden rounded-2xl border border-line/15/80 bg-panel/60"
           >
             <header className="flex flex-wrap items-center justify-between gap-2 border-b border-line/15/60 bg-gradient-to-r from-zinc-900/60 to-transparent px-5 py-3">
-              <button
-                type="button"
-                onClick={() => toggleCategoryCollapsed(categoryName)}
-                className="group flex items-center gap-2 min-w-0 flex-1 text-left rounded-md px-1 -mx-1 hover:bg-white/[0.02] focus:outline-none focus:bg-white/[0.04]"
-                aria-expanded={!isCatCollapsed}
-                title={isCatCollapsed ? "Развернуть категорию" : "Свернуть категорию"}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className={`h-3.5 w-3.5 shrink-0 text-muted transition group-hover:text-fg ${isCatCollapsed ? "-rotate-90" : ""}`}
-                  aria-hidden="true"
-                ><path d="m6 9 6 6 6-6" /></svg>
-                <span
-                  aria-hidden="true"
-                  className="h-2 w-2 shrink-0 rounded-full bg-gradient-to-br from-emerald-400 to-sky-400 shadow-sm shadow-emerald-500/30"
-                />
-                <h3 className="truncate text-sm font-semibold text-fg">{categoryName}</h3>
-                <span className="shrink-0 rounded-full bg-surface/70 px-2 py-0.5 text-[10px] font-medium text-muted">
-                  {list.length}
-                </span>
-                {activeCount < list.length && (
-                  <span className="shrink-0 rounded-full border border-amber-700/40 bg-amber-950/30 px-2 py-0.5 text-[10px] font-medium text-amber-300" title="Часть услуг выключена">
-                    {activeCount}/{list.length} активно
-                  </span>
-                )}
-                {/* Тревожные индикаторы категории — видны и в свёрнутом
-                  * состоянии, чтобы проблемы было заметно сразу. Кликами они
-                  * не управляют (это по-прежнему toggle категории), цель —
-                  * быстро глазами найти категорию, требующую внимания. */}
-                {noMastersCount > 0 && (
+              <div className="group flex items-center gap-2 min-w-0 flex-1">
+                <button
+                  type="button"
+                  onClick={() => toggleCategoryCollapsed(categoryName)}
+                  className="flex shrink-0 items-center gap-1.5 rounded p-0.5 text-muted hover:text-fg focus:outline-none"
+                  aria-expanded={!isCatCollapsed}
+                  title={isCatCollapsed ? "Развернуть категорию" : "Свернуть категорию"}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className={`h-3.5 w-3.5 shrink-0 transition ${isCatCollapsed ? "-rotate-90" : ""}`}
+                    aria-hidden="true"
+                  ><path d="m6 9 6 6 6-6" /></svg>
                   <span
-                    className="shrink-0 rounded-full border border-rose-700/50 bg-rose-950/30 px-2 py-0.5 text-[10px] font-medium text-rose-200"
-                    title={`Без назначенных мастеров: ${noMastersCount}. Услуги скрыты на сайте, никто их не возьмёт.`}
-                  >
-                    ⚠ {noMastersCount} без мастеров
-                  </span>
+                    aria-hidden="true"
+                    className="h-2 w-2 shrink-0 rounded-full bg-gradient-to-br from-emerald-400 to-sky-400 shadow-sm shadow-emerald-500/30"
+                  />
+                </button>
+                {isHeaderEditing ? (
+                  <input
+                    value={headerEditDraft}
+                    autoFocus
+                    onChange={(e) => setHeaderEditDraft(e.target.value)}
+                    onBlur={() => void saveHeaderRename(sectionCat!)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); }
+                      if (e.key === "Escape") setHeaderEditCatId(null);
+                    }}
+                    className="min-w-0 flex-1 rounded border border-sky-500/50 bg-surface/50 px-2 py-0.5 text-sm font-semibold text-fg outline-none ring-1 ring-sky-500/30"
+                  />
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (canManage && sectionCat) {
+                          setHeaderEditCatId(String(sectionCat.id));
+                          setHeaderEditDraft(categoryName);
+                        } else {
+                          toggleCategoryCollapsed(categoryName);
+                        }
+                      }}
+                      className={`min-w-0 flex-1 text-left ${canManage && sectionCat ? "cursor-text" : ""}`}
+                      title={canManage && sectionCat ? "Кликните чтобы переименовать" : ""}
+                    >
+                      <h3 className="truncate text-sm font-semibold text-fg">{categoryName}</h3>
+                    </button>
+                    <span className="shrink-0 rounded-full bg-surface/70 px-2 py-0.5 text-[10px] font-medium text-muted">
+                      {list.length}
+                    </span>
+                    {activeCount < list.length && (
+                      <span className="shrink-0 rounded-full border border-amber-700/40 bg-amber-950/30 px-2 py-0.5 text-[10px] font-medium text-amber-300" title="Часть услуг выключена">
+                        {activeCount}/{list.length} активно
+                      </span>
+                    )}
+                    {noMastersCount > 0 && (
+                      <span
+                        className="shrink-0 rounded-full border border-rose-700/50 bg-rose-950/30 px-2 py-0.5 text-[10px] font-medium text-rose-200"
+                        title={`Без назначенных мастеров: ${noMastersCount}. Услуги скрыты на сайте, никто их не возьмёт.`}
+                      >
+                        ⚠ {noMastersCount} без мастеров
+                      </span>
+                    )}
+                    {notOnSiteCount > 0 && (
+                      <span
+                        className="shrink-0 rounded-full border border-amber-700/40 bg-amber-950/20 px-2 py-0.5 text-[10px] font-medium text-amber-300"
+                        title={`Не опубликовано на главном сайте: ${notOnSiteCount}. Нажмите «Обновить всё на сайте» вверху страницы.`}
+                      >
+                        🌐 {notOnSiteCount} не на сайте
+                      </span>
+                    )}
+                  </>
                 )}
-                {notOnSiteCount > 0 && (
-                  <span
-                    className="shrink-0 rounded-full border border-amber-700/40 bg-amber-950/20 px-2 py-0.5 text-[10px] font-medium text-amber-300"
-                    title={`Не опубликовано на главном сайте: ${notOnSiteCount}. Нажмите «Обновить всё на сайте» вверху страницы.`}
-                  >
-                    🌐 {notOnSiteCount} не на сайте
-                  </span>
-                )}
-              </button>
+              </div>
               {canManage && (
                 <button
                   type="button"
