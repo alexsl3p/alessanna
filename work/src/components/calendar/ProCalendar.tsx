@@ -282,8 +282,10 @@ export function ProCalendar({
   );
 
   const serviceName = useCallback(
-    (serviceId: string | number) =>
-      services.find((s) => String(s.id) === String(serviceId))?.name_et ?? t("common.service"),
+    (serviceId: string | number | null) =>
+      serviceId != null
+        ? (services.find((s) => String(s.id) === String(serviceId))?.name_et ?? t("common.service"))
+        : t("common.service"),
     [services, t]
   );
 
@@ -322,7 +324,7 @@ export function ProCalendar({
 
       if (lockToStaffId != null && parsed.employeeId !== lockToStaffId) return;
 
-      if (!staffCanPerformService(staffServiceLinks, parsed.employeeId, booking.service_id, staff)) {
+      if (booking.service_id != null && !staffCanPerformService(staffServiceLinks, parsed.employeeId, booking.service_id, staff)) {
         return;
       }
 
