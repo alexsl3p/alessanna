@@ -59,12 +59,19 @@ export function BookingModal({
     () => staffList.find((e) => e.id === initialStaffId) ?? null,
     [staffList, initialStaffId]
   );
+  const selectedStaffRow = useMemo(
+    () => staffList.find((e) => e.id === staffId) ?? null,
+    [staffList, staffId],
+  );
 
   const eligibleServices = useMemo(() => {
-    if (lockStaff)
-      return servicesEligibleForStaff(services, links, initialStaffId, initialStaffRow);
-    return services.filter((s) => s.active);
-  }, [services, links, lockStaff, initialStaffId, initialStaffRow]);
+    const targetStaffId = lockStaff ? initialStaffId : staffId;
+    const targetStaffRow = lockStaff ? initialStaffRow : selectedStaffRow;
+    return servicesEligibleForStaff(services, links, targetStaffId, targetStaffRow, {
+      implicitAll: false,
+      privilegedCanDoAll: false,
+    });
+  }, [services, links, lockStaff, initialStaffId, initialStaffRow, staffId, selectedStaffRow]);
 
   const eligibleStaff = useMemo(() => {
     const base = staffEligibleForService(staffList, links, serviceId || null);
@@ -113,9 +120,17 @@ export function BookingModal({
     setStaffId(initialStaffId);
     setClientName("");
     setClientPhone("");
-    const firstSvc = eligibleServices[0]?.id ?? services.find((s) => s.active)?.id ?? 0;
+    const firstSvc = eligibleServices[0]?.id ?? 0;
     setServiceId(firstSvc);
   }, [open, initialStaffId, eligibleServices, services, editAppointment]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (!serviceId) return;
+    if (!eligibleServices.some((s) => s.id === serviceId)) {
+      setServiceId(eligibleServices[0]?.id ?? 0);
+    }
+  }, [open, eligibleServices, serviceId]);
 
   useEffect(() => {
     if (!open) return;
@@ -138,7 +153,10 @@ export function BookingModal({
       return;
     }
     if (lockStaff) {
-      const allowed = servicesEligibleForStaff(services, links, initialStaffId, initialStaffRow);
+      const allowed = servicesEligibleForStaff(services, links, initialStaffId, initialStaffRow, {
+        implicitAll: false,
+        privilegedCanDoAll: false,
+      });
       if (!allowed.some((s) => s.id === serviceId)) {
         setError(t("modal.pickService"));
         return;
