@@ -1304,12 +1304,28 @@ export function AdminStaffPage() {
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap">
                       {editingId === r.id ? (
-                        <div className="flex items-center gap-2">
-                          <button type="button" className="text-gold underline" onClick={() => void saveEdit()}>
-                            {t("common.save")}
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            className="flex h-7 w-7 items-center justify-center rounded text-emerald-300/75 transition hover:bg-emerald-300/[0.08] hover:text-emerald-200"
+                            onClick={() => void saveEdit()}
+                            title={t("common.save")}
+                            aria-label={t("common.save")}
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                              <path d="M20 6 9 17l-5-5"/>
+                            </svg>
                           </button>
-                          <button type="button" className="text-muted underline" onClick={() => setEditingId(null)}>
-                            {t("common.cancel")}
+                          <button
+                            type="button"
+                            className="flex h-7 w-7 items-center justify-center rounded text-muted transition hover:bg-line/[0.08] hover:text-fg"
+                            onClick={() => setEditingId(null)}
+                            title={t("common.cancel")}
+                            aria-label={t("common.cancel")}
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                              <path d="M18 6 6 18M6 6l12 12"/>
+                            </svg>
                           </button>
                         </div>
                       ) : (
@@ -1879,22 +1895,30 @@ export function AdminStaffPage() {
 
                   <div className="ml-auto flex items-center gap-3 text-xs">
                     {isEditing ? (
-                      <>
+                      <div className="flex items-center gap-1.5">
                         <button
                           type="button"
-                          className="text-gold underline"
+                          className="flex h-7 w-7 items-center justify-center rounded text-emerald-300/75 transition hover:bg-emerald-300/[0.08] hover:text-emerald-200"
                           onClick={() => void saveEdit()}
+                          title={t("common.save")}
+                          aria-label={t("common.save")}
                         >
-                        {t("common.save")}
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                            <path d="M20 6 9 17l-5-5"/>
+                          </svg>
                       </button>
                         <button
                           type="button"
-                          className="text-muted underline"
+                          className="flex h-7 w-7 items-center justify-center rounded text-muted transition hover:bg-line/[0.08] hover:text-fg"
                           onClick={() => setEditingId(null)}
+                          title={t("common.cancel")}
+                          aria-label={t("common.cancel")}
                         >
-                        {t("common.cancel")}
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                            <path d="M18 6 6 18M6 6l12 12"/>
+                          </svg>
                       </button>
-                    </>
+                    </div>
                   ) : (
                     <div className="flex items-center gap-1.5">
                         <button
