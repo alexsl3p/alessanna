@@ -1098,23 +1098,12 @@ export function ServicesPage() {
     sortBy, publicListingNames, serviceStaffLinksMap,
   ]);
 
-  /** Все id услуг, прошедшие текущие фильтры (для «Развернуть всё»). */
+  /** Все id услуг, прошедшие текущие фильтры (для счётчика «найдено»). */
   const visibleServiceIds = useMemo(() => {
     const out: string[] = [];
     for (const [, list] of groupedServices) for (const s of list) out.push(String(s.id));
     return out;
   }, [groupedServices]);
-
-  function expandAllVisible() {
-    setExpandedIds((prev) => {
-      const next = new Set(prev);
-      for (const id of visibleServiceIds) next.add(id);
-      return next;
-    });
-  }
-  function collapseAll() {
-    setExpandedIds(new Set());
-  }
 
   /** Quick top-of-page stats: active/total services + masters coverage. */
   const servicesStats = useMemo(() => {
@@ -1139,20 +1128,7 @@ export function ServicesPage() {
       <header className="rounded-2xl border border-gold/15 bg-gradient-to-br from-zinc-900/60 via-zinc-950 to-black/70 p-5 shadow-sm shadow-black/30">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span
-                aria-hidden="true"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gold/25 bg-gold/[0.07] text-gold"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
-                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z M3.3 7 12 12m0 0 8.7-5M12 12v10" />
-                </svg>
-              </span>
-              <div>
-                <h1 className="text-2xl font-semibold tracking-tight text-fg">{t("services.title")}</h1>
-                <p className="text-sm text-muted">{t("services.subtitle")}</p>
-              </div>
-            </div>
+            <h1 className="text-2xl font-semibold tracking-tight text-fg">{t("services.title")}</h1>
 
             {/* Stat chips */}
             <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
@@ -1205,24 +1181,22 @@ export function ServicesPage() {
           </div>
 
           {canManage && (
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-1">
               <button
                 type="button"
                 onClick={() => void refreshPublicStatus()}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-line/20 px-3 py-2 text-sm font-medium text-fg transition hover:border-line/30 hover:bg-surface"
-                title="Сверить CRM со списком услуг, который видит сайт"
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-muted transition hover:bg-white/[0.06] hover:text-fg"
+                title="Проверить главную — сверить CRM со списком услуг, который видит сайт"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5" /></svg>
-                Проверить главную
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px]"><path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5" /></svg>
               </button>
               <button
                 type="button"
                 onClick={() => void syncAllServicesToPublicSite()}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-gold/30 bg-gold/[0.08] px-3 py-2 text-sm font-medium text-gold transition hover:border-gold/50 hover:bg-gold/[0.14]"
-                title="Записывает все активные услуги из CRM в таблицу для главного сайта (service_listings)"
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-gold transition hover:bg-gold/[0.1]"
+                title="Обновить всё на сайте — записывает все активные услуги из CRM в таблицу для главного сайта (service_listings)"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M12 3v12m-4-4 4 4 4-4M4 21h16" /></svg>
-                Обновить всё на сайте
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px]"><path d="M12 3v12m-4-4 4 4 4-4M4 21h16" /></svg>
               </button>
             </div>
           )}
@@ -1257,18 +1231,17 @@ export function ServicesPage() {
                 type="button"
                 onClick={() => setShowToolbar((v) => !v)}
                 className={
-                  "inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition " +
+                  "relative flex h-9 w-9 items-center justify-center rounded-lg transition " +
                   (filtersActive
-                    ? "border-gold/30 bg-gold/[0.08] text-gold hover:border-gold/50"
-                    : "border-line/20 bg-black/30 text-fg hover:border-line/30 hover:bg-surface")
+                    ? "text-gold hover:bg-gold/[0.1]"
+                    : "text-muted hover:bg-white/[0.06] hover:text-fg")
                 }
                 aria-expanded={showToolbar}
                 title="Фильтры и сортировка"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M3 6h18M6 12h12M10 18h4" /></svg>
-                Фильтры
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px]"><path d="M3 6h18M6 12h12M10 18h4" /></svg>
                 {filtersActive && (
-                  <span className="rounded-full bg-gold/20 px-1.5 text-[10px] font-semibold text-gold">
+                  <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-gold px-1 text-[9px] font-semibold text-black">
                     {[
                       filterActive !== "all" ? 1 : 0,
                       filterNoMasters ? 1 : 0,
@@ -1278,30 +1251,13 @@ export function ServicesPage() {
                     ].reduce((a, b) => a + b, 0)}
                   </span>
                 )}
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={`h-3.5 w-3.5 transition ${showToolbar ? "rotate-180" : ""}`}><path d="m6 9 6 6 6-6" /></svg>
               </button>
 
-              <div className="ml-auto flex items-center gap-2 text-xs text-muted">
-                {(serviceSearch || filtersActive) && (
-                  <span>{visibleServiceIds.length} из {services.length} найдено</span>
-                )}
-                <button
-                  type="button"
-                  onClick={expandAllVisible}
-                  className="rounded-md border border-line/20 bg-black/30 px-2 py-1 text-[11px] font-medium text-fg transition hover:border-line/30 hover:bg-surface hover:text-fg"
-                  title="Раскрыть полные карточки всех видимых услуг"
-                >
-                  Развернуть всё
-                </button>
-                <button
-                  type="button"
-                  onClick={collapseAll}
-                  className="rounded-md border border-line/20 bg-black/30 px-2 py-1 text-[11px] font-medium text-fg transition hover:border-line/30 hover:bg-surface hover:text-fg"
-                  title="Свернуть все карточки"
-                >
-                  Свернуть всё
-                </button>
-              </div>
+              {(serviceSearch || filtersActive) && (
+                <div className="ml-auto text-xs text-muted">
+                  {visibleServiceIds.length} из {services.length} найдено
+                </div>
+              )}
             </div>
 
             {showToolbar && (
