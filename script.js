@@ -265,7 +265,7 @@
     var top = target.getBoundingClientRect().top + window.scrollY - offset;
     window.scrollTo({ top: Math.max(0, top), behavior: reduceMotionMq.matches ? "auto" : "smooth" });
     if (hash && window.history && window.history.pushState) {
-      window.history.pushState(null, "", hash);
+      window.history.pushState(null, "", window.location.pathname + window.location.search + hash);
     }
     return true;
   }
@@ -280,6 +280,12 @@
       if (!sectionId) return;
       e.preventDefault();
       closeNav();
+      if (
+        sectionId === "teenused" &&
+        (link.hasAttribute("data-services-tabs-toggle") || link.hasAttribute("data-price-list-toggle"))
+      ) {
+        return;
+      }
       var targetSection = document.getElementById(sectionId);
       if (targetSection && sectionId !== "teenused") targetSection.removeAttribute("hidden");
       scrollToSectionTitle(sectionId, hash);
@@ -387,7 +393,8 @@
   window.addEventListener("site-team-rendered", applyTeamFilterForActiveTab);
 
   document.querySelectorAll("[data-price-list-toggle]").forEach(function (btn) {
-    btn.addEventListener("click", function () {
+    btn.addEventListener("click", function (e) {
+      if (e) e.preventDefault();
       var teenused = document.getElementById("teenused");
       if (!teenused) return;
       teenused.removeAttribute("hidden");
@@ -417,6 +424,7 @@
 
   document.querySelectorAll("[data-services-tabs-toggle]").forEach(function (btn) {
     btn.addEventListener("click", function (e) {
+      if (e) e.preventDefault();
       var teenused = document.getElementById("teenused");
       if (!teenused) return;
       teenused.removeAttribute("hidden");
@@ -434,6 +442,9 @@
       });
 
       applyTeamFilterForActiveTab();
+      requestAnimationFrame(function () {
+        scrollToSectionTitle("teenused", "#teenused");
+      });
     });
   });
 
