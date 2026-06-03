@@ -241,14 +241,9 @@ function buildCatalogHtml(groups, svcMasters, prefix) {
      *   будут переключаться синхронно при клике в любом месте. */
     const panelId = px + "panel-cat-" + ti;
     const tabId = px + "tab-cat-" + ti;
-    const isFirst = ti === 0;
     const catKey = gr.id;
     tabHtml +=
-      '<button type="button" class="tab-btn' +
-      (isFirst ? " is-active" : "") +
-      '" role="tab" aria-selected="' +
-      (isFirst ? "true" : "false") +
-      '" aria-controls="' +
+      '<button type="button" class="tab-btn" role="tab" aria-selected="false" aria-controls="' +
       esc(panelId) +
       '" id="' +
       esc(tabId) +
@@ -261,13 +256,9 @@ function buildCatalogHtml(groups, svcMasters, prefix) {
     panelHtml +=
       '<div id="' +
       esc(panelId) +
-      '" class="tab-panel' +
-      (isFirst ? " is-active" : "") +
-      '" role="tabpanel" aria-labelledby="' +
+      '" class="tab-panel" role="tabpanel" aria-labelledby="' +
       esc(tabId) +
-      '"' +
-      (isFirst ? "" : " hidden") +
-      ' data-pick-category="' +
+      '" hidden data-pick-category="' +
       esc(catKey) +
       '"><p class="price-panel-title">' +
       esc(catalogName("category", gr.name)) +
