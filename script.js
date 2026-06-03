@@ -416,11 +416,6 @@
 
   document.querySelectorAll("[data-services-tabs-toggle]").forEach(function (btn) {
     btn.addEventListener("click", function (e) {
-      if (isOnlineBookingPanelOff()) {
-        e.preventDefault();
-        showToast(servicesHeroPhoneOnlyToastMessage(), "ok");
-        return;
-      }
       var teenused = document.getElementById("teenused");
       if (!teenused) return;
       teenused.classList.add("services-list-open");
