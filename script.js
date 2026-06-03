@@ -295,10 +295,8 @@
     var targetId = btn.getAttribute("aria-controls");
     if (!targetId) return;
     var teenused = document.getElementById("teenused");
-    if (teenused) {
-      teenused.classList.remove("price-list-open");
-      teenused.classList.remove("services-list-open");
-    }
+    var isServicesMode = !!(teenused && teenused.classList.contains("services-list-open"));
+    var isPriceMode = !!(teenused && teenused.classList.contains("price-list-open"));
 
     var mount = btn.closest("#teenused-supabase-mount");
     var scope = mount || teenused;
@@ -311,14 +309,18 @@
     btn.setAttribute("aria-selected", "true");
 
     scope.querySelectorAll(".tab-panel").forEach(function (panel) {
-      var show = panel.id === targetId;
+      var show = isPriceMode || panel.id === targetId;
       panel.hidden = !show;
       panel.classList.toggle("is-active", show);
     });
 
     applyTeamFilterForActiveTab();
-    var meistridSection = document.getElementById("meistrid");
-    if (meistridSection) meistridSection.removeAttribute("hidden");
+    if (isServicesMode || isPriceMode) {
+      requestAnimationFrame(function () {
+        var panel = document.getElementById(targetId);
+        if (panel) panel.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
   });
 
   /**
@@ -402,8 +404,6 @@
       });
 
       applyTeamFilterForActiveTab();
-      var meistridSection = document.getElementById("meistrid");
-      if (meistridSection) meistridSection.removeAttribute("hidden");
 
       var firstPriceBlock = teenused.querySelector(".price-panel-title");
       if (firstPriceBlock) {
@@ -427,13 +427,11 @@
       });
 
       teenused.querySelectorAll(".tab-panel").forEach(function (panel) {
-        panel.hidden = false;
-        panel.classList.add("is-active");
+        panel.hidden = true;
+        panel.classList.remove("is-active");
       });
 
       applyTeamFilterForActiveTab();
-      var meistridSection = document.getElementById("meistrid");
-      if (meistridSection) meistridSection.removeAttribute("hidden");
     });
   });
 
@@ -766,8 +764,8 @@
      */
     function updateTeamSectionVisibility() {
       if (!teamRoot) return;
-      teamRoot.hidden = false;
       var hasPickedServices = picked.length > 0;
+      teamRoot.hidden = !hasPickedServices;
       if (hasPickedServices) {
         teamRoot.querySelectorAll(".reveal").forEach(function (el) {
           el.classList.add("is-visible");
@@ -778,7 +776,7 @@
     }
 
     function applyBookingCartVisibility() {
-      if (summary) summary.hidden = !bookingCartEnabled;
+      if (summary) summary.hidden = !picked.length;
     }
 
     function currentTeamGroupKey() {
@@ -1098,16 +1096,8 @@
     }
 
     function updateDock() {
-      if (!bookingCartEnabled) {
-        summary.classList.remove("selection-summary--dock");
-        summary.classList.remove("selection-summary--dock-collapsed");
-        document.body.classList.remove("selection-dock-active");
-        document.body.classList.remove("selection-dock-panel-collapsed");
-        updateCartCountBadge();
-        if (dockToggle) dockToggle.setAttribute("aria-expanded", "false");
-        return;
-      }
       var has = picked.length > 0;
+      summary.hidden = !has;
       summary.classList.toggle("selection-summary--dock", has);
       document.body.classList.toggle("selection-dock-active", has);
       updateCartCountBadge();
@@ -1167,8 +1157,8 @@
           btn.setAttribute("data-master-id", mid);
           btn.textContent = masterNameById(mid);
           btn.addEventListener("click", function () {
-            if (masterSelect && masterSelect.value === mid) applyMaster("");
-            else applyMaster(mid);
+            if (masterSelect && masterSelect.value === mid) applyMaster("", false);
+            else applyMaster(mid, true);
           });
           chipsEl.appendChild(btn);
         })(ids[c]);
@@ -1305,6 +1295,12 @@
     function scrollToMastersBlock() {
       requestAnimationFrame(function () {
         scrollToSectionTitle("meistrid");
+      });
+    }
+
+    function scrollToBookingBlock() {
+      requestAnimationFrame(function () {
+        scrollToSectionTitle("broneeri");
       });
     }
 
@@ -1500,7 +1496,7 @@
       return [];
     }
 
-    function applyPickMaster(pickKeyStr, staffIdOrAny) {
+    function applyPickMaster(pickKeyStr, staffIdOrAny, scrollAfter) {
       var changed = false;
       for (var i = 0; i < picked.length; i++) {
         if (picked[i].key === pickKeyStr) {
@@ -1514,6 +1510,7 @@
       if (changed) {
         renderList();
         updateBookingChainPreview();
+        if (staffIdOrAny && scrollAfter) scrollToBookingBlock();
       }
     }
 
@@ -1563,13 +1560,19 @@
     function propagateGlobalMasterToPicks() {
       if (!picked.length) return false;
       var formMaster = masterSelect ? String(masterSelect.value || "") : "";
+      if (!formMaster) return false;
       var changed = false;
       for (var i = 0; i < picked.length; i++) {
         var p = picked[i];
-        if (p.selectedMaster === ANY_MASTER_ID) continue;
-        var next = resolveDefaultMasterFor(p, formMaster || p.selectedMaster);
-        if (next && next !== p.selectedMaster) {
-          p.selectedMaster = next;
+        var canDo = formMaster === ANY_MASTER_ID;
+        if (!canDo) {
+          var allowed = mastersForSpecificPick(p);
+          canDo = allowed.some(function (m) {
+            return String(m.id) === formMaster;
+          });
+        }
+        if (canDo && formMaster !== p.selectedMaster) {
+          p.selectedMaster = formMaster;
           changed = true;
         }
       }
@@ -1604,7 +1607,7 @@
       anyBtn.setAttribute("aria-checked", pick.selectedMaster === ANY_MASTER_ID ? "true" : "false");
       anyBtn.textContent = anyMasterLabelForChip();
       anyBtn.addEventListener("click", function () {
-        applyPickMaster(pick.key, pick.selectedMaster === ANY_MASTER_ID ? "" : ANY_MASTER_ID);
+        applyPickMaster(pick.key, pick.selectedMaster === ANY_MASTER_ID ? "" : ANY_MASTER_ID, true);
       });
       host.appendChild(anyBtn);
 
@@ -1617,7 +1620,7 @@
           btn.setAttribute("aria-checked", pick.selectedMaster === String(m.id) ? "true" : "false");
           btn.textContent = m.name;
           btn.addEventListener("click", function () {
-            applyPickMaster(pick.key, pick.selectedMaster === String(m.id) ? "" : String(m.id));
+            applyPickMaster(pick.key, pick.selectedMaster === String(m.id) ? "" : String(m.id), true);
           });
           host.appendChild(btn);
         })(masters[i]);
@@ -1783,11 +1786,6 @@
          *   "<uuid>" = конкретный мастер. */
         selectedMaster: "",
       };
-      /* Сразу подставляем «лучшего» мастера: глобальный выбор формы или
-       * единственного валидного — иначе клиенту приходится отдельно кликать
-       * чип внутри карточки, и план дня висит «мастер не выбран» при том,
-       * что выбор очевиден. */
-      pick.selectedMaster = resolveDefaultMasterFor(pick, "");
       return pick;
     }
 
@@ -1958,7 +1956,6 @@
         masters: masters,
         selectedMaster: "",
       };
-      pick.selectedMaster = resolveDefaultMasterFor(pick, "");
       /* Режим «одна запись за раз»: выбор в форме тоже заменяет услугу. */
       picked = [pick];
       syncFormCategory();
@@ -2011,12 +2008,13 @@
       }
     }
 
-    function applyMaster(id) {
+    function applyMaster(id, scrollAfter) {
       if (!masterSelect) return;
       masterSelect.value = id || "";
       setMasterDisplayText(id ? masterNameById(id) : UI.masterNone);
       highlightTeam(id || "");
       masterSelect.dispatchEvent(new Event("change", { bubbles: true }));
+      if (id && scrollAfter) scrollToBookingBlock();
     }
 
     /**
@@ -2079,8 +2077,8 @@
                 }
               }
               if (found) {
-                if (masterSelect.value === id) applyMaster("");
-                else applyMaster(id);
+                if (masterSelect.value === id) applyMaster("", false);
+                else applyMaster(id, true);
                 return;
               }
               if (attempts++ < 20) setTimeout(tryApply, 50);
