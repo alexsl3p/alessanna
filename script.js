@@ -280,6 +280,8 @@
       if (!sectionId) return;
       e.preventDefault();
       closeNav();
+      var targetSection = document.getElementById(sectionId);
+      if (targetSection) targetSection.removeAttribute("hidden");
       scrollToSectionTitle(sectionId, hash);
     });
   });
@@ -315,6 +317,8 @@
     });
 
     applyTeamFilterForActiveTab();
+    var meistridSection = document.getElementById("meistrid");
+    if (meistridSection) meistridSection.removeAttribute("hidden");
   });
 
   /**
@@ -398,6 +402,8 @@
       });
 
       applyTeamFilterForActiveTab();
+      var meistridSection = document.getElementById("meistrid");
+      if (meistridSection) meistridSection.removeAttribute("hidden");
 
       var firstPriceBlock = teenused.querySelector(".price-panel-title");
       if (firstPriceBlock) {
@@ -410,11 +416,6 @@
 
   document.querySelectorAll("[data-services-tabs-toggle]").forEach(function (btn) {
     btn.addEventListener("click", function (e) {
-      if (isOnlineBookingPanelOff()) {
-        e.preventDefault();
-        showToast(servicesHeroPhoneOnlyToastMessage(), "ok");
-        return;
-      }
       var teenused = document.getElementById("teenused");
       if (!teenused) return;
       teenused.classList.add("services-list-open");
@@ -431,6 +432,8 @@
       });
 
       applyTeamFilterForActiveTab();
+      var meistridSection = document.getElementById("meistrid");
+      if (meistridSection) meistridSection.removeAttribute("hidden");
     });
   });
 
