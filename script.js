@@ -390,6 +390,7 @@
     btn.addEventListener("click", function () {
       var teenused = document.getElementById("teenused");
       if (!teenused) return;
+      teenused.removeAttribute("hidden");
       teenused.classList.add("price-list-open");
       teenused.classList.remove("services-list-open");
 
@@ -418,6 +419,7 @@
     btn.addEventListener("click", function (e) {
       var teenused = document.getElementById("teenused");
       if (!teenused) return;
+      teenused.removeAttribute("hidden");
       teenused.classList.add("services-list-open");
       teenused.classList.remove("price-list-open");
 
@@ -776,7 +778,7 @@
     }
 
     function applyBookingCartVisibility() {
-      if (summary) summary.hidden = !picked.length;
+      if (summary) summary.hidden = true;
     }
 
     function currentTeamGroupKey() {
@@ -1097,9 +1099,11 @@
 
     function updateDock() {
       var has = picked.length > 0;
-      summary.hidden = !has;
-      summary.classList.toggle("selection-summary--dock", has);
-      document.body.classList.toggle("selection-dock-active", has);
+      summary.hidden = true;
+      summary.classList.remove("selection-summary--dock");
+      summary.classList.remove("selection-summary--dock-collapsed");
+      document.body.classList.remove("selection-dock-active");
+      document.body.classList.remove("selection-dock-panel-collapsed");
       updateCartCountBadge();
       if (!has) {
         summary.classList.remove("selection-summary--dock-collapsed");
@@ -1114,8 +1118,7 @@
          * пульсом на toggle (см. updateCartCountBadge). Если пользователь
          * затем сам развернет — это разовый жест в рамках сессии,
          * пересохранять preference не нужно. */
-        setDockCollapsed(true);
-        return;
+        if (dockToggle) dockToggle.setAttribute("aria-expanded", "true");
       }
       if (typeof updateSelectionDockOffset === "function") updateSelectionDockOffset();
     }

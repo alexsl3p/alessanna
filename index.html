@@ -115,7 +115,7 @@
       </div>
     </section>
 
-    <section class="section" id="teenused">
+    <section class="section" id="teenused" hidden>
       <div class="container">
         <div class="section-head reveal">
           <span class="section-kicker" data-i18n="site.servicesKicker">Услуги</span>
@@ -124,30 +124,14 @@
           <p class="section-lead" data-i18n="site.servicesLead">Итоговая стоимость может меняться в зависимости от сложности и объёма работы — точную цену мастер уточнит перед началом процедуры.</p>
         </div>
         <div id="teenused-supabase-mount"></div>
-        <div class="selection-summary reveal" data-selection-summary aria-live="polite" hidden>
-          <button type="button" class="selection-dock-toggle" data-selection-dock-toggle aria-expanded="true" aria-controls="selection-dock-panel" data-i18n-attr="title:site.selectionDockToggleTitle">
-            <span class="selection-dock-toggle-chevron" aria-hidden="true"></span>
-            <span class="selection-dock-toggle-label" data-i18n="site.selectionDockLabel">Ваш выбор</span>
-            <span class="selection-dock-toggle-count" data-cart-count hidden>0</span>
-          </button>
-          <div class="selection-dock-body" id="selection-dock-panel">
-            <p class="selection-summary-kicker" data-i18n="site.selectionDockLabel">Ваш выбор</p>
-            <p class="selection-summary-hint" data-i18n="site.selectionHint">Нажмите на услугу в прайсе, чтобы выбрать её для записи. Одновременно можно оформить только одну услугу за раз.</p>
-            <ul class="pick-list" data-selected-services-list hidden></ul>
-            <p class="pick-list-empty" data-selected-services-empty data-i18n="site.selectionEmpty">Услуги пока не выбраны.</p>
-            <!-- Итоговая длительность всей цепочки услуг (picked[].duration + buffer_after_min).
-                 Заполняется script.js функцией renderPlanSummary(). -->
-            <p class="pick-plan-summary" data-plan-summary hidden></p>
-            <div class="selection-masters" data-summary-masters-wrap hidden>
-              <p class="selection-masters-label" id="summary-masters-label" data-summary-masters-label data-i18n="site.selectionMastersLabel">Один мастер на всё (если подходит)</p>
-              <div class="selection-masters-chips" data-summary-master-chips role="radiogroup" aria-labelledby="summary-masters-label"></div>
-            </div>
-            <div class="selection-master-row">
-              <span class="selection-master-label" data-i18n="site.selectionMasterLabel">Мастер:</span>
-              <strong class="selection-master-value" data-selected-master-display>—</strong>
-            </div>
-            <a href="#broneeri" class="btn btn-outline selection-summary-cta" data-i18n="site.selectionCta">К записи</a>
+        <div data-selection-summary hidden aria-hidden="true">
+          <ul data-selected-services-list hidden></ul>
+          <p data-selected-services-empty hidden></p>
+          <p data-plan-summary hidden></p>
+          <div data-summary-masters-wrap hidden>
+            <div data-summary-master-chips></div>
           </div>
+          <strong data-selected-master-display hidden>—</strong>
         </div>
       </div>
     </section>
