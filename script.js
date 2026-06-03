@@ -281,7 +281,7 @@
       e.preventDefault();
       closeNav();
       var targetSection = document.getElementById(sectionId);
-      if (targetSection) targetSection.removeAttribute("hidden");
+      if (targetSection && sectionId !== "teenused") targetSection.removeAttribute("hidden");
       scrollToSectionTitle(sectionId, hash);
     });
   });
