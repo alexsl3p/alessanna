@@ -356,24 +356,46 @@
     var groupsEls = teamRoot.querySelectorAll(".team-group");
     if (!groupsEls.length) return;
 
-    var teenusedRoot = document.getElementById("teenused");
-    var showAllMastersMode = !!(
-      teenusedRoot &&
-      (teenusedRoot.classList.contains("price-list-open") ||
-        teenusedRoot.classList.contains("services-list-open"))
+    /* Источник истины для блока «Мастера» — конкретные выбранные услуги
+     * (li.is-picked в прайсе). Если стрижка выбрана — показываем только
+     * мастеров категории «стрижка». Несколько услуг из разных категорий →
+     * показываем все их категории. Читаем из DOM, потому что picked[] живёт
+     * в другом IIFE. */
+    var wantedKeys = {};
+    var hasWanted = false;
+    var pickedRows = document.querySelectorAll(
+      "#teenused .tab-panel[data-pick-category] .menu-list li.is-picked",
     );
-
-    var activeBtn = document.querySelector("#teenused .tab-btn.is-active");
-    var targetPanel = null;
-    if (activeBtn) {
-      var targetId = activeBtn.getAttribute("aria-controls");
-      if (targetId) targetPanel = document.getElementById(targetId);
+    for (var p = 0; p < pickedRows.length; p++) {
+      var panel = pickedRows[p].closest(".tab-panel[data-pick-category]");
+      if (!panel) continue;
+      var pk = normalizeCategoryKey(panel.getAttribute("data-pick-category"));
+      if (pk) {
+        wantedKeys[pk] = true;
+        hasWanted = true;
+      }
     }
-    var wantedKey = normalizeCategoryKey(
-      targetPanel ? targetPanel.getAttribute("data-pick-category") : "",
-    );
 
-    if (showAllMastersMode || !wantedKey) {
+    /* Нет выбранной услуги — ориентир на активную категорию (открытый таб),
+     * чтобы при простом просмотре список мастеров уже соответствовал тому,
+     * что человек смотрит сверху. */
+    if (!hasWanted) {
+      var activeBtn = document.querySelector("#teenused .tab-btn.is-active");
+      var targetPanel = null;
+      if (activeBtn) {
+        var targetId = activeBtn.getAttribute("aria-controls");
+        if (targetId) targetPanel = document.getElementById(targetId);
+      }
+      var wantedKey = normalizeCategoryKey(
+        targetPanel ? targetPanel.getAttribute("data-pick-category") : "",
+      );
+      if (wantedKey) {
+        wantedKeys[wantedKey] = true;
+        hasWanted = true;
+      }
+    }
+
+    if (!hasWanted) {
       groupsEls.forEach(function (el) {
         el.hidden = false;
       });
@@ -382,8 +404,8 @@
 
     var matched = 0;
     groupsEls.forEach(function (el) {
-      var key = String(el.getAttribute("data-category-name") || "").trim();
-      var on = key === wantedKey;
+      var key = normalizeCategoryKey(el.getAttribute("data-category-name"));
+      var on = !!wantedKeys[key];
       el.hidden = !on;
       if (on) matched++;
     });
