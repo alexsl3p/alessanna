@@ -327,6 +327,8 @@
     });
 
     applyTeamFilterForActiveTab();
+    var meistridSection = document.getElementById("meistrid");
+    if (meistridSection) meistridSection.removeAttribute("hidden");
     if (isServicesMode || isPriceMode) {
       requestAnimationFrame(function () {
         var panel = document.getElementById(targetId);
@@ -418,6 +420,8 @@
       });
 
       applyTeamFilterForActiveTab();
+      var meistridSection = document.getElementById("meistrid");
+      if (meistridSection) meistridSection.removeAttribute("hidden");
 
       var firstPriceBlock = teenused.querySelector(".price-panel-title");
       if (firstPriceBlock) {
@@ -448,6 +452,8 @@
       });
 
       applyTeamFilterForActiveTab();
+      var meistridSection = document.getElementById("meistrid");
+      if (meistridSection) meistridSection.removeAttribute("hidden");
       requestAnimationFrame(function () {
         scrollToSectionTitle("teenused", "#teenused");
       });
