@@ -287,7 +287,13 @@
         return;
       }
       var targetSection = document.getElementById(sectionId);
-      if (targetSection && sectionId !== "teenused") targetSection.removeAttribute("hidden");
+      /* #teenused открывается только кнопками «Услуги»/«Прайс лист»,
+       * #meistrid — только после выбора конкретной услуги (см.
+       * updateTeamSectionVisibility). Поэтому навигационные ссылки на них
+       * не снимают `hidden` сами. */
+      if (targetSection && sectionId !== "teenused" && sectionId !== "meistrid") {
+        targetSection.removeAttribute("hidden");
+      }
       scrollToSectionTitle(sectionId, hash);
     });
   });
