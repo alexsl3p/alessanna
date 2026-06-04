@@ -321,7 +321,7 @@
     btn.setAttribute("aria-selected", "true");
 
     scope.querySelectorAll(".tab-panel").forEach(function (panel) {
-      var show = isPriceMode || panel.id === targetId;
+      var show = panel.id === targetId;
       panel.hidden = !show;
       panel.classList.toggle("is-active", show);
     });
@@ -434,8 +434,8 @@
       var teenused = document.getElementById("teenused");
       if (!teenused) return;
       teenused.removeAttribute("hidden");
-      teenused.classList.add("price-list-open");
-      teenused.classList.remove("services-list-open");
+      teenused.classList.add("services-list-open");
+      teenused.classList.remove("price-list-open");
 
       teenused.querySelectorAll(".tab-btn").forEach(function (tab) {
         tab.classList.remove("is-active");
@@ -1758,6 +1758,7 @@
       updateDock();
       syncTeamGroupsVisibility();
       syncTeamMasterEligibility();
+      applyTeamFilterForActiveTab();
       /* После изменения корзины мастера пере-фильтруем по реальным
        * staff_services из CRM (через filterMastersByFormCategory):
        * не оставляем «лишних» сотрудников disabled, а полностью убираем
