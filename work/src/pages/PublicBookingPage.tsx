@@ -17,7 +17,6 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
-import { formatGoogleCalendarFnError } from "../lib/formatGoogleCalendarFnError";
 import {
   compareSalonYmd,
   gregorianAddDays,
@@ -861,29 +860,27 @@ export function PublicBookingPage() {
       void loadDayData();
       return;
     }
-    const end = new Date(pickedStart.getTime() + durationMin * 60 * 1000);
     const noteTrim = clientNote.trim();
     try {
-      const { data, error: fnError } = await supabase.functions.invoke("google-calendar-sync", {
-        body: {
-          mode: "website_booking",
-          staffId: finalStaffId,
-          serviceId: svc.id,
-          clientName: normalizedClientName || "Клиент",
-          clientPhone: clientPhone.trim() || "",
-          startTime: pickedStart.toISOString(),
-          endTime: end.toISOString(),
-          ...(noteTrim ? { note: noteTrim } : {}),
-        },
+      const { data, error: rpcError } = await supabase.rpc("public_book_chain", {
+        p_client_name: normalizedClientName || "Клиент",
+        p_client_phone: clientPhone.trim() || "",
+        p_client_note: noteTrim || null,
+        p_start_at: pickedStart.toISOString(),
+        p_items: [{ service_id: svc.id, staff_id: finalStaffId }],
+        p_source: "public_site",
+        p_created_by_staff_id: null,
       });
       setBooking(false);
-      if (fnError) {
-        setMsg(fnError.message || "Не удалось связаться с сервером записи.");
+      if (rpcError) {
+        setMsg(rpcError.message || "Не удалось связаться с сервером записи.");
         return;
       }
       const payload = data ?? {};
       if ((payload as { ok?: boolean }).ok !== true) {
-        const errText = formatGoogleCalendarFnError(payload);
+        const errText =
+          String((payload as { message?: unknown }).message || (payload as { error?: unknown }).error || "") ||
+          "Запись не создана.";
         setMsg(errText);
         if (/slot|занят|no longer available/i.test(errText)) {
           void loadDayData();

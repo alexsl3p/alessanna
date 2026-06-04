@@ -23,53 +23,6 @@ import type { AppointmentRow } from "../types/database";
 
 type StaffName = { id: string; name: string };
 type ServiceName = { id: string; name: string };
-type SyncStatus = { status: "pending" | "sent" | "error"; last_error: string | null };
-
-const LEGACY_SKIPPED_HINT =
-  "Legacy skipped: Google scope was disconnected when the booking was created.";
-
-function mergeGoogleSyncByAppointment(
-  rows: Array<{ appointment_id: string | null; status: string; last_error: string | null }>,
-): Record<string, SyncStatus> {
-  type Agg = { rank: number; status: SyncStatus["status"]; errors: string[] };
-  const rank = (raw: string): number => {
-    if (raw === "error" || raw === "skipped") return 3;
-    if (raw === "pending") return 2;
-    if (raw === "sent") return 1;
-    return 0;
-  };
-  const map = new Map<string, Agg>();
-  for (const r of rows) {
-    if (!r.appointment_id) continue;
-    const raw = r.status;
-    const st: SyncStatus["status"] | null =
-      raw === "skipped"
-        ? "error"
-        : raw === "pending" || raw === "sent" || raw === "error"
-          ? raw
-          : null;
-    if (st === null) continue;
-    const rnk = rank(raw);
-    const err =
-      raw === "skipped" ? (r.last_error?.trim() ? r.last_error : LEGACY_SKIPPED_HINT) : r.last_error;
-    const cur = map.get(r.appointment_id);
-    if (!cur || rnk > cur.rank) {
-      map.set(r.appointment_id, {
-        rank: rnk,
-        status: st,
-        errors: err ? [err] : [],
-      });
-    } else if (cur && rnk === cur.rank && rnk >= 3 && err) {
-      cur.errors.push(err);
-    }
-  }
-  const out: Record<string, SyncStatus> = {};
-  for (const [id, v] of map) {
-    const joined = [...new Set(v.errors.map((e) => e.trim()).filter(Boolean))].join("; ");
-    out[id] = { status: v.status, last_error: joined || null };
-  }
-  return out;
-}
 
 type StatusFilter = "all" | "active" | "pending" | "confirmed" | "cancelled";
 type SourceSort = "none" | "asc" | "desc";
@@ -98,7 +51,6 @@ export function BookingsPage() {
   const [services, setServices] = useState<ServiceName[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [syncByAppointment, setSyncByAppointment] = useState<Record<string, SyncStatus>>({});
 
   /* фильтры/поиск */
   const [search, setSearch] = useState("");
@@ -118,18 +70,11 @@ export function BookingsPage() {
      * (bigint) и актуальный `service_listings` (uuid). Грузим оба источника и мёржим
      * по стринговому id — иначе в колонке «Услуга» у новых записей всегда прочерк. */
     try {
-      const [b, e, legacySvc, listingSvc, outbox] = await Promise.all([
+      const [b, e, legacySvc, listingSvc] = await Promise.all([
         q,
         supabase.from("staff").select("id,name"),
         supabase.from("services").select("id,name_et"),
         supabase.from("service_listings").select("id,name"),
-        supabase
-          .from("notifications_outbox")
-          .select("appointment_id,status,last_error,created_at")
-          .eq("kind", "google_calendar_event")
-          .in("status", ["pending", "sent", "error", "skipped"])
-          .order("created_at", { ascending: false })
-          .limit(1500),
       ]);
       if (b.error) throw b.error;
       if (b.data) setRows(b.data as AppointmentRow[]);
@@ -146,19 +91,6 @@ export function BookingsPage() {
         }
       }
       setServices(merged);
-      if (outbox.data) {
-        setSyncByAppointment(
-          mergeGoogleSyncByAppointment(
-            outbox.data as Array<{
-              appointment_id: string | null;
-              status: string;
-              last_error: string | null;
-            }>,
-          ),
-        );
-      } else {
-        setSyncByAppointment({});
-      }
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : t("bookings.loadError"));
     } finally {
@@ -289,17 +221,6 @@ export function BookingsPage() {
     await load();
   }
 
-  async function retrySync(id: string) {
-    const { error } = await supabase.functions.invoke("google-calendar-sync", {
-      body: { mode: "drain", appointmentId: id },
-    });
-    if (error) {
-      window.alert(`Retry sync failed: ${error.message}`);
-      return;
-    }
-    await load();
-  }
-
   function statusLabel(status: string) {
     if (status === "pending") return t("bookings.statusPending");
     if (status === "confirmed") return t("bookings.statusConfirmed");
@@ -353,38 +274,6 @@ export function BookingsPage() {
     if (f === "pending") return t("bookings.filterPending");
     if (f === "confirmed") return t("bookings.filterConfirmed");
     return t("bookings.filterCancelled");
-  }
-
-  function syncMeta(row: AppointmentRow): { label: string; tone: string; error?: string | null } | null {
-    const s = syncByAppointment[row.id];
-    if (s) {
-      if (s.status === "pending") {
-        return { label: "sync pending", tone: "border-amber-800/60 bg-amber-950/40 text-amber-200" };
-      }
-      if (s.status === "error") {
-        return {
-          label: "sync failed",
-          tone: "border-red-800/60 bg-red-950/40 text-red-200",
-          error: s.last_error,
-        };
-      }
-      return { label: "synced", tone: "border-emerald-800/60 bg-emerald-950/40 text-emerald-200" };
-    }
-    const src = String(row.source ?? "").toLowerCase();
-    if (src === "public_site" && row.google_event_id) {
-      return { label: "synced", tone: "border-emerald-800/60 bg-emerald-950/40 text-emerald-200" };
-    }
-    if (src === "public_site" && !row.google_event_id) {
-      return {
-        label: t("bookings.googleMissing", { defaultValue: "Нет в Google" }),
-        tone: "border-amber-800/60 bg-amber-950/40 text-amber-200",
-        error: t("bookings.googleMissingHint", {
-          defaultValue:
-            "Запись с сайта без google_event_id — событие в Google не создано или не привязано. Проверьте Integrations и логи Edge Function.",
-        }),
-      };
-    }
-    return null;
   }
 
   return (
@@ -461,7 +350,7 @@ export function BookingsPage() {
               >
                 {t("bookings.siteBookingAlert", {
                   defaultValue:
-                    "Новая запись с сайта: {{client}}, {{when}}{{staff}}. Проверьте, что событие появилось в Google Calendar.",
+                    "Новая запись с сайта: {{client}}, {{when}}{{staff}}.",
                   client: a.client,
                   when: whenLabel,
                   staff: staff ? `, ${staff.name}` : "",
@@ -535,7 +424,6 @@ export function BookingsPage() {
                 const em = staffNames.find((x) => x.id === b.staff_id);
                 const sv = services.find((x) => x.id === String(b.service_id));
                 const src = sourceMeta(b.source);
-                const sync = syncMeta(b);
                 const acceptedBy = b.created_by_staff_id
                   ? staffNames.find((x) => x.id === b.created_by_staff_id)
                   : null;
@@ -615,27 +503,6 @@ export function BookingsPage() {
                           })}
                         </div>
                       )}
-                      {sync && (
-                        <div className="mt-1 max-w-[280px]">
-                          <span
-                            className={
-                              "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide " +
-                              sync.tone
-                            }
-                            title={sync.error ?? undefined}
-                          >
-                            {sync.label}
-                          </span>
-                          {sync.error && (
-                            <p
-                              className="mt-1 text-[10px] leading-snug text-red-300/90 break-words"
-                              title={sync.error}
-                            >
-                              {sync.error}
-                            </p>
-                          )}
-                        </div>
-                      )}
                     </td>
                     {(canManage || (isWorkerOnlyEffective && staffMember)) && (
                       <td className="px-4 py-3">
@@ -658,17 +525,6 @@ export function BookingsPage() {
                               {t("bookings.delete", { defaultValue: "Удалить" })}
                             </button>
                           )}
-                          {sync?.label === "sync failed" &&
-                            (canManage ||
-                              (isWorkerOnlyEffective && staffMember && b.staff_id === staffMember.id)) && (
-                              <button
-                                type="button"
-                                onClick={() => void retrySync(b.id)}
-                                className="text-xs text-amber-300 hover:text-amber-200"
-                              >
-                                Retry sync
-                              </button>
-                            )}
                         </div>
                       </td>
                     )}

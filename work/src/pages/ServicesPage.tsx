@@ -20,6 +20,15 @@ function normServiceName(n: string): string {
   return String(n || "").trim().toLowerCase();
 }
 
+function cleanCategoryName(name: unknown): string {
+  return String(name || "").trim();
+}
+
+function isHiddenCategoryName(name: unknown): boolean {
+  const clean = cleanCategoryName(name);
+  return clean === "Без категории" || clean === "Все услуги";
+}
+
 /** Сравнение staff_id / service_id из PostgREST (регистр, пробелы). */
 function normId(id: string | number | null | undefined): string {
   return String(id ?? "")
@@ -249,10 +258,12 @@ export function ServicesPage() {
   }
 
   function categoryNameFromService(service: ServiceRow, catList: CategoryRow[] = categories): string {
-    const direct = String(service.category || "").trim();
+    const direct = cleanCategoryName(service.category);
+    if (isHiddenCategoryName(direct)) return "";
     if (direct) return direct;
     const byId = catList.find((c) => String(c.id) === String(service.category_id || ""));
-    return String(byId?.name || "").trim();
+    const byIdName = cleanCategoryName(byId?.name);
+    return isHiddenCategoryName(byIdName) ? "" : byIdName;
   }
 
   function mapModernServices(rows: Array<Record<string, unknown>>): ServiceRow[] {
@@ -378,15 +389,17 @@ export function ServicesPage() {
 
     const cLegacy = await supabase.from("categories").select("*").order("created_at", { ascending: true });
     if (!cLegacy.error && cLegacy.data) {
-      loadedCategories = cLegacy.data as CategoryRow[];
+      loadedCategories = (cLegacy.data as CategoryRow[]).filter((c) => !isHiddenCategoryName(c.name));
       setCategories(loadedCategories);
     } else {
       const cModern = await supabase.from("service_categories").select("id,name").order("created_at", { ascending: true });
       if (cModern.data) {
-        loadedCategories = (cModern.data as Array<{ id: string; name: string }>).map((r) => ({
-          id: String(r.id) as unknown as number,
-          name: String(r.name || ""),
-        }));
+        loadedCategories = (cModern.data as Array<{ id: string; name: string }>)
+          .filter((r) => !isHiddenCategoryName(r.name))
+          .map((r) => ({
+            id: String(r.id) as unknown as number,
+            name: cleanCategoryName(r.name),
+          }));
         setCategories(loadedCategories);
       }
     }
@@ -548,6 +561,7 @@ export function ServicesPage() {
   async function addCategory() {
     if (!newCat.trim() || !canManage) return;
     const categoryName = newCat.trim();
+    if (isHiddenCategoryName(categoryName)) return;
     const legacyInsert = await supabase.from("categories").insert({ name: categoryName });
     if (legacyInsert.error) {
       const modernInsert = await supabase.from("service_categories").insert({ name: categoryName });
@@ -597,10 +611,11 @@ export function ServicesPage() {
   async function deleteCategory(category: CategoryRow) {
     if (!canManage) return;
     const categoryName = String(category.name || "").trim();
+    if (isHiddenCategoryName(categoryName)) return;
     const servicesInCategory = services.filter((s) => categoryNameFromService(s) === categoryName);
     const extra =
       servicesInCategory.length > 0
-        ? `\n\n${servicesInCategory.length} услуг перейдут в "Без категории".`
+        ? `\n\n${servicesInCategory.length} услуг останутся без категории и не будут показываться в списке категорий.`
         : "";
     if (!window.confirm(`Удалить категорию "${categoryName}"?${extra}`)) return;
 
@@ -780,7 +795,9 @@ export function ServicesPage() {
   }
 
   function openQuickCreate(categoryName: string) {
-    setQuickCreateCategory(categoryName || "");
+    const clean = cleanCategoryName(categoryName);
+    if (!clean || isHiddenCategoryName(clean)) return;
+    setQuickCreateCategory(clean);
     setQuickName(i18n.t("services.newServiceDefault"));
     setQuickPriceEur("30");
     setQuickDuration("60");
@@ -1029,12 +1046,12 @@ export function ServicesPage() {
         )
       : null;
 
-    let pool = services;
+    let pool = services.filter((s) => Boolean(categoryNameFromService(s)));
     if (q) pool = pool.filter((s) => String(s.name_et || "").toLowerCase().includes(q));
     if (filterActive === "active") pool = pool.filter((s) => s.active !== false);
     if (filterActive === "inactive") pool = pool.filter((s) => s.active === false);
     if (filterNoMasters) {
-      pool = pool.filter((s) => staffLinksForService(String(s.id)).length === 0);
+      pool = pool.filter((s) => Boolean(categoryNameFromService(s)) && staffLinksForService(String(s.id)).length === 0);
     }
     if (filterNotOnMain) {
       pool = pool.filter((s) => !publicListingNames.has(String(s.name_et || "").trim().toLowerCase()));
@@ -1059,7 +1076,8 @@ export function ServicesPage() {
 
     const map = new Map<string, ServiceRow[]>();
     for (const service of pool) {
-      const categoryName = categoryNameFromService(service) || "Без категории";
+      const categoryName = categoryNameFromService(service);
+      if (!categoryName) continue;
       if (!map.has(categoryName)) map.set(categoryName, []);
       map.get(categoryName)?.push(service);
     }
@@ -1068,7 +1086,7 @@ export function ServicesPage() {
     if (noFilters) {
       for (const c of categories) {
         const name = String(c.name || "").trim();
-        if (name && name !== "Все услуги" && !map.has(name)) map.set(name, []);
+        if (name && !isHiddenCategoryName(name) && !map.has(name)) map.set(name, []);
       }
     }
     for (const list of map.values()) list.sort(compare);
@@ -1078,7 +1096,6 @@ export function ServicesPage() {
     const catOrder = new Map<string, number>();
     categories.forEach((c, i) => catOrder.set(String(c.name || "").trim(), i));
     return Array.from(map.entries())
-      .filter(([categoryName]) => categoryName !== "Без категории")
       .sort((a, b) => {
         const ia = catOrder.has(a[0]) ? catOrder.get(a[0])! : Number.MAX_SAFE_INTEGER;
         const ib = catOrder.has(b[0]) ? catOrder.get(b[0])! : Number.MAX_SAFE_INTEGER;
@@ -1100,18 +1117,19 @@ export function ServicesPage() {
 
   /** Quick top-of-page stats: active/total services + masters coverage. */
   const servicesStats = useMemo(() => {
-    const total = services.length;
-    const active = services.filter((s) => s.active).length;
+    const categorizedServices = services.filter((s) => Boolean(categoryNameFromService(s)));
+    const total = categorizedServices.length;
+    const active = categorizedServices.filter((s) => s.active).length;
     const onSite = publicListingNames.size;
     /* «Без мастеров» — активные услуги, у которых в staff_services нет ни одной
      * привязки. Совпадает с подсветкой карточек ниже (см. noMasters в списке)
      * и с фильтром filterNoMasters в тулбаре, чтобы клик по чипу открывал ровно
      * те же карточки, что выделены жёлтым. */
-    const noMasters = services.filter(
+    const noMasters = categorizedServices.filter(
       (s) => s.active && staffLinksForService(String(s.id)).length === 0,
     ).length;
     return { total, active, onSite, noMasters };
-  }, [services, publicListingNames, serviceStaffLinksMap]);
+  }, [services, categories, publicListingNames, serviceStaffLinksMap]);
 
   if (loading) return <p className="text-muted">{t("common.loading")}</p>;
 
@@ -1430,10 +1448,8 @@ export function ServicesPage() {
           ).length;
           const isCatCollapsed = !openCats.has(categoryName);
           const categoryForGroup =
-            categoryName === "Без категории"
-              ? null
-              : categories.find((c) => String(c.name || "").trim() === categoryName) ??
-                ({ id: categoryName as unknown as number, name: categoryName } as CategoryRow);
+            categories.find((c) => String(c.name || "").trim() === categoryName) ??
+            ({ id: categoryName as unknown as number, name: categoryName } as CategoryRow);
           return (
           <section
             key={categoryName}
@@ -1528,7 +1544,7 @@ export function ServicesPage() {
                   )}
                   <button
                     type="button"
-                    onClick={() => openQuickCreate(categoryName === "Без категории" ? "" : categoryName)}
+                    onClick={() => openQuickCreate(categoryName)}
                     className="flex h-7 w-7 items-center justify-center rounded text-muted transition hover:bg-line/[0.07] hover:text-fg"
                     title="Добавить услугу"
                   >
@@ -1835,7 +1851,7 @@ export function ServicesPage() {
                   <p className="text-sm text-muted">В этой категории пока нет услуг.</p>
                   <button
                     type="button"
-                    onClick={() => openQuickCreate(categoryName === "Без категории" ? "" : categoryName)}
+                    onClick={() => openQuickCreate(categoryName)}
                     className="mt-2 text-xs text-muted transition hover:text-fg"
                   >
                     + Добавить первую услугу
@@ -1854,7 +1870,7 @@ export function ServicesPage() {
           <div className="w-full max-w-md rounded-xl border border-line/15 bg-panel p-5">
             <h3 className="text-base font-semibold text-fg">Быстрое создание услуги</h3>
             <p className="mt-1 text-xs text-muted">
-              Категория: {String(quickCreateCategory || "Без категории")}
+              Категория: {String(quickCreateCategory || "")}
             </p>
 
             <div className="mt-4 space-y-3">
@@ -1932,7 +1948,7 @@ export function ServicesPage() {
               <button
                 type="button"
                 onClick={() => void createServiceFromQuickForm()}
-                className="rounded-md bg-sky-600 px-3 py-2 text-xs font-medium text-fg hover:bg-sky-500"
+                className="rounded-md border border-line/20 bg-surface/40 px-3 py-2 text-xs font-medium text-fg transition hover:border-gold/35 hover:bg-surface hover:text-gold"
               >
                 Создать услугу
               </button>

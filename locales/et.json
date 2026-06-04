@@ -65,7 +65,6 @@
     "adminTimeOff": "Vabad ajad",
     "adminSupport": "Sissetulnud",
     "profileSecurity": "Turvalisus",
-    "adminIntegrations": "Integratsioonid",
     "adminSiteSettings": "Saidi seaded",
     "myHelp": "Abi",
     "analytics": "Analüütika",
@@ -475,7 +474,7 @@
     "switchUser": "Vaheta kasutajat",
     "logoutToReception": "Välju vastuvõtu ekraanile",
     "workspaceTitle": "Vastuvõtt — graafik",
-    "workspaceSubtitle": "Põhiekraan: kalender nagu Google Calendaris. Vaba lahter või nupp «Tee broneering» — uus kirje.",
+    "workspaceSubtitle": "Põhiekraan: salongi kalender. Vaba lahter või nupp «Tee broneering» — uus kirje.",
     "layout": {
       "edit": "Kohanda blokke",
       "done": "Valmis",

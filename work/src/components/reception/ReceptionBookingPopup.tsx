@@ -79,7 +79,11 @@ export function ReceptionBookingPopup({
   );
 
   const eligibleServices = useMemo(
-    () => servicesEligibleForStaff(services, links, staffId, selectedStaff),
+    () =>
+      servicesEligibleForStaff(services, links, staffId, selectedStaff, {
+        implicitAll: false,
+        privilegedCanDoAll: false,
+      }),
     [services, links, staffId, selectedStaff],
   );
 

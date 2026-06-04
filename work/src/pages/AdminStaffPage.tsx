@@ -156,162 +156,6 @@ function isMissingStaffMarketingColumnError(err: { message?: string } | null | u
   );
 }
 
-/** Базовая проверка e-mail — синхронизирована с CHECK-constraint миграции 025. */
-function isPlausibleEmail(raw: string): boolean {
-  const v = String(raw || "").trim();
-  if (!v) return true;
-  return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v);
-}
-
-/**
- * Инлайновое поле «календарь сотрудника»: сохраняется по blur/Enter.
- * Пишем сразу в `staff.calendar_email`; миграция 025 добавляет колонку и
- * CHECK-валидатор. Ошибка валидации показывается через `onError`.
- */
-function StaffCalendarEmailField(props: {
-  row: StaffTableRow;
-  onSaved: () => void;
-  onError: (msg: string | null) => void;
-}) {
-  const initial = (props.row as StaffTableRow & { calendar_email?: string | null }).calendar_email ?? "";
-  const [value, setValue] = useState<string>(initial ?? "");
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    setValue(initial ?? "");
-  }, [initial]);
-
-  async function commit() {
-    const trimmed = value.trim();
-    if (trimmed === (initial ?? "").trim()) return;
-    if (!isPlausibleEmail(trimmed)) {
-      props.onError("Проверьте формат e-mail или очистите поле.");
-      return;
-    }
-    props.onError(null);
-    setSaving(true);
-    const { error } = await supabase
-      .from("staff")
-      .update({ calendar_email: trimmed === "" ? null : trimmed })
-      .eq("id", props.row.id);
-    setSaving(false);
-    if (error) {
-      props.onError(error.message);
-      return;
-    }
-    props.onSaved();
-  }
-
-  return (
-    <input
-      type="email"
-      autoComplete="email"
-      spellCheck={false}
-      disabled={saving}
-      placeholder="master@gmail.com"
-      value={value}
-      onChange={(e) => setValue(e.target.value)}
-      onBlur={() => void commit()}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          (e.currentTarget as HTMLInputElement).blur();
-        }
-      }}
-      className="w-full rounded border border-line/20 bg-canvas px-2 py-1 text-xs text-fg focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold/30 disabled:opacity-60"
-    />
-  );
-}
-
-/**
- * Общий Google-календарь салона: храним в `salon_settings` под ключом
- * `salon_calendar_email`. Этот адрес — целевой календарь, куда будущая
- * интеграция будет записывать все брони салона.
- */
-function SalonCalendarSettingsCard(props: { onError: (msg: string | null) => void }) {
-  const [value, setValue] = useState<string>("");
-  const [initial, setInitial] = useState<string>("");
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-
-  const load = useCallback(async () => {
-    const { data, error } = await supabase
-      .from("salon_settings")
-      .select("value")
-      .eq("key", "salon_calendar_email")
-      .maybeSingle();
-    if (error) {
-      props.onError(error.message);
-      setLoading(false);
-      return;
-    }
-    const v = (data?.value ?? "") as string;
-    setInitial(v);
-    setValue(v);
-    setLoading(false);
-  }, [props]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  async function save() {
-    const trimmed = value.trim();
-    if (!isPlausibleEmail(trimmed)) {
-      props.onError("Проверьте формат e-mail или очистите поле.");
-      return;
-    }
-    props.onError(null);
-    setSaving(true);
-    const { error } = await supabase
-      .from("salon_settings")
-      .upsert({ key: "salon_calendar_email", value: trimmed === "" ? null : trimmed }, { onConflict: "key" });
-    setSaving(false);
-    if (error) {
-      props.onError(error.message);
-      return;
-    }
-    setInitial(trimmed);
-  }
-
-  const dirty = value.trim() !== initial.trim();
-
-  return (
-    <section className="mt-4 rounded-lg border border-line/15 bg-panel/60 p-3">
-      <header className="mb-1 flex items-baseline justify-between gap-2">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
-          Общий Google-календарь салона
-        </p>
-        <span className="text-[10px] text-muted">salon_settings.salon_calendar_email</span>
-      </header>
-      <p className="mb-2 text-[11px] leading-snug text-muted">
-        Рабочая почта салона — в этот календарь попадут все записи (сейчас только хранится,
-        реальная синхронизация с Google Calendar будет подключена отдельным шагом).
-      </p>
-      <div className="flex gap-2">
-        <input
-          type="email"
-          autoComplete="email"
-          spellCheck={false}
-          disabled={loading || saving}
-          placeholder="salon@gmail.com"
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          className="flex-1 rounded border border-line/20 bg-canvas px-2 py-1 text-sm text-fg focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold/30 disabled:opacity-60"
-        />
-        <button
-          type="button"
-          onClick={() => void save()}
-          disabled={loading || saving || !dirty}
-          className="rounded bg-sky-600 px-3 py-1 text-xs font-medium text-fg hover:bg-sky-500 disabled:opacity-40"
-        >
-          Сохранить
-        </button>
-      </div>
-    </section>
-  );
-}
-
 export function AdminStaffPage() {
   const { t } = useTranslation();
   const { staffMember } = useAuth();
@@ -1224,7 +1068,6 @@ export function AdminStaffPage() {
       <header>
         <h1 className="text-xl font-semibold text-fg">{t("nav.adminStaff")}</h1>
         <p className="mt-1 text-sm text-muted">{t("adminStaff.subtitle")}</p>
-        <SalonCalendarSettingsCard onError={setErr} />
       </header>
 
       {staffMarketingColumnMissing && (
@@ -1349,7 +1192,7 @@ export function AdminStaffPage() {
         </div>
           <button
             type="submit"
-            className="inline-flex h-9 items-center justify-center rounded-md bg-sky-600 px-4 text-sm font-semibold text-fg shadow-sm shadow-sky-950/40 transition hover:bg-sky-500 active:bg-sky-700"
+            className="inline-flex h-9 items-center justify-center rounded-md border border-line/20 bg-surface/40 px-4 text-sm font-semibold text-fg transition hover:border-gold/35 hover:bg-surface hover:text-gold active:bg-canvas/80"
           >
           {t("common.add")}
         </button>
@@ -1459,25 +1302,58 @@ export function AdminStaffPage() {
                         </button>
                       </div>
                     </td>
-                    <td className="space-x-2 px-3 py-2 whitespace-nowrap">
+                    <td className="px-3 py-2 whitespace-nowrap">
                       {editingId === r.id ? (
-                        <>
-                          <button type="button" className="text-gold underline" onClick={() => void saveEdit()}>
-                            {t("common.save")}
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            className="flex h-7 w-7 items-center justify-center rounded text-emerald-300/75 transition hover:bg-emerald-300/[0.08] hover:text-emerald-200"
+                            onClick={() => void saveEdit()}
+                            title={t("common.save")}
+                            aria-label={t("common.save")}
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                              <path d="M20 6 9 17l-5-5"/>
+                            </svg>
                           </button>
-                          <button type="button" className="text-muted underline" onClick={() => setEditingId(null)}>
-                            {t("common.cancel")}
+                          <button
+                            type="button"
+                            className="flex h-7 w-7 items-center justify-center rounded text-muted transition hover:bg-line/[0.08] hover:text-fg"
+                            onClick={() => setEditingId(null)}
+                            title={t("common.cancel")}
+                            aria-label={t("common.cancel")}
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                              <path d="M18 6 6 18M6 6l12 12"/>
+                            </svg>
                           </button>
-                        </>
+                        </div>
                       ) : (
-                        <>
-                          <button type="button" className="text-gold underline" onClick={() => startEdit(r)}>
-                            {t("adminStaff.edit")}
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            className="flex h-7 w-7 items-center justify-center rounded text-muted transition hover:bg-line/[0.08] hover:text-fg"
+                            onClick={() => startEdit(r)}
+                            title={t("adminStaff.edit")}
+                            aria-label={t("adminStaff.edit")}
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5">
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                            </svg>
                           </button>
-                          <button type="button" className="text-red-400 underline" onClick={() => void remove(r)}>
-                            delete
+                          <button
+                            type="button"
+                            className="flex h-7 w-7 items-center justify-center rounded text-rose-300/60 transition hover:bg-rose-300/[0.08] hover:text-rose-300/90"
+                            onClick={() => void remove(r)}
+                            title={t("adminStaff.deletePermanent")}
+                            aria-label={t("adminStaff.deletePermanent")}
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                              <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                            </svg>
                           </button>
-                        </>
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -1515,16 +1391,6 @@ export function AdminStaffPage() {
                       );
                     })}
                   </div>
-                          </div>
-                          <div className="flex flex-col gap-1 rounded border border-line/15/80 p-2">
-                            <span className="text-[11px] font-medium uppercase text-muted">
-                              Календарь сотрудника
-                            </span>
-                            <StaffCalendarEmailField row={r} onSaved={() => void load()} onError={setErr} />
-                            <span className="text-[10px] leading-snug text-muted">
-                              Персональный e-mail для Google/Apple/Outlook календаря. На него будут
-                              приходить приглашения и ICS-файлы записей, когда подключим интеграцию.
-                            </span>
                           </div>
                           <div className="flex flex-col gap-1 rounded border border-line/15/80 p-2">
                             <span className="text-[11px] font-medium uppercase text-muted">
@@ -1934,18 +1800,18 @@ export function AdminStaffPage() {
 
       <section
         aria-label="Техническая команда, поддержка сайта"
-        className="mt-10 rounded-lg border border-amber-900/30 bg-gradient-to-br from-amber-950/20 via-zinc-950 to-black/60 p-4 shadow-inner shadow-black/40 sm:p-5"
+        className="mt-8 rounded-lg border border-line/15 bg-panel/40 p-4"
       >
         <header className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
           <div className="flex flex-wrap items-baseline gap-2">
-            <h2 className="text-sm font-semibold tracking-wide text-amber-100/90">
+            <h2 className="text-sm font-semibold text-fg">
               Техническая команда
             </h2>
-            <span className="text-[11px] tracking-wide text-amber-200/50">
-              · поддержка сайта и CRM
+            <span className="text-xs text-muted">
+              поддержка сайта и CRM
             </span>
           </div>
-          <span className="text-[11px] text-muted">
+          <span className="text-xs text-muted">
             не участвует в расписании салона
           </span>
         </header>
@@ -1956,23 +1822,16 @@ export function AdminStaffPage() {
             появится здесь, а не в таблице салона.
           </p>
         ) : (
-          <ul className="divide-y divide-amber-900/20">
+          <ul className="divide-y divide-line/15">
             {adminRows.map((r) => {
               const isOwner = String(r.role || "").toLowerCase() === "owner";
               const isEditing = editingId === r.id;
-              const initial = (r.name || "?").trim().slice(0, 1).toUpperCase();
               return (
                 <li
                   key={r.id}
-                  className="flex flex-wrap items-center gap-x-4 gap-y-2 py-2.5 text-sm"
+                  className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3 text-sm"
                 >
                   <div className="flex min-w-[9rem] flex-1 items-center gap-2.5">
-                    <span
-                      aria-hidden="true"
-                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-amber-800/40 bg-amber-900/25 text-[12px] font-semibold text-amber-200/85"
-                    >
-                      {initial}
-                    </span>
                     <div className="min-w-0 leading-tight">
                       {isEditing ? (
                         <input
@@ -1986,7 +1845,7 @@ export function AdminStaffPage() {
                           {r.name}
                         </span>
                       )}
-                      <span className="inline-flex items-center gap-1 rounded-full border border-amber-800/40 bg-amber-900/20 px-1.5 py-0.5 text-[9.5px] font-medium uppercase tracking-wide text-amber-200/80">
+                      <span className="mt-1 inline-flex items-center rounded border border-line/15 bg-surface/40 px-1.5 py-0.5 text-[9.5px] font-medium uppercase tracking-wide text-muted">
                         {isOwner ? "Owner" : "Админ"}
                       </span>
                     </div>
@@ -2029,41 +1888,57 @@ export function AdminStaffPage() {
 
                   <div className="ml-auto flex items-center gap-3 text-xs">
                     {isEditing ? (
-                      <>
+                      <div className="flex items-center gap-1.5">
                         <button
                           type="button"
-                          className="text-gold underline"
+                          className="flex h-7 w-7 items-center justify-center rounded text-emerald-300/75 transition hover:bg-emerald-300/[0.08] hover:text-emerald-200"
                           onClick={() => void saveEdit()}
+                          title={t("common.save")}
+                          aria-label={t("common.save")}
                         >
-                        {t("common.save")}
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                            <path d="M20 6 9 17l-5-5"/>
+                          </svg>
                       </button>
                         <button
                           type="button"
-                          className="text-muted underline"
+                          className="flex h-7 w-7 items-center justify-center rounded text-muted transition hover:bg-line/[0.08] hover:text-fg"
                           onClick={() => setEditingId(null)}
+                          title={t("common.cancel")}
+                          aria-label={t("common.cancel")}
                         >
-                        {t("common.cancel")}
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                            <path d="M18 6 6 18M6 6l12 12"/>
+                          </svg>
                       </button>
-                    </>
+                    </div>
                   ) : (
-                    <>
+                    <div className="flex items-center gap-1.5">
                         <button
                           type="button"
-                          className="text-gold underline"
+                          className="flex h-7 w-7 items-center justify-center rounded text-muted transition hover:bg-line/[0.08] hover:text-fg"
                           onClick={() => startEdit(r)}
+                          title={t("adminStaff.edit")}
+                          aria-label={t("adminStaff.edit")}
                         >
-                        {t("adminStaff.edit")}
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                          </svg>
                       </button>
                         <button
                           type="button"
-                          className="text-red-400 underline disabled:cursor-not-allowed disabled:opacity-40"
+                          className="flex h-7 w-7 items-center justify-center rounded text-rose-300/60 transition hover:bg-rose-300/[0.08] hover:text-rose-300/90 disabled:cursor-not-allowed disabled:opacity-30"
                           onClick={() => void remove(r)}
                           disabled={isOwner}
-                          title={isOwner ? "Owner удалять нельзя" : undefined}
+                          title={isOwner ? "Owner удалять нельзя" : t("adminStaff.deletePermanent")}
+                          aria-label={isOwner ? "Owner удалять нельзя" : t("adminStaff.deletePermanent")}
                         >
-                        delete
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                            <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                          </svg>
                       </button>
-                    </>
+                    </div>
                   )}
       </div>
                 </li>
@@ -2072,7 +1947,7 @@ export function AdminStaffPage() {
           </ul>
         )}
 
-        <p className="mt-3 border-t border-amber-900/20 pt-2 text-[10px] leading-snug text-muted">
+        <p className="mt-3 border-t border-line/15 pt-3 text-[10px] leading-snug text-muted">
           Администраторы всегда скрыты на публичном сайте и в онлайн-записи. Этот блок — техперсонал,
           обслуживающий CRM и сайт салона. Чтобы добавить нового админа, используйте форму выше и
           выберите роль «Админ» — сотрудник появится именно здесь.

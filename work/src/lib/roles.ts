@@ -161,12 +161,15 @@ export function servicesEligibleForStaff(
   services: ServiceRow[],
   links: StaffServiceRow[],
   staffId: string,
-  staffRow?: Pick<StaffMember, "roles" | "active"> | null
+  staffRow?: Pick<StaffMember, "roles" | "active"> | null,
+  options: { implicitAll?: boolean; privilegedCanDoAll?: boolean } = {}
 ): ServiceRow[] {
+  const { implicitAll = true, privilegedCanDoAll = true } = options;
   const active = services.filter((s) => s.active);
   const forSt = links.filter((l) => l.staff_id === staffId);
-  if (forSt.length === 0) return active;
+  if (forSt.length === 0) return implicitAll ? active : [];
   if (
+    privilegedCanDoAll &&
     staffRow?.active &&
     (hasStaffRole(staffRow, "manager") || hasStaffRole(staffRow, "admin"))
   ) {

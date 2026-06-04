@@ -265,7 +265,7 @@
     var top = target.getBoundingClientRect().top + window.scrollY - offset;
     window.scrollTo({ top: Math.max(0, top), behavior: reduceMotionMq.matches ? "auto" : "smooth" });
     if (hash && window.history && window.history.pushState) {
-      window.history.pushState(null, "", hash);
+      window.history.pushState(null, "", window.location.pathname + window.location.search + hash);
     }
     return true;
   }
@@ -280,8 +280,14 @@
       if (!sectionId) return;
       e.preventDefault();
       closeNav();
+      if (
+        sectionId === "teenused" &&
+        (link.hasAttribute("data-services-tabs-toggle") || link.hasAttribute("data-price-list-toggle"))
+      ) {
+        return;
+      }
       var targetSection = document.getElementById(sectionId);
-      if (targetSection) targetSection.removeAttribute("hidden");
+      if (targetSection && sectionId !== "teenused") targetSection.removeAttribute("hidden");
       scrollToSectionTitle(sectionId, hash);
     });
   });
@@ -295,10 +301,8 @@
     var targetId = btn.getAttribute("aria-controls");
     if (!targetId) return;
     var teenused = document.getElementById("teenused");
-    if (teenused) {
-      teenused.classList.remove("price-list-open");
-      teenused.classList.remove("services-list-open");
-    }
+    var isServicesMode = !!(teenused && teenused.classList.contains("services-list-open"));
+    var isPriceMode = !!(teenused && teenused.classList.contains("price-list-open"));
 
     var mount = btn.closest("#teenused-supabase-mount");
     var scope = mount || teenused;
@@ -311,7 +315,7 @@
     btn.setAttribute("aria-selected", "true");
 
     scope.querySelectorAll(".tab-panel").forEach(function (panel) {
-      var show = panel.id === targetId;
+      var show = isPriceMode || panel.id === targetId;
       panel.hidden = !show;
       panel.classList.toggle("is-active", show);
     });
@@ -319,6 +323,12 @@
     applyTeamFilterForActiveTab();
     var meistridSection = document.getElementById("meistrid");
     if (meistridSection) meistridSection.removeAttribute("hidden");
+    if (isServicesMode || isPriceMode) {
+      requestAnimationFrame(function () {
+        var panel = document.getElementById(targetId);
+        if (panel) panel.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
   });
 
   /**
@@ -385,9 +395,11 @@
   window.addEventListener("site-team-rendered", applyTeamFilterForActiveTab);
 
   document.querySelectorAll("[data-price-list-toggle]").forEach(function (btn) {
-    btn.addEventListener("click", function () {
+    btn.addEventListener("click", function (e) {
+      if (e) e.preventDefault();
       var teenused = document.getElementById("teenused");
       if (!teenused) return;
+      teenused.removeAttribute("hidden");
       teenused.classList.add("price-list-open");
       teenused.classList.remove("services-list-open");
 
@@ -416,8 +428,10 @@
 
   document.querySelectorAll("[data-services-tabs-toggle]").forEach(function (btn) {
     btn.addEventListener("click", function (e) {
+      if (e) e.preventDefault();
       var teenused = document.getElementById("teenused");
       if (!teenused) return;
+      teenused.removeAttribute("hidden");
       teenused.classList.add("price-list-open");
       teenused.classList.remove("services-list-open");
 
@@ -427,13 +441,16 @@
       });
 
       teenused.querySelectorAll(".tab-panel").forEach(function (panel) {
-        panel.hidden = false;
-        panel.classList.add("is-active");
+        panel.hidden = true;
+        panel.classList.remove("is-active");
       });
 
       applyTeamFilterForActiveTab();
       var meistridSection = document.getElementById("meistrid");
       if (meistridSection) meistridSection.removeAttribute("hidden");
+      requestAnimationFrame(function () {
+        scrollToSectionTitle("teenused", "#teenused");
+      });
     });
   });
 
@@ -766,8 +783,8 @@
      */
     function updateTeamSectionVisibility() {
       if (!teamRoot) return;
-      teamRoot.hidden = false;
       var hasPickedServices = picked.length > 0;
+      teamRoot.hidden = !hasPickedServices;
       if (hasPickedServices) {
         teamRoot.querySelectorAll(".reveal").forEach(function (el) {
           el.classList.add("is-visible");
@@ -778,7 +795,7 @@
     }
 
     function applyBookingCartVisibility() {
-      if (summary) summary.hidden = !bookingCartEnabled;
+      if (summary) summary.hidden = true;
     }
 
     function currentTeamGroupKey() {
@@ -1121,18 +1138,12 @@
     }
 
     function updateDock() {
-      if (!bookingCartEnabled) {
-        summary.classList.remove("selection-summary--dock");
-        summary.classList.remove("selection-summary--dock-collapsed");
-        document.body.classList.remove("selection-dock-active");
-        document.body.classList.remove("selection-dock-panel-collapsed");
-        updateCartCountBadge();
-        if (dockToggle) dockToggle.setAttribute("aria-expanded", "false");
-        return;
-      }
       var has = picked.length > 0;
-      summary.classList.toggle("selection-summary--dock", has);
-      document.body.classList.toggle("selection-dock-active", has);
+      summary.hidden = true;
+      summary.classList.remove("selection-summary--dock");
+      summary.classList.remove("selection-summary--dock-collapsed");
+      document.body.classList.remove("selection-dock-active");
+      document.body.classList.remove("selection-dock-panel-collapsed");
       updateCartCountBadge();
       if (!has) {
         summary.classList.remove("selection-summary--dock-collapsed");
@@ -1147,8 +1158,7 @@
          * пульсом на toggle (см. updateCartCountBadge). Если пользователь
          * затем сам развернет — это разовый жест в рамках сессии,
          * пересохранять preference не нужно. */
-        setDockCollapsed(true);
-        return;
+        if (dockToggle) dockToggle.setAttribute("aria-expanded", "true");
       }
       if (typeof updateSelectionDockOffset === "function") updateSelectionDockOffset();
     }
@@ -1190,8 +1200,8 @@
           btn.setAttribute("data-master-id", mid);
           btn.textContent = masterNameById(mid);
           btn.addEventListener("click", function () {
-            if (masterSelect && masterSelect.value === mid) applyMaster("");
-            else applyMaster(mid);
+            if (masterSelect && masterSelect.value === mid) applyMaster("", false);
+            else applyMaster(mid, true);
           });
           chipsEl.appendChild(btn);
         })(ids[c]);
@@ -1328,6 +1338,12 @@
     function scrollToMastersBlock() {
       requestAnimationFrame(function () {
         scrollToSectionTitle("meistrid");
+      });
+    }
+
+    function scrollToBookingBlock() {
+      requestAnimationFrame(function () {
+        scrollToSectionTitle("broneeri");
       });
     }
 
@@ -1523,7 +1539,7 @@
       return [];
     }
 
-    function applyPickMaster(pickKeyStr, staffIdOrAny) {
+    function applyPickMaster(pickKeyStr, staffIdOrAny, scrollAfter) {
       var changed = false;
       for (var i = 0; i < picked.length; i++) {
         if (picked[i].key === pickKeyStr) {
@@ -1537,6 +1553,7 @@
       if (changed) {
         renderList();
         updateBookingChainPreview();
+        if (staffIdOrAny && scrollAfter) scrollToBookingBlock();
       }
     }
 
@@ -1586,13 +1603,19 @@
     function propagateGlobalMasterToPicks() {
       if (!picked.length) return false;
       var formMaster = masterSelect ? String(masterSelect.value || "") : "";
+      if (!formMaster) return false;
       var changed = false;
       for (var i = 0; i < picked.length; i++) {
         var p = picked[i];
-        if (p.selectedMaster === ANY_MASTER_ID) continue;
-        var next = resolveDefaultMasterFor(p, formMaster || p.selectedMaster);
-        if (next && next !== p.selectedMaster) {
-          p.selectedMaster = next;
+        var canDo = formMaster === ANY_MASTER_ID;
+        if (!canDo) {
+          var allowed = mastersForSpecificPick(p);
+          canDo = allowed.some(function (m) {
+            return String(m.id) === formMaster;
+          });
+        }
+        if (canDo && formMaster !== p.selectedMaster) {
+          p.selectedMaster = formMaster;
           changed = true;
         }
       }
@@ -1627,7 +1650,7 @@
       anyBtn.setAttribute("aria-checked", pick.selectedMaster === ANY_MASTER_ID ? "true" : "false");
       anyBtn.textContent = anyMasterLabelForChip();
       anyBtn.addEventListener("click", function () {
-        applyPickMaster(pick.key, pick.selectedMaster === ANY_MASTER_ID ? "" : ANY_MASTER_ID);
+        applyPickMaster(pick.key, pick.selectedMaster === ANY_MASTER_ID ? "" : ANY_MASTER_ID, true);
       });
       host.appendChild(anyBtn);
 
@@ -1640,7 +1663,7 @@
           btn.setAttribute("aria-checked", pick.selectedMaster === String(m.id) ? "true" : "false");
           btn.textContent = m.name;
           btn.addEventListener("click", function () {
-            applyPickMaster(pick.key, pick.selectedMaster === String(m.id) ? "" : String(m.id));
+            applyPickMaster(pick.key, pick.selectedMaster === String(m.id) ? "" : String(m.id), true);
           });
           host.appendChild(btn);
         })(masters[i]);
@@ -1806,11 +1829,6 @@
          *   "<uuid>" = конкретный мастер. */
         selectedMaster: "",
       };
-      /* Сразу подставляем «лучшего» мастера: глобальный выбор формы или
-       * единственного валидного — иначе клиенту приходится отдельно кликать
-       * чип внутри карточки, и план дня висит «мастер не выбран» при том,
-       * что выбор очевиден. */
-      pick.selectedMaster = resolveDefaultMasterFor(pick, "");
       return pick;
     }
 
@@ -1981,7 +1999,6 @@
         masters: masters,
         selectedMaster: "",
       };
-      pick.selectedMaster = resolveDefaultMasterFor(pick, "");
       /* Режим «одна запись за раз»: выбор в форме тоже заменяет услугу. */
       picked = [pick];
       syncFormCategory();
@@ -2034,12 +2051,13 @@
       }
     }
 
-    function applyMaster(id) {
+    function applyMaster(id, scrollAfter) {
       if (!masterSelect) return;
       masterSelect.value = id || "";
       setMasterDisplayText(id ? masterNameById(id) : UI.masterNone);
       highlightTeam(id || "");
       masterSelect.dispatchEvent(new Event("change", { bubbles: true }));
+      if (id && scrollAfter) scrollToBookingBlock();
     }
 
     /**
@@ -2102,8 +2120,8 @@
                 }
               }
               if (found) {
-                if (masterSelect.value === id) applyMaster("");
-                else applyMaster(id);
+                if (masterSelect.value === id) applyMaster("", false);
+                else applyMaster(id, true);
                 return;
               }
               if (attempts++ < 20) setTimeout(tryApply, 50);
@@ -3138,6 +3156,8 @@
         p_client_phone: phoneVal || "",
         p_client_note: noteVal || "",
         p_start_at: startIso,
+        p_source: "public_site",
+        p_created_by_staff_id: null,
         p_items: items.map(function (it) {
           return {
             service_id: it.serviceId,
@@ -3222,78 +3242,6 @@
         "\n\n" +
         pubT("site.ui.priceDisclaimer", "Prices are indicative.")
       );
-    }
-
-    /** Одна услуга + конкретный мастер → Edge Function `website_booking` (сразу Google Calendar, затем CRM).
-     *  Без endTime: сервер считает конец по duration+buffer из service_listings.
-     *  Возвращает { handled, ok } или null → тогда вызывать public_book_chain. */
-    function trySubmitWebsiteBookingDirect(nameVal, phoneVal, noteVal) {
-      var chainApi = globalThis.__SITE_BOOKING_CHAIN__;
-      var items = chainApi && typeof chainApi.getItems === "function" ? chainApi.getItems() : [];
-      if (!items.length) {
-        var fb = resolveFallbackItemFromForm();
-        if (fb && fb.serviceId) items = [fb];
-      }
-      if (items.length !== 1) return Promise.resolve(null);
-      var it = items[0];
-      if (!it || !it.serviceId) return Promise.resolve(null);
-      var staffId = resolveSubmitStaffId(it, 1);
-      if (!staffId || staffId === ANY_MASTER_ID) return Promise.resolve(null);
-
-      var cfg = getSalonSupabaseCfg();
-      if (!cfg.url || !cfg.key) return Promise.resolve(null);
-
-      var startIso = buildChainStartIso(selectedKey, timeSelect.value);
-      if (!startIso) return Promise.resolve(null);
-
-      var fnUrl = cfg.url + "/functions/v1/google-calendar-sync";
-      return fetch(fnUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: cfg.key,
-          Authorization: "Bearer " + cfg.key,
-        },
-        body: JSON.stringify({
-          mode: "website_booking",
-          staffId: String(staffId),
-          serviceId: String(it.serviceId),
-          clientName: nameVal || "",
-          clientPhone: phoneVal || "",
-          startTime: startIso,
-          note: noteVal || "",
-        }),
-      })
-        .then(function (r) {
-          return r.json().then(
-            function (j) {
-              return { status: r.status, j: j };
-            },
-            function () {
-              return { status: r.status, j: null };
-            }
-          );
-        })
-        .then(function (res) {
-          var j = res.j || {};
-          if (j.ok === true) {
-            showToast(bookingSuccessMessageWithPriceNote(), "ok");
-            bookingForm.reset();
-            if (chainApi && chainApi.clear) chainApi.clear();
-            invalidateMonthCache();
-            clearSelection();
-            renderCalendar();
-            return { handled: true, ok: true };
-          }
-          if (j.ok === false && j.error) {
-            showToast(chainHumanErrorMessage(null, String(j.error)) || String(j.error), "err");
-            return { handled: true, ok: false };
-          }
-          return null;
-        })
-        .catch(function () {
-          return null;
-        });
     }
 
     /** Цепочка услуг (picked[] в dock) + Supabase RPC. Возвращает Promise, который резолвится
@@ -3399,13 +3347,10 @@
         return;
       }
 
-      /* 1) Один мастер + одна услуга → прямой Google Calendar (Edge). 2) Иначе RPC цепочка. 3) Legacy API/mailto. */
-      trySubmitWebsiteBookingDirect(nameVal, phoneVal, noteVal).then(function (directRes) {
-        if (directRes && directRes.handled) return;
-        trySubmitViaBookChain(nameVal, phoneVal, noteVal).then(function (res) {
-          if (res && res.handled) return;
-          continueLegacySubmit();
-        });
+      /* 1) RPC public_book_chain → наш CRM-календарь. 2) Legacy API/mailto, если Supabase недоступен. */
+      trySubmitViaBookChain(nameVal, phoneVal, noteVal).then(function (res) {
+        if (res && res.handled) return;
+        continueLegacySubmit();
       });
 
       function continueLegacySubmit() {

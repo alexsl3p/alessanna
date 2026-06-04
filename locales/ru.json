@@ -63,7 +63,6 @@
     "adminSupport": "Входящие",
     "adminCommunications": "Письма",
     "adminInvites": "Приглашения",
-    "adminIntegrations": "Интеграции",
     "adminSiteSettings": "Настройки сайта",
     "profileSecurity": "Безопасность",
     "myHelp": "Помощь",
@@ -234,7 +233,7 @@
   "adminStaff": {
     "subtitle": "Таблица staff: телефон, имя, роль, активность, услуги.",
     "name": "Имя",
-    "roleBrief": "Кто",
+    "roleBrief": "Роль",
     "expandRow": "Подробнее",
     "collapseRow": "Свернуть",
     "assignedNone": "Нет явных привязок",
@@ -474,7 +473,7 @@
     "switchUser": "Сменить пользователя",
     "logoutToReception": "Выйти на экран ресепшена",
     "workspaceTitle": "Ресепшен — расписание",
-    "workspaceSubtitle": "Главный экран: календарь как в Google Calendar. Свободная ячейка или кнопка «Сделать запись» — новая запись.",
+    "workspaceSubtitle": "Главный экран: календарь салона. Свободная ячейка или кнопка «Сделать запись» — новая запись.",
     "layout": {
       "edit": "Настроить блоки",
       "done": "Готово",
