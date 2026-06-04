@@ -418,8 +418,8 @@
     btn.addEventListener("click", function (e) {
       var teenused = document.getElementById("teenused");
       if (!teenused) return;
-      teenused.classList.add("services-list-open");
-      teenused.classList.remove("price-list-open");
+      teenused.classList.add("price-list-open");
+      teenused.classList.remove("services-list-open");
 
       teenused.querySelectorAll(".tab-btn").forEach(function (tab) {
         tab.classList.remove("is-active");
@@ -1077,7 +1077,14 @@
         for (var i = 0; i < lis.length; i++) {
           lis[i].classList.remove("is-master-ineligible");
           lis[i].removeAttribute("aria-disabled");
+          lis[i].hidden = false;
           if (lis[i].getAttribute("role") === "button") lis[i].tabIndex = 0;
+        }
+        /* Restore groups hidden by the service filter (not by the category tab filter). */
+        var sfGs = teamRoot.querySelectorAll(".team-group[data-svc-hidden]");
+        for (var s = 0; s < sfGs.length; s++) {
+          sfGs[s].removeAttribute("data-svc-hidden");
+          sfGs[s].hidden = false;
         }
         return;
       }
@@ -1087,12 +1094,28 @@
         var tid = li.getAttribute("data-master-id") || nameToId[li.textContent.trim().toLowerCase()];
         var bad = !tid || !allowed.length || allowed.indexOf(tid) === -1;
         li.classList.toggle("is-master-ineligible", bad);
+        li.hidden = bad;
         if (bad) {
           li.setAttribute("aria-disabled", "true");
           li.tabIndex = -1;
         } else {
           li.removeAttribute("aria-disabled");
           if (li.getAttribute("role") === "button") li.tabIndex = 0;
+        }
+      }
+      /* Hide groups where every master is ineligible for the selected service. */
+      var groups = teamRoot.querySelectorAll(".team-group");
+      for (var k = 0; k < groups.length; k++) {
+        var grp = groups[k];
+        /* Skip groups already hidden by the category tab filter. */
+        if (grp.hidden && !grp.hasAttribute("data-svc-hidden")) continue;
+        var visibleLis = grp.querySelectorAll(".team-names li:not([hidden])");
+        if (visibleLis.length === 0) {
+          grp.setAttribute("data-svc-hidden", "1");
+          grp.hidden = true;
+        } else {
+          grp.removeAttribute("data-svc-hidden");
+          grp.hidden = false;
         }
       }
     }
