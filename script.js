@@ -2157,23 +2157,22 @@
               }
               if (found) {
                 if (masterSelect.value === id) applyMaster("", false);
-                else {
-                  applyMaster(id, true);
-                  var bookSec = document.getElementById("broneeri");
-                  if (bookSec) {
-                    var hdr = document.querySelector("#header");
-                    var hdrH = hdr ? hdr.getBoundingClientRect().height : 0;
-                    var top = bookSec.getBoundingClientRect().top + window.scrollY - hdrH - 24;
-                    var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-                    window.scrollTo({ top: Math.max(0, top), behavior: reduced ? "auto" : "smooth" });
-                  }
-                }
+                else applyMaster(id, true);
                 return;
               }
               if (attempts++ < 20) setTimeout(tryApply, 50);
             };
             if (changed) setTimeout(tryApply, 0);
             else tryApply();
+            setTimeout(function () {
+              var bookSec = document.getElementById("broneeri");
+              if (!bookSec) return;
+              var hdr = document.querySelector("#header");
+              var hdrH = hdr ? hdr.getBoundingClientRect().height : 0;
+              var top = bookSec.getBoundingClientRect().top + window.scrollY - hdrH - 24;
+              var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+              window.scrollTo({ top: Math.max(0, top), behavior: reduced ? "auto" : "smooth" });
+            }, 80);
           });
           li.addEventListener("keydown", function (e) {
             if (e.key === "Enter" || e.key === " ") {
