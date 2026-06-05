@@ -1986,14 +1986,24 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
 /* ---------- MAVE hero promo ---------- */
 .mave-hero-section {
   padding-top: clamp(4.5rem, 8vw, 6.5rem);
+  overflow-x: clip;
+}
+
+.mave-hero-section > .container {
+  width: 100%;
+  max-width: none;
+  padding-inline: 0;
 }
 
 .mave-hero {
   position: relative;
   overflow: hidden;
-  min-height: clamp(31rem, 55vw, 42rem);
+  width: 100%;
+  min-height: clamp(33rem, 56vw, 47rem);
   border: 1px solid var(--line-strong);
-  border-radius: 1rem;
+  border-right: 0;
+  border-left: 0;
+  border-radius: 0;
   background: #050403;
   box-shadow: var(--shadow-card), inset 0 1px 0 rgba(255, 255, 255, 0.04);
   isolation: isolate;
@@ -2078,8 +2088,6 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
     display: flex;
     flex-direction: column;
     min-height: 0;
-    margin-inline: -0.25rem;
-    border-radius: 0.85rem;
   }
 
   .mave-hero__image {
