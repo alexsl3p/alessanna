@@ -1241,11 +1241,6 @@ body.site-ilusalong #hero.hero {
   margin-bottom: 0;
 }
 
-/* Режим "Услуги": показываем полный список без цен. */
-.services-list-open .menu-list .price {
-  display: none;
-}
-
 .price-panel-title {
   display: none;
   margin: 0 0 1rem;
