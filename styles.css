@@ -1983,79 +1983,127 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
   line-height: 1.75;
 }
 
-/* ---------- Промо-карточки партнёров (Mave / Yodeyma) ---------- */
-.promo-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.25rem;
-  max-width: 56rem;
-  margin: 0 auto;
+/* ---------- MAVE hero promo ---------- */
+.mave-hero-section {
+  padding-top: clamp(4.5rem, 8vw, 6.5rem);
 }
 
-.promo-card {
-  border: 1px solid var(--line-strong);
-  border-radius: 1.1rem;
+.mave-hero {
+  position: relative;
   overflow: hidden;
-  transition: transform 0.4s var(--ease-out), box-shadow 0.4s var(--ease-out), border-color 0.3s;
+  min-height: clamp(31rem, 55vw, 42rem);
+  border: 1px solid var(--line-strong);
+  border-radius: 1rem;
+  background: #050403;
   box-shadow: var(--shadow-card), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  isolation: isolate;
 }
 
-.promo-card:hover {
-  transform: translateY(-4px);
-  border-color: var(--stroke);
-  box-shadow: var(--shadow-card), 0 24px 56px rgba(0, 0, 0, 0.5), 0 0 36px var(--gold-glow), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+.mave-hero__image {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
 }
 
-.promo-card--mave {
-  background: linear-gradient(155deg, rgba(16, 14, 22, 0.98), rgba(8, 8, 12, 0.99));
-}
-
-.promo-card--yodeyma {
-  background: linear-gradient(155deg, rgba(22, 16, 12, 0.98), rgba(10, 8, 6, 0.99));
-}
-
-.promo-card__inner {
-  padding: 2rem 1.75rem;
+.mave-hero__content {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
-  gap: 0.8rem;
-  min-height: 210px;
+  justify-content: center;
+  min-height: inherit;
+  max-width: 30rem;
+  padding: clamp(2rem, 6vw, 4.6rem);
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.72);
 }
 
-.promo-card__kicker {
+.mave-hero__label {
+  margin: 0 0 0.85rem;
+  color: var(--gold-bright);
   font-size: 0.62rem;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.24em;
   text-transform: uppercase;
-  color: var(--text-muted);
 }
 
-.promo-card__title {
+.mave-hero__title {
+  max-width: 9.5ch;
+  margin: 0;
+  color: var(--text);
   font-family: var(--font-display);
-  font-size: clamp(2.2rem, 5vw, 3rem);
+  font-size: clamp(2.65rem, 7vw, 5.45rem);
   font-weight: 400;
   font-style: italic;
-  letter-spacing: 0.04em;
-  margin: 0;
-  line-height: 1;
+  line-height: 0.94;
+}
+
+.mave-hero__lead {
+  max-width: 31rem;
+  margin: 1.25rem 0 0;
+  color: rgba(232, 232, 229, 0.74);
+  font-size: clamp(0.93rem, 1.25vw, 1.05rem);
+  line-height: 1.8;
+}
+
+.mave-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  margin-top: 1.65rem;
+}
+
+.mave-hero__text-link {
   color: var(--gold-bright);
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-decoration: none;
+  text-transform: uppercase;
 }
 
-.promo-card__body {
-  color: var(--text-muted);
-  font-size: 0.9rem;
-  line-height: 1.75;
-  margin: 0;
-  flex: 1;
+.mave-hero__text-link:hover {
+  color: var(--text);
 }
 
-.promo-card__cta {
-  align-self: flex-start;
-  margin-top: 0.5rem;
-}
+@media (max-width: 760px) {
+  .mave-hero-section {
+    padding-top: clamp(3.25rem, 14vw, 4.5rem);
+  }
 
-@media (max-width: 600px) {
-  .promo-grid {
-    grid-template-columns: 1fr;
+  .mave-hero {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    margin-inline: -0.25rem;
+    border-radius: 0.85rem;
+  }
+
+  .mave-hero__image {
+    position: relative;
+    z-index: 0;
+    height: clamp(18rem, 72vw, 23rem);
+    object-position: 58% center;
+  }
+
+  .mave-hero__content {
+    justify-content: flex-start;
+    min-height: auto;
+    max-width: 100%;
+    padding: 1.45rem 1.2rem 1.6rem;
+    background: linear-gradient(180deg, #090806, #050403);
+  }
+
+  .mave-hero__title {
+    max-width: 11ch;
+    font-size: clamp(2.55rem, 13vw, 3.25rem);
+  }
+
+  .mave-hero__lead {
+    max-width: 22rem;
   }
 }
 
