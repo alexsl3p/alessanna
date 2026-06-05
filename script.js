@@ -417,7 +417,11 @@
     }
   }
 
-  window.addEventListener("teenused-supabase-ready", applyTeamFilterForActiveTab);
+  /* Defer so the inner IIFE's teenused-supabase-ready handler (wireMenuPickRows +
+   * syncMenuRowsPickedClass) runs first and restores is-picked before we filter. */
+  window.addEventListener("teenused-supabase-ready", function () {
+    requestAnimationFrame(applyTeamFilterForActiveTab);
+  });
   window.addEventListener("site-team-rendered", applyTeamFilterForActiveTab);
 
   document.querySelectorAll("[data-price-list-toggle]").forEach(function (btn) {
@@ -2057,6 +2061,34 @@
       validateMasterForPicks();
       syncTeamMasterEligibility();
       syncMasterSelectEligibility();
+      /* Re-render заменяет весь innerHTML каталога — активная вкладка и
+       * hidden-состояния панелей сбрасываются. Восстанавливаем: находим
+       * первый is-picked li → его родительскую панель → делаем её видимой
+       * и активируем соответствующий tab-btn. После этого перефильтруем
+       * блок «Мастера» уже с правильными is-picked в DOM. */
+      var anyPicked = teenused.querySelector(".tab-panel[data-pick-category] .menu-list li.is-picked");
+      if (anyPicked) {
+        var panelToRestore = anyPicked.closest(".tab-panel");
+        if (panelToRestore) {
+          teenused.querySelectorAll(".tab-panel").forEach(function (p) {
+            p.hidden = true;
+            p.classList.remove("is-active");
+          });
+          teenused.querySelectorAll(".tab-btn").forEach(function (b) {
+            b.classList.remove("is-active");
+            b.setAttribute("aria-selected", "false");
+          });
+          panelToRestore.hidden = false;
+          panelToRestore.classList.add("is-active");
+          var tabToRestore = teenused.querySelector('.tab-btn[aria-controls="' + panelToRestore.id + '"]');
+          if (tabToRestore) {
+            tabToRestore.classList.add("is-active");
+            tabToRestore.setAttribute("aria-selected", "true");
+          }
+        }
+      }
+      updateTeamSectionVisibility();
+      applyTeamFilterForActiveTab();
     });
 
     window.addEventListener("site-team-ready", function () {
