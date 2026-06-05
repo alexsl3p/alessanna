@@ -1983,6 +1983,82 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
   line-height: 1.75;
 }
 
+/* ---------- Промо-карточки партнёров (Mave / Yodeyma) ---------- */
+.promo-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  max-width: 56rem;
+  margin: 0 auto;
+}
+
+.promo-card {
+  border: 1px solid var(--line-strong);
+  border-radius: 1.1rem;
+  overflow: hidden;
+  transition: transform 0.4s var(--ease-out), box-shadow 0.4s var(--ease-out), border-color 0.3s;
+  box-shadow: var(--shadow-card), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.promo-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--stroke);
+  box-shadow: var(--shadow-card), 0 24px 56px rgba(0, 0, 0, 0.5), 0 0 36px var(--gold-glow), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.promo-card--mave {
+  background: linear-gradient(155deg, rgba(16, 14, 22, 0.98), rgba(8, 8, 12, 0.99));
+}
+
+.promo-card--yodeyma {
+  background: linear-gradient(155deg, rgba(22, 16, 12, 0.98), rgba(10, 8, 6, 0.99));
+}
+
+.promo-card__inner {
+  padding: 2rem 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  min-height: 210px;
+}
+
+.promo-card__kicker {
+  font-size: 0.62rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.promo-card__title {
+  font-family: var(--font-display);
+  font-size: clamp(2.2rem, 5vw, 3rem);
+  font-weight: 400;
+  font-style: italic;
+  letter-spacing: 0.04em;
+  margin: 0;
+  line-height: 1;
+  color: var(--gold-bright);
+}
+
+.promo-card__body {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.75;
+  margin: 0;
+  flex: 1;
+}
+
+.promo-card__cta {
+  align-self: flex-start;
+  margin-top: 0.5rem;
+}
+
+@media (max-width: 600px) {
+  .promo-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .review-moderation-note {
   max-width: 42rem;
   margin: 0 auto 1.75rem;
