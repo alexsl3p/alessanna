@@ -89,11 +89,20 @@ function keyPreview(key) {
   return raw.slice(0, 6) + "..." + raw.slice(-4);
 }
 
-function fmtPrice(p) {
+function fmtPrice(p, pMax) {
   if (p == null || p === "") return "—";
   const n = Number(p);
-  if (Number.isNaN(n)) return String(p);
-  return n.toFixed(0).replace(".", ",") + " €";
+  if (Number.isNaN(n)) return "—";
+  const fmt = (v) => {
+    const x = Number(v);
+    return Number.isNaN(x) ? null : Number.isInteger(x) ? String(x) : x.toFixed(0);
+  };
+  const minStr = fmt(n);
+  const maxN = pMax != null && pMax !== "" ? Number(pMax) : NaN;
+  if (!Number.isNaN(maxN) && maxN > n) {
+    return minStr + "–" + fmt(maxN) + " €";
+  }
+  return minStr + " €";
 }
 
 function esc(s) {
@@ -297,7 +306,7 @@ function buildCatalogHtml(groups, svcMasters, prefix) {
           '"><span>' +
           esc(catalogName("service", it.name)) +
           '</span><span class="price">' +
-          esc(fmtPrice(it.price)) +
+          esc(fmtPrice(it.price, it.price_max)) +
           "</span></li>";
       }
     }
@@ -584,6 +593,7 @@ async function fetchPriceList(client) {
       id,
       name,
       price,
+      price_max,
       duration,
       buffer_after_min,
       category:service_categories(name)
@@ -609,6 +619,7 @@ async function fetchPriceList(client) {
       id,
       name,
       price,
+      price_max,
       duration,
       is_active,
       category:service_categories(name)
@@ -632,7 +643,7 @@ async function fetchPriceList(client) {
 
   const listingsMinimal = await client
     .from("service_listings")
-    .select("id,name,price,duration")
+    .select("id,name,price,price_max,duration")
     .order("name", { ascending: true });
 
   info("Supabase response: service_listings (minimal)", {
