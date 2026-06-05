@@ -206,25 +206,6 @@
     );
   }
 
-  document.body.addEventListener(
-    "click",
-    function (ev) {
-      var a = ev.target.closest('a[href="#broneeri"]');
-      if (!a) return;
-      var sec = document.getElementById("broneeri");
-      /* И data-attr, и класс секции — если атрибут не успел проставиться или кэш старый */
-      var phoneOnly =
-        a.getAttribute("data-booking-phone-only") === "true" ||
-        (sec && sec.classList.contains("booking-panel--off"));
-      if (!phoneOnly) return;
-      ev.preventDefault();
-      ev.stopPropagation();
-      showToast(bookingPhoneOnlyToastMessage(), "ok");
-      closeNav();
-    },
-    true
-  );
-
   function closeNav() {
     if (!nav || !navToggle) return;
     nav.classList.remove("is-open");
@@ -2176,7 +2157,17 @@
               }
               if (found) {
                 if (masterSelect.value === id) applyMaster("", false);
-                else applyMaster(id, true);
+                else {
+                  applyMaster(id, true);
+                  var bookSec = document.getElementById("broneeri");
+                  if (bookSec) {
+                    var hdr = document.querySelector("#header");
+                    var hdrH = hdr ? hdr.getBoundingClientRect().height : 0;
+                    var top = bookSec.getBoundingClientRect().top + window.scrollY - hdrH - 24;
+                    var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+                    window.scrollTo({ top: Math.max(0, top), behavior: reduced ? "auto" : "smooth" });
+                  }
+                }
                 return;
               }
               if (attempts++ < 20) setTimeout(tryApply, 50);
