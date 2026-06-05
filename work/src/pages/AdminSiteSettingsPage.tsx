@@ -16,6 +16,7 @@ import { supabase } from "../lib/supabase";
 import {
   parseSalonBoolSetting,
   SALON_SETTING_PUBLIC_BOOKING_PANEL_ENABLED,
+  SALON_SETTING_SITE_CHAT_ENABLED,
 } from "../lib/salonSettingsParse";
 
 export function AdminSiteSettingsPage() {
@@ -26,6 +27,7 @@ export function AdminSiteSettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [siteBookingCartEnabled, setSiteBookingCartEnabled] = useState(true);
   const [publicBookingPanelEnabled, setPublicBookingPanelEnabled] = useState(true);
+  const [siteChatEnabled, setSiteChatEnabled] = useState(true);
 
   const [receptionRows, setReceptionRows] = useState<ReceptionRows>(() =>
     DEFAULT_RECEPTION_ROWS.map((r) => [...r]),
@@ -52,6 +54,7 @@ export function AdminSiteSettingsPage() {
       .in("key", [
         "site_booking_cart_enabled",
         SALON_SETTING_PUBLIC_BOOKING_PANEL_ENABLED,
+        SALON_SETTING_SITE_CHAT_ENABLED,
         "reception_section_order",
       ]);
     setLoading(false);
@@ -62,9 +65,11 @@ export function AdminSiteSettingsPage() {
     const rows = (data ?? []) as { key: string; value: string | null }[];
     const cartRow = rows.find((r) => r.key === "site_booking_cart_enabled");
     const panelRow = rows.find((r) => r.key === SALON_SETTING_PUBLIC_BOOKING_PANEL_ENABLED);
+    const chatRow = rows.find((r) => r.key === SALON_SETTING_SITE_CHAT_ENABLED);
     const recvRow = rows.find((r) => r.key === "reception_section_order");
     setSiteBookingCartEnabled(parseSalonBoolSetting(cartRow?.value, true));
     setPublicBookingPanelEnabled(parseSalonBoolSetting(panelRow?.value, true));
+    setSiteChatEnabled(parseSalonBoolSetting(chatRow?.value, true));
     if (recvRow?.value) {
       try {
         const parsed = parseReceptionLayoutFile(JSON.parse(recvRow.value) as unknown);
@@ -117,6 +122,21 @@ export function AdminSiteSettingsPage() {
       return;
     }
     setPublicBookingPanelEnabled(nextEnabled);
+  }
+
+  async function saveSiteChatEnabled(nextEnabled: boolean) {
+    const next = nextEnabled ? "true" : "false";
+    setSaving(true);
+    setError(null);
+    const { error: saveError } = await supabase
+      .from("salon_settings")
+      .upsert({ key: SALON_SETTING_SITE_CHAT_ENABLED, value: next }, { onConflict: "key" });
+    setSaving(false);
+    if (saveError) {
+      setError(saveError.message);
+      return;
+    }
+    setSiteChatEnabled(nextEnabled);
   }
 
   async function saveReceptionLayout() {
@@ -197,6 +217,23 @@ export function AdminSiteSettingsPage() {
               checked={publicBookingPanelEnabled}
               disabled={loading || saving}
               onChange={(e) => void savePublicBookingPanelEnabled(e.target.checked)}
+            />
+          </label>
+        </div>
+        <div className="mt-3 rounded-lg border border-line/15 bg-canvas/40 p-3">
+          <label className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium text-fg">Онлайн-чат на сайте</p>
+              <p className="mt-1 text-xs text-muted">
+                Кнопка чата в правом нижнем углу лендинга. Выключите, чтобы скрыть виджет без деплоя.
+              </p>
+            </div>
+            <input
+              type="checkbox"
+              className="mt-1 h-4 w-4 accent-emerald-500"
+              checked={siteChatEnabled}
+              disabled={loading || saving}
+              onChange={(e) => void saveSiteChatEnabled(e.target.checked)}
             />
           </label>
         </div>

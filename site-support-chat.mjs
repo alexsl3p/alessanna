@@ -1525,10 +1525,29 @@ export function initSupportChat() {
   }
 }
 
+async function maybeInitSupportChat() {
+  const cfg = getCfg();
+  if (cfg) {
+    try {
+      const sb = getSb(cfg.url, cfg.anonKey);
+      const { data } = await sb
+        .from("salon_settings")
+        .select("value")
+        .eq("key", "site_chat_enabled")
+        .maybeSingle();
+      const val = String(data?.value ?? "").trim().toLowerCase();
+      if (val === "false" || val === "0" || val === "no" || val === "off") return;
+    } catch (_) {
+      // on error default to showing the chat
+    }
+  }
+  initSupportChat();
+}
+
 if (typeof document !== "undefined") {
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initSupportChat, { once: true });
+    document.addEventListener("DOMContentLoaded", () => { void maybeInitSupportChat(); }, { once: true });
   } else {
-    initSupportChat();
+    void maybeInitSupportChat();
   }
 }

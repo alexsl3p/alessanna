@@ -11,6 +11,7 @@ export function parseSalonBoolSetting(v: string | null | undefined, fallback = t
 }
 
 export const SALON_SETTING_PUBLIC_BOOKING_PANEL_ENABLED = "public_booking_panel_enabled" as const;
+export const SALON_SETTING_SITE_CHAT_ENABLED = "site_chat_enabled" as const;
 
 /**
  * Включена ли публичная панель записи. Сначала RPC (обход RLS), при ошибке — прямое чтение
