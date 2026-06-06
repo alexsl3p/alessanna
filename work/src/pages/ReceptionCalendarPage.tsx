@@ -295,6 +295,7 @@ export function ReceptionCalendarPage() {
                 cursor={cursor}
                 staff={staff}
                 appointments={appointments}
+                workDates={workDates}
                 visibleStaffIds={visibleStaffIds}
                 onDayClick={handleDayClick}
                 onApptClick={handleApptClick}
