@@ -40,6 +40,12 @@ export function ReceptionCalendarPage() {
   const dark = theme === "onyx" || theme === "stone";
   const [view, setView] = useState<View>("week");
 
+  useEffect(() => {
+    const prev = document.title;
+    document.title = "Alessanna Reception";
+    return () => { document.title = prev; };
+  }, []);
+
   const [desktopMode, setDesktopMode] = useState(() => {
     try { return localStorage.getItem("reception_desktop_mode") === "1"; } catch { return false; }
   });
