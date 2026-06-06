@@ -10,7 +10,7 @@ import {
   startOfMonth,
   startOfWeek,
 } from "date-fns";
-import type { AppointmentRow, StaffMember } from "../../types/database";
+import type { AppointmentRow, StaffMember, StaffWorkDateRow } from "../../types/database";
 import { buildStaffHueMap } from "../../lib/staffHue";
 import { googleStaffColor } from "./receptionColors";
 
@@ -20,6 +20,7 @@ type Props = {
   cursor: Date;
   staff: StaffMember[];
   appointments: AppointmentRow[];
+  workDates: StaffWorkDateRow[];
   visibleStaffIds: Set<string>;
   onDayClick: (day: Date) => void;
   onApptClick: (appt: AppointmentRow, x: number, y: number) => void;
@@ -30,6 +31,7 @@ export function ReceptionMonthView({
   cursor,
   staff,
   appointments,
+  workDates,
   visibleStaffIds,
   onDayClick,
   onApptClick,
@@ -70,6 +72,19 @@ export function ReceptionMonthView({
     return map;
   }, [appointments, visibleStaffIds]);
 
+  // Map date → working staff members (visible only)
+  const workingByDay = useMemo(() => {
+    const map = new Map<string, StaffMember[]>();
+    for (const wd of workDates) {
+      if (!visibleStaffIds.has(wd.staff_id)) continue;
+      const member = staffMap.get(wd.staff_id);
+      if (!member) continue;
+      if (!map.has(wd.work_date)) map.set(wd.work_date, []);
+      map.get(wd.work_date)!.push(member);
+    }
+    return map;
+  }, [workDates, visibleStaffIds, staffMap]);
+
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-canvas">
       {/* Column headers */}
@@ -89,6 +104,7 @@ export function ReceptionMonthView({
         {gridDays.map((day) => {
           const key = format(day, "yyyy-MM-dd");
           const dayAppts = apptsByDay.get(key) ?? [];
+          const workingStaff = workingByDay.get(key) ?? [];
           const isToday = isSameDay(day, today);
           const isCurrentMonth = isSameMonth(day, cursor);
           const MAX_VISIBLE = 3;
@@ -116,6 +132,24 @@ export function ReceptionMonthView({
               >
                 {format(day, "d")}
               </button>
+
+              {/* Working staff chips */}
+              {workingStaff.length > 0 && (
+                <div className="mb-0.5 flex flex-wrap gap-0.5">
+                  {workingStaff.map((m) => {
+                    const c = googleStaffColor(m, staffHueMap);
+                    return (
+                      <span
+                        key={m.id}
+                        className="max-w-full truncate rounded px-1 py-0 text-[9px] font-medium leading-4"
+                        style={{ backgroundColor: c.bg, color: c.fg }}
+                      >
+                        {m.name.split(" ")[0]}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
 
               <div className="flex min-h-0 flex-col gap-0.5 overflow-hidden">
                 {visibleAppts.map((appt) => {
@@ -153,3 +187,4 @@ export function ReceptionMonthView({
     </div>
   );
 }
+

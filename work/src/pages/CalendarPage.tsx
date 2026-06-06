@@ -228,6 +228,17 @@ export function CalendarPage() {
     return out;
   }, [activeStaffForCalendar, durationMin, filteredAppointments, monthDays, schedules, timeOff, view]);
 
+  const workingByDay = useMemo(() => {
+    const map = new Map<string, StaffMember[]>();
+    for (const wd of workDates) {
+      const member = staff.find((s) => s.id === wd.staff_id);
+      if (!member) continue;
+      if (!map.has(wd.work_date)) map.set(wd.work_date, []);
+      map.get(wd.work_date)!.push(member);
+    }
+    return map;
+  }, [workDates, staff]);
+
   /* No sidebar toggle in this view — show every active master (workers
    * still only see their own column). */
   const effectiveVisibleIds = useMemo(
@@ -394,6 +405,8 @@ export function CalendarPage() {
                     const availability = monthMasterAvailability.get(format(day, "yyyy-MM-dd"));
                     const isToday = isSameDay(day, new Date());
                     const colPos = idx % 7;
+                    const dayKey = format(day, "yyyy-MM-dd");
+                    const workingStaff = workingByDay.get(dayKey) ?? [];
                     return (
                       <div
                         key={day.toISOString()}
@@ -418,6 +431,19 @@ export function CalendarPage() {
                             </span>
                           )}
                         </div>
+                        {workingStaff.length > 0 && (
+                          <div className="mb-1 flex flex-wrap gap-0.5">
+                            {workingStaff.map((m) => (
+                              <span
+                                key={m.id}
+                                className="max-w-full truncate rounded px-1 py-0 text-[9px] font-medium leading-4"
+                                style={staffCrmAppointmentBlockStyle(m.id, staff, staffHueMap)}
+                              >
+                                {m.name.split(" ")[0]}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                         <div className="space-y-0.5">
                           {blocks.slice(0, 3).map((b) => {
                             const svc = services.find((s) => s.id === b.service_id);
