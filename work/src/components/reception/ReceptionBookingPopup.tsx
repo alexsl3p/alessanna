@@ -166,7 +166,7 @@ export function ReceptionBookingPopup({
   const accentCancelText = useGold ? "text-gold hover:bg-gold/10" : "text-[#1a73e8] hover:bg-surface";
   const accentResetBtn = useGold ? "text-gold" : "text-[#1a73e8]";
 
-  const inputCls = `flex-1 rounded-lg border border-line/20 bg-surface px-2 py-1.5 text-sm text-fg focus:outline-none focus:ring-1 ${accentFocus}`;
+  const inputCls = `flex-1 min-w-0 h-9 rounded-lg border border-line/20 bg-surface px-2 text-sm text-fg focus:outline-none focus:ring-1 ${accentFocus}`;
   const timeCls = `w-24 rounded-lg border border-line/20 bg-surface px-2 py-1 text-sm text-fg focus:outline-none focus:ring-1 ${accentFocus}`;
 
   return (
