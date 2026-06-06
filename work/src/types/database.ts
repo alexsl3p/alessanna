@@ -50,6 +50,8 @@ export type StaffTableRow = {
   /** Из Google Calendar calendarList (импорт). */
   calendar_color_hex?: string | null;
   calendar_foreground_hex?: string | null;
+  /** Email для входа через PWA (Supabase Auth email+password). */
+  email?: string | null;
 };
 
 export type CategoryRow = {

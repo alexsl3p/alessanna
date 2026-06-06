@@ -158,7 +158,7 @@ function isMissingStaffMarketingColumnError(err: { message?: string } | null | u
 
 export function AdminStaffPage() {
   const { t } = useTranslation();
-  const { staffMember } = useAuth();
+  const { staffMember, sendPasswordReset } = useAuth();
   const currentStaffId = staffMember?.id ?? null;
   const [rows, setRows] = useState<StaffTableRow[]>([]);
   const [services, setServices] = useState<CatalogSkillService[]>([]);
@@ -172,6 +172,8 @@ export function AdminStaffPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [pwdResetMsg, setPwdResetMsg] = useState<Record<string, string>>({});
   /** Компактный список: детали (роли, услуги) только в раскрытой строке. */
   const [expandedById, setExpandedById] = useState<Record<string, boolean>>({});
   /** id строки в каталоге CRM → UUID service_listings (FK staff_services.service_id). */
@@ -404,17 +406,20 @@ export function AdminStaffPage() {
     setEditingId(r.id);
     setEditName(r.name);
     setEditPhone(r.phone ?? "");
+    setEditEmail(r.email ?? "");
     setExpandedById((prev) => ({ ...prev, [r.id]: true }));
   }
 
   async function saveEdit() {
     if (!editingId) return;
     setErr(null);
+    const emailVal = editEmail.trim().toLowerCase() || null;
     const { error } = await supabase
       .from("staff")
       .update({
         name: editName.trim(),
         phone: digitsOnly(editPhone) || null,
+        email: emailVal,
       })
       .eq("id", editingId);
     if (error) {
@@ -423,6 +428,20 @@ export function AdminStaffPage() {
     }
     setEditingId(null);
     void load();
+  }
+
+  async function resetPwd(staffId: string, staffEmail: string | null | undefined) {
+    const e = (staffEmail || "").trim();
+    if (!e) {
+      setPwdResetMsg((prev) => ({ ...prev, [staffId]: "Укажите email сотрудника." }));
+      return;
+    }
+    setPwdResetMsg((prev) => ({ ...prev, [staffId]: "Отправляем…" }));
+    const { error: err } = await sendPasswordReset(e);
+    setPwdResetMsg((prev) => ({
+      ...prev,
+      [staffId]: err ? `Ошибка: ${err}` : `Ссылка отправлена на ${e}`,
+    }));
   }
 
   /** admin/owner никогда не светится на публичном сайте. Для остальных — показ совпадает с is_active. */
@@ -1421,6 +1440,44 @@ export function AdminStaffPage() {
                               );
                             })()}
                           </div>
+                          {/* ── Email / PWA ── */}
+                          <div className="flex flex-col gap-1 rounded border border-line/15/80 p-2">
+                            <span className="text-[11px] font-medium uppercase text-muted">
+                              Email (PWA / вход по паролю)
+                            </span>
+                            {editingId === r.id ? (
+                              <input
+                                type="email"
+                                value={editEmail}
+                                onChange={(e) => setEditEmail(e.target.value)}
+                                placeholder="master@example.com"
+                                className="mt-0.5 w-full rounded border border-line/25 bg-canvas px-2 py-1 font-mono text-xs text-fg"
+                                aria-label="Email для PWA"
+                              />
+                            ) : (
+                              <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                                <span className="text-xs text-fg font-mono">
+                                  {r.email || <span className="text-muted italic">не задан</span>}
+                                </span>
+                                {r.email && (
+                                  <button
+                                    type="button"
+                                    onClick={() => void resetPwd(r.id, r.email)}
+                                    className="rounded border border-violet-800/60 bg-violet-950/30 px-2 py-0.5 text-[10px] font-medium text-violet-200 transition hover:border-violet-600/80 hover:bg-violet-900/30"
+                                  >
+                                    Сброс пароля
+                                  </button>
+                                )}
+                                {pwdResetMsg[r.id] && (
+                                  <span className="text-[10px] text-zinc-400">{pwdResetMsg[r.id]}</span>
+                                )}
+                              </div>
+                            )}
+                            <span className="text-[10px] leading-snug text-muted">
+                              Заполните, чтобы мастер мог войти в мобильное приложение по email и паролю.
+                            </span>
+                          </div>
+
                           <div className="space-y-4">
                             {/* ───────── Активные услуги мастера ───────── */}
                             <section
@@ -1872,6 +1929,38 @@ export function AdminStaffPage() {
                         hideTitle={t("adminStaff.hidePhone", { defaultValue: "Скрыть номер" })}
                         className="mt-0.5 block text-xs text-muted"
                       />
+                    )}
+                  </div>
+
+                  <div className="min-w-[7rem] text-xs">
+                    <span className="block text-[10px] uppercase tracking-wide text-muted">Email</span>
+                    {isEditing ? (
+                      <input
+                        type="email"
+                        value={editEmail}
+                        onChange={(e) => setEditEmail(e.target.value)}
+                        placeholder="master@example.com"
+                        className="mt-0.5 w-full rounded border border-line/25 bg-canvas px-1 py-0.5 font-mono text-xs text-fg"
+                        aria-label="Email"
+                      />
+                    ) : (
+                      <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                        <span className="block font-mono text-xs text-muted">
+                          {r.email || "—"}
+                        </span>
+                        {r.email && !isEditing && (
+                          <button
+                            type="button"
+                            onClick={() => void resetPwd(r.id, r.email)}
+                            className="rounded border border-violet-800/60 bg-violet-950/30 px-1.5 py-0.5 text-[10px] text-violet-200 transition hover:border-violet-600/80 hover:bg-violet-900/30"
+                          >
+                            Сброс пароля
+                          </button>
+                        )}
+                        {pwdResetMsg[r.id] && (
+                          <span className="text-[10px] text-zinc-400">{pwdResetMsg[r.id]}</span>
+                        )}
+                      </div>
                     )}
                   </div>
 

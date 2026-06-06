@@ -23,6 +23,7 @@ import { SimplePublicBookingPage } from "./pages/SimplePublicBookingPage";
 import { ReceptionPage } from "./pages/ReceptionPage";
 import { PublicInvitePage } from "./pages/PublicInvitePage";
 import { AdminInvitesPage } from "./pages/AdminInvitesPage";
+import { PwaResetPasswordPage } from "./pages/PwaResetPasswordPage";
 
 function RequireManage({ children }: { children: React.ReactNode }) {
   const { canManage } = useEffectiveRole();
@@ -54,6 +55,7 @@ export default function App() {
       <Route path="/reception" element={<Protected><ReceptionPage /></Protected>} />
       <Route path="/quick-booking" element={<Protected><ReceptionPage /></Protected>} />
       <Route path="/invite/:token" element={<PublicInvitePage />} />
+      <Route path="/auth/reset-password" element={<PwaResetPasswordPage />} />
       <Route
         path="/"
         element={

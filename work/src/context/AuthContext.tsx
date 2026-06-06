@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
+import { supabaseAuth } from "../lib/supabaseAuth";
 import { hasStaffRole, isWorkerOnlyView, normalizeStaffMember } from "../lib/roles";
 import type { StaffMember } from "../types/database";
 
@@ -37,6 +38,9 @@ type AuthState = {
   staffMember: StaffMember | null;
   loading: boolean;
   login: (input: LoginInput | string) => Promise<LoginResult>;
+  loginWithEmail: (email: string, password: string) => Promise<LoginResult>;
+  registerWithEmail: (email: string, password: string) => Promise<LoginResult>;
+  sendPasswordReset: (email: string) => Promise<{ error?: string }>;
   logout: () => void;
   /** Удалить device_token с этого устройства (без revoke в БД). */
   forgetThisDevice: () => void;
@@ -157,6 +161,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
+      /* 3) Нет ни staffMember, ни device_token — проверяем Supabase Auth сессию
+       * (email-логин через PWA). Если сессия жива, получаем staff по email. */
+      if (!cancelled && isSupabaseConfigured()) {
+        try {
+          const { data: { session } } = await supabaseAuth.auth.getSession();
+          if (session) {
+            const { data: staffData } = await supabaseAuth.rpc("staff_get_by_auth_email");
+            const payload = (staffData ?? {}) as { status?: string; staff?: Record<string, unknown> };
+            if (payload.status === "ok" && payload.staff) {
+              const row = staffTableRowToMember(payload.staff);
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(row));
+              if (!cancelled) {
+                setStaffMember(row);
+              }
+            }
+          }
+        } catch {
+          /* Сеть недоступна — пропускаем, пользователь войдёт вручную. */
+        }
+      }
+
       if (!cancelled) setLoading(false);
     }
 
@@ -249,10 +274,59 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { ok: true, mode: typeof payload.mode === "string" ? payload.mode : undefined };
   }, []);
 
+  const loginWithEmail = useCallback(async (email: string, password: string): Promise<LoginResult> => {
+    if (!isSupabaseConfigured()) return { ok: false, errorKey: "auth.error.notConfigured" };
+    const { error: authErr } = await supabaseAuth.auth.signInWithPassword({ email, password });
+    if (authErr) return { ok: false, message: authErr.message, displayError: authErr.message };
+    const { data: staffData, error: rpcErr } = await supabaseAuth.rpc("staff_get_by_auth_email");
+    if (rpcErr) {
+      await supabaseAuth.auth.signOut();
+      return { ok: false, message: rpcErr.message };
+    }
+    const payload = (staffData ?? {}) as { status?: string; staff?: Record<string, unknown> };
+    if (payload.status !== "ok" || !payload.staff) {
+      await supabaseAuth.auth.signOut();
+      return { ok: false, status: "access_denied" };
+    }
+    const row = staffTableRowToMember(payload.staff);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(row));
+    setStaffMember(row);
+    return { ok: true };
+  }, []);
+
+  const registerWithEmail = useCallback(async (email: string, password: string): Promise<LoginResult> => {
+    if (!isSupabaseConfigured()) return { ok: false, errorKey: "auth.error.notConfigured" };
+    const { error: signUpErr } = await supabaseAuth.auth.signUp({ email, password });
+    if (signUpErr) return { ok: false, message: signUpErr.message, displayError: signUpErr.message };
+    /* Если подтверждение email включено в Supabase — пользователь получит письмо.
+     * Пробуем сразу войти: если email не подтверждён, signInWithPassword вернёт ошибку. */
+    const { error: loginErr } = await supabaseAuth.auth.signInWithPassword({ email, password });
+    if (loginErr) {
+      return { ok: false, displayError: "Проверьте почту — вам отправлено письмо с подтверждением." };
+    }
+    const { data: staffData } = await supabaseAuth.rpc("staff_get_by_auth_email");
+    const payload = (staffData ?? {}) as { status?: string; staff?: Record<string, unknown> };
+    if (payload.status !== "ok" || !payload.staff) {
+      await supabaseAuth.auth.signOut();
+      return { ok: false, displayError: "Доступ не настроен. Обратитесь к администратору." };
+    }
+    const row = staffTableRowToMember(payload.staff);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(row));
+    setStaffMember(row);
+    return { ok: true };
+  }, []);
+
+  const sendPasswordReset = useCallback(async (email: string): Promise<{ error?: string }> => {
+    const redirectTo = `${window.location.origin}/auth/reset-password`;
+    const { error } = await supabaseAuth.auth.resetPasswordForEmail(email, { redirectTo });
+    return error ? { error: error.message } : {};
+  }, []);
+
   const logout = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY);
     // Внимание: device_token НЕ удаляем — это смысл «доверенного устройства».
     // Чтобы устройство «забыть», есть отдельный forgetThisDevice().
+    void supabaseAuth.auth.signOut();
     setReceptionMode(false);
     setStaffMember(null);
   }, []);
@@ -267,6 +341,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       staffMember,
       loading,
       login,
+      loginWithEmail,
+      registerWithEmail,
+      sendPasswordReset,
       logout,
       forgetThisDevice,
       hasDeviceToken,
@@ -276,7 +353,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isReceptionMode: receptionMode,
       setReceptionMode,
     }),
-    [staffMember, loading, login, logout, forgetThisDevice, hasDeviceToken, receptionMode, setReceptionMode]
+    [staffMember, loading, login, loginWithEmail, registerWithEmail, sendPasswordReset, logout, forgetThisDevice, hasDeviceToken, receptionMode, setReceptionMode]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -6,6 +6,8 @@ import { isSupabaseConfigured } from "../lib/supabase";
 import { LanguageSwitcher } from "../components/LanguageSwitcher";
 
 type Step = "phone" | "pin";
+type EmailMode = "login" | "register" | "forgot";
+type LoginMode = "phone" | "email";
 
 function publicSiteUrl(): string {
   const fromEnv = (import.meta as unknown as { env?: { VITE_PUBLIC_SITE_URL?: string } }).env
@@ -28,7 +30,7 @@ export function LoginPage() {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const nextAfterLogin = safePostLoginPath(searchParams.get("next"));
-  const { staffMember, login, hasDeviceToken, loading } = useAuth();
+  const { staffMember, login, loginWithEmail, registerWithEmail, sendPasswordReset, hasDeviceToken, loading } = useAuth();
   const [phone, setPhone] = useState("");
   const [pin, setPin] = useState("");
   const [showWorkLoginForm, setShowWorkLoginForm] = useState(false);
@@ -38,6 +40,12 @@ export function LoginPage() {
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
   const [redirectAfterLogin, setRedirectAfterLogin] = useState(nextAfterLogin);
+  const [loginMode, setLoginMode] = useState<LoginMode>("phone");
+  const [emailMode, setEmailMode] = useState<EmailMode>("login");
+  const [email, setEmail] = useState("");
+  const [emailPassword, setEmailPassword] = useState("");
+  const [emailConfirm, setEmailConfirm] = useState("");
+  const [forgotSent, setForgotSent] = useState(false);
 
   if (staffMember) return <Navigate to={redirectAfterLogin} replace />;
   /* Пока AuthContext пробует автологин по device_token — не показываем форму,
@@ -122,6 +130,45 @@ export function LoginPage() {
     applyResult(r);
   }
 
+  async function onEmailLogin(e: FormEvent) {
+    e.preventDefault();
+    setError("");
+    setPending(true);
+    const r = await loginWithEmail(email.trim(), emailPassword);
+    setPending(false);
+    if (!r.ok) applyResult(r);
+  }
+
+  async function onEmailRegister(e: FormEvent) {
+    e.preventDefault();
+    setError("");
+    if (emailPassword.length < 6) {
+      setError("Минимум 6 символов.");
+      return;
+    }
+    if (emailPassword !== emailConfirm) {
+      setError("Пароли не совпадают.");
+      return;
+    }
+    setPending(true);
+    const r = await registerWithEmail(email.trim(), emailPassword);
+    setPending(false);
+    if (!r.ok) applyResult(r);
+  }
+
+  async function onForgot(e: FormEvent) {
+    e.preventDefault();
+    setError("");
+    setPending(true);
+    const { error: err } = await sendPasswordReset(email.trim());
+    setPending(false);
+    if (err) {
+      setError(err);
+    } else {
+      setForgotSent(true);
+    }
+  }
+
   function backToPhone() {
     setStep("phone");
     setPin("");
@@ -137,6 +184,27 @@ export function LoginPage() {
     }
   }
 
+  function switchToEmail() {
+    setLoginMode("email");
+    setEmailMode("login");
+    setRedirectAfterLogin("/reception");
+    setError("");
+    setForgotSent(false);
+  }
+
+  function switchToPhone() {
+    setLoginMode("phone");
+    setError("");
+    setForgotSent(false);
+  }
+
+  const emailSubtitle =
+    emailMode === "forgot"
+      ? "Сброс пароля"
+      : emailMode === "register"
+        ? "Регистрация"
+        : "Вход для мастеров";
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-black px-4">
       <div className="absolute right-4 top-4">
@@ -146,15 +214,18 @@ export function LoginPage() {
         <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">{t("brand")}</p>
         <h1 className="mt-2 text-xl font-semibold text-white">{t("login.title")}</h1>
         <p className="mt-1 text-sm text-zinc-500">
-          {step === "phone"
-            ? t("login.subtitle")
-            : t("login.pinSubtitle", {
-                defaultValue: "Введите PIN для доступа",
-                name: staffName,
-              })}
+          {step === "phone" && loginMode === "email"
+            ? emailSubtitle
+            : step === "phone"
+              ? t("login.subtitle")
+              : t("login.pinSubtitle", {
+                  defaultValue: "Введите PIN для доступа",
+                  name: staffName,
+                })}
         </p>
 
-        {step === "phone" && (
+        {/* ── Кнопки выбора режима ── */}
+        {step === "phone" && loginMode === "phone" && (
           <div className="mt-4 grid grid-cols-1 gap-2">
             <button
               type="button"
@@ -184,13 +255,23 @@ export function LoginPage() {
                 Войдите, чтобы открыть режим самозаписи
               </span>
             </button>
+            <button
+              type="button"
+              onClick={switchToEmail}
+              className="rounded-lg border border-violet-700/50 bg-violet-950/30 px-3 py-2 text-left text-sm text-violet-100 hover:bg-violet-900/40"
+            >
+              3. Мастер / Приложение
+              <span className="mt-0.5 block text-xs text-violet-200/60">
+                Вход по email — для мобильного приложения
+              </span>
+            </button>
             <a
               href={publicSiteUrl()}
               target="_blank"
               rel="noopener noreferrer"
               className="rounded-lg border border-zinc-700 bg-zinc-900/40 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-800/60"
             >
-              3. Сайт
+              4. Сайт
               <span className="mt-0.5 block text-xs text-zinc-400">
                 Открыть публичный сайт в новой вкладке
               </span>
@@ -204,7 +285,7 @@ export function LoginPage() {
           </p>
         )}
 
-        {step === "phone" && showWorkLoginForm && hasDeviceToken && showTrustedHint && (
+        {step === "phone" && loginMode === "phone" && showWorkLoginForm && hasDeviceToken && showTrustedHint && (
           <p className="mt-4 rounded-lg border border-emerald-900/40 bg-emerald-950/20 p-2.5 text-xs text-emerald-200/80">
             {t("login.trustedDeviceHint", {
               defaultValue: "Это устройство добавлено в доверенные — войдёте без PIN",
@@ -212,8 +293,8 @@ export function LoginPage() {
           </p>
         )}
 
-        {step === "phone" ? (
-          showWorkLoginForm ? (
+        {/* ── Форма телефон → (PIN) ── */}
+        {step === "phone" && loginMode === "phone" && showWorkLoginForm && (
           <form onSubmit={onSubmitPhone} className="mt-6 space-y-4">
             <div>
               <label htmlFor="phone" className="block text-xs font-medium text-zinc-500">
@@ -244,8 +325,9 @@ export function LoginPage() {
               {pending ? t("login.signingIn") : t("login.button")}
             </button>
           </form>
-          ) : null
-        ) : (
+        )}
+
+        {step === "pin" && (
           <form onSubmit={onSubmitPin} className="mt-6 space-y-4">
             <div>
               <label htmlFor="pin" className="block text-xs font-medium text-zinc-500">
@@ -268,12 +350,6 @@ export function LoginPage() {
               />
             </div>
 
-            {/* Раньше тут был чекбокс «Доверять устройству». Убрал: каждый
-              * успешный логин теперь автоматически добавляет устройство в
-              * доверенные (см. 047_salon_devices.sql и onSubmitPin). Меньше
-              * кликов и меньше путаницы — а отозвать всё равно можно в
-              * /profile/security. Заодно админ из той же страницы может
-              * перевести устройство в статус «общего салонного». */}
             <p className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-3 text-xs text-zinc-400">
               {t("login.deviceWillBeRemembered", {
                 defaultValue:
@@ -300,6 +376,165 @@ export function LoginPage() {
               </button>
             </div>
           </form>
+        )}
+
+        {/* ── Email login / register / forgot ── */}
+        {step === "phone" && loginMode === "email" && (
+          <div className="mt-6">
+            {forgotSent ? (
+              <div className="space-y-4">
+                <p className="rounded-lg border border-emerald-800/50 bg-emerald-950/30 p-3 text-sm text-emerald-200">
+                  Письмо со ссылкой для сброса пароля отправлено на {email}. Проверьте почту.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => { setForgotSent(false); setEmailMode("login"); }}
+                  className="w-full rounded-lg border border-zinc-700 py-2.5 text-sm font-medium text-zinc-300 hover:bg-zinc-900"
+                >
+                  Назад ко входу
+                </button>
+              </div>
+            ) : emailMode === "forgot" ? (
+              <form onSubmit={(e) => void onForgot(e)} className="space-y-4">
+                <div>
+                  <label htmlFor="email-forgot" className="block text-xs font-medium text-zinc-500">
+                    Email
+                  </label>
+                  <input
+                    id="email-forgot"
+                    type="email"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-zinc-700 bg-black px-3 py-2 text-sm text-white placeholder:text-zinc-600 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500"
+                    placeholder="master@example.com"
+                    required
+                  />
+                </div>
+                {error && <p className="text-sm text-red-400">{error}</p>}
+                <button
+                  type="submit"
+                  disabled={pending}
+                  className="w-full rounded-lg bg-violet-600 py-2.5 text-sm font-semibold text-white hover:bg-violet-500 disabled:opacity-50"
+                >
+                  {pending ? "Отправляем…" : "Отправить ссылку"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEmailMode("login")}
+                  className="w-full rounded-lg border border-zinc-700 py-2 text-sm text-zinc-400 hover:bg-zinc-900"
+                >
+                  Назад ко входу
+                </button>
+              </form>
+            ) : (
+              <form
+                onSubmit={(e) => void (emailMode === "login" ? onEmailLogin(e) : onEmailRegister(e))}
+                className="space-y-4"
+              >
+                <div>
+                  <label htmlFor="email-input" className="block text-xs font-medium text-zinc-500">
+                    Email
+                  </label>
+                  <input
+                    id="email-input"
+                    type="email"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-zinc-700 bg-black px-3 py-2 text-sm text-white placeholder:text-zinc-600 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500"
+                    placeholder="master@example.com"
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="email-password" className="block text-xs font-medium text-zinc-500">
+                    Пароль
+                  </label>
+                  <input
+                    id="email-password"
+                    type="password"
+                    autoComplete={emailMode === "login" ? "current-password" : "new-password"}
+                    value={emailPassword}
+                    onChange={(e) => setEmailPassword(e.target.value)}
+                    minLength={6}
+                    className="mt-1 w-full rounded-lg border border-zinc-700 bg-black px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500"
+                    placeholder="••••••"
+                    required
+                  />
+                </div>
+                {emailMode === "register" && (
+                  <div>
+                    <label htmlFor="email-confirm" className="block text-xs font-medium text-zinc-500">
+                      Повторите пароль
+                    </label>
+                    <input
+                      id="email-confirm"
+                      type="password"
+                      autoComplete="new-password"
+                      value={emailConfirm}
+                      onChange={(e) => setEmailConfirm(e.target.value)}
+                      minLength={6}
+                      className="mt-1 w-full rounded-lg border border-zinc-700 bg-black px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500"
+                      placeholder="••••••"
+                      required
+                    />
+                  </div>
+                )}
+
+                {error && <p className="text-sm text-red-400">{error}</p>}
+
+                <button
+                  type="submit"
+                  disabled={pending}
+                  className="w-full rounded-lg bg-violet-600 py-2.5 text-sm font-semibold text-white hover:bg-violet-500 disabled:opacity-50"
+                >
+                  {pending
+                    ? "Подождите…"
+                    : emailMode === "login"
+                      ? "Войти"
+                      : "Зарегистрироваться"}
+                </button>
+
+                <div className="flex items-center justify-between text-xs text-zinc-500">
+                  {emailMode === "login" ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => { setEmailMode("register"); setError(""); }}
+                        className="hover:text-zinc-300"
+                      >
+                        Нет аккаунта? Зарегистрироваться
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setEmailMode("forgot"); setError(""); }}
+                        className="hover:text-zinc-300"
+                      >
+                        Забыли пароль?
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => { setEmailMode("login"); setError(""); }}
+                      className="hover:text-zinc-300"
+                    >
+                      Уже есть аккаунт? Войти
+                    </button>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={switchToPhone}
+                  className="w-full rounded-lg border border-zinc-800 py-2 text-xs text-zinc-600 hover:text-zinc-400"
+                >
+                  ← Назад к выбору режима
+                </button>
+              </form>
+            )}
+          </div>
         )}
       </div>
     </div>
