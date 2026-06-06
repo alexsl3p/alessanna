@@ -32,7 +32,20 @@
     <script>
       if ("serviceWorker" in navigator) {
         window.addEventListener("load", function () {
-          navigator.serviceWorker.register("/sw.js").catch(function () {});
+          navigator.serviceWorker.register("/sw.js").then(function (reg) {
+            // When a new service worker is installed and one was already
+            // controlling the page, a fresh build is live — reload once so the
+            // user never gets pinned to a stale version.
+            reg.addEventListener("updatefound", function () {
+              var nw = reg.installing;
+              if (!nw) return;
+              nw.addEventListener("statechange", function () {
+                if (nw.state === "installed" && navigator.serviceWorker.controller) {
+                  window.location.reload();
+                }
+              });
+            });
+          }).catch(function () {});
         });
       }
     </script>
