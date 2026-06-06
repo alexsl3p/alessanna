@@ -326,6 +326,8 @@ export function ReceptionWeekGrid({
         <div className={`flex w-14 shrink-0 items-end justify-center pb-1 text-[10px] ${mutedCls}`}>
           GMT+3
         </div>
+        {/* Bordered wrapper — right border marks the visual calendar edge */}
+        <div className={`flex flex-1 border-r ${borderCls}`}>
         {days.map((day, i) => {
           const isToday = isSameDay(day, now);
           const dateStr = format(day, "yyyy-MM-dd");
@@ -382,8 +384,9 @@ export function ReceptionWeekGrid({
             </div>
           );
         })}
-        {/* Right spacer — matches the spacer inside the body so edges align */}
-        <div className="w-3 shrink-0" />
+        </div>{/* end bordered day-columns wrapper */}
+        {/* Spacer lives OUTSIDE the border so breathing room is clearly beyond the grid */}
+        <div className="w-5 shrink-0" />
       </div>
 
       {/* Scrollable time body */}
@@ -411,8 +414,8 @@ export function ReceptionWeekGrid({
           )}
         </div>
 
-        {/* Day columns */}
-        <div className="flex flex-1">
+        {/* Day columns — bordered wrapper marks the visual calendar right edge */}
+        <div className={`flex flex-1 border-r ${borderCls}`}>
           {days.map((day) => {
             const dayAnchor = setHours(startOfDay(day), START_HOUR);
             const isToday = isSameDay(day, now);
@@ -605,9 +608,9 @@ export function ReceptionWeekGrid({
               </div>
             );
           })}
-          {/* Right spacer — matches header spacer so the last column has breathing room */}
-          <div className="w-3 shrink-0" style={{ height: TOTAL_PX }} />
         </div>
+        {/* Spacer OUTSIDE the border — clear breathing room beyond the calendar grid */}
+        <div className="w-5 shrink-0" style={{ height: TOTAL_PX }} />
       </div>
     </div>
   );
