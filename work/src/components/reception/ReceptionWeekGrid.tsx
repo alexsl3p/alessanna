@@ -291,14 +291,6 @@ export function ReceptionWeekGrid({
     return () => clearInterval(id);
   }, []);
 
-  // Open at ~10:00 (typical salon start) on mount; the full 00:00–24:00
-  // grid stays scrollable inside the body so any hour can be reached
-  // earlier or later, like a normal calendar.
-  useEffect(() => {
-    if (bodyRef.current) {
-      bodyRef.current.scrollTop = Math.max(0, (8 - START_HOUR) * PX_PER_HOUR - 8);
-    }
-  }, []);
 
   function handleBodyClick(e: React.MouseEvent<HTMLDivElement>, day: Date) {
     if ((e.target as HTMLElement).closest("[data-appt]")) return;
