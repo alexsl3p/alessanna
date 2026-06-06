@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   addMinutes,
@@ -433,13 +433,18 @@ export function ReceptionWeekGrid({
                 style={{ height: TOTAL_PX }}
                 onClick={(e) => handleBodyClick(e, day)}
               >
-                {/* Hour lines */}
+                {/* Hour lines + half-hour marks */}
                 {HOURS.map((h) => (
-                  <div
-                    key={h}
-                    className={`pointer-events-none absolute inset-x-0 border-t ${hrLine}`}
-                    style={{ top: (h - START_HOUR) * PX_PER_HOUR }}
-                  />
+                  <React.Fragment key={h}>
+                    <div
+                      className={`pointer-events-none absolute inset-x-0 border-t ${hrLine}`}
+                      style={{ top: (h - START_HOUR) * PX_PER_HOUR }}
+                    />
+                    <div
+                      className="pointer-events-none absolute inset-x-0 border-t border-line/[0.04]"
+                      style={{ top: (h - START_HOUR) * PX_PER_HOUR + PX_PER_HOUR / 2 }}
+                    />
+                  </React.Fragment>
                 ))}
 
                 {/* Time-off zones */}
