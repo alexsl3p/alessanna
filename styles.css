@@ -2015,7 +2015,7 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  object-position: 58% center;
+  object-position: 74% center;
   filter: brightness(1.24) contrast(1.04);
 }
 
