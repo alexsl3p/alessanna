@@ -323,11 +323,9 @@ export function ReceptionWeekGrid({
     <div className={`flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden ${bg}`}>
       {/* Day header row — right-pad by scrollbar width so columns align with body */}
       <div className={`flex shrink-0 border-b ${borderCls} ${bg}`} style={{ paddingRight: scrollbarWidth }}>
-        <div className={`flex w-14 shrink-0 items-end justify-center pb-1 text-[10px] ${mutedCls}`}>
+        <div className={`flex w-10 shrink-0 items-end justify-center pb-1 text-[10px] md:w-14 ${mutedCls}`}>
           GMT+3
         </div>
-        {/* Bordered wrapper — right border marks the visual calendar edge */}
-        <div className={`flex flex-1 border-r ${borderCls}`}>
         {days.map((day, i) => {
           const isToday = isSameDay(day, now);
           const dateStr = format(day, "yyyy-MM-dd");
@@ -352,7 +350,7 @@ export function ReceptionWeekGrid({
               </span>
               <span
                 className={[
-                  "flex h-8 w-8 items-center justify-center rounded-full text-lg font-medium",
+                  "flex h-7 w-7 items-center justify-center rounded-full text-base font-medium md:h-8 md:w-8 md:text-lg",
                   isToday
                     ? useGold ? "bg-gold text-canvas" : "bg-[#1a73e8] text-white"
                     : textCls,
@@ -361,22 +359,22 @@ export function ReceptionWeekGrid({
                 {format(day, "d")}
               </span>
               {workingStaff.length > 0 && (
-                <div className="mt-0.5 flex flex-wrap justify-center gap-0.5 px-1">
-                  {workingStaff.slice(0, 4).map((m) => {
+                <div className="mt-0.5 flex flex-wrap justify-center gap-0.5 px-0.5">
+                  {workingStaff.slice(0, 3).map((m) => {
                     const c = googleStaffColor(m, staffHueMap);
                     return (
                       <span
                         key={m.id}
-                        className="max-w-[56px] truncate rounded px-1.5 py-0.5 text-[10px] font-medium"
+                        className="max-w-[48px] truncate rounded px-1 py-0.5 text-[9px] font-medium md:max-w-[56px] md:px-1.5 md:text-[10px]"
                         style={{ backgroundColor: c.bg, color: c.fg }}
                       >
                         {m.name.split(" ")[0]}
                       </span>
                     );
                   })}
-                  {workingStaff.length > 4 && (
+                  {workingStaff.length > 3 && (
                     <span className={`rounded px-1 py-0.5 text-[9px] ${mutedCls}`}>
-                      +{workingStaff.length - 4}
+                      +{workingStaff.length - 3}
                     </span>
                   )}
                 </div>
@@ -384,19 +382,16 @@ export function ReceptionWeekGrid({
             </div>
           );
         })}
-        </div>{/* end bordered day-columns wrapper */}
-        {/* Spacer lives OUTSIDE the border so breathing room is clearly beyond the grid */}
-        <div className="w-5 shrink-0" />
       </div>
 
       {/* Scrollable time body */}
       <div ref={bodyRef} className={`flex min-h-0 flex-1 overflow-y-scroll ${bg}`}>
         {/* Time gutter */}
-        <div className={`relative w-14 shrink-0 ${bg}`} style={{ height: TOTAL_PX }}>
+        <div className={`relative w-10 shrink-0 md:w-14 ${bg}`} style={{ height: TOTAL_PX }}>
           {HOURS.map((h) => (
             <div
               key={h}
-              className={`absolute right-2 text-[10px] ${mutedCls}`}
+              className={`absolute right-0.5 text-[9px] md:right-2 md:text-[10px] ${mutedCls}`}
               style={{ top: (h - START_HOUR) * PX_PER_HOUR - 6 }}
             >
               {h.toString().padStart(2, "0")}:00
@@ -414,8 +409,8 @@ export function ReceptionWeekGrid({
           )}
         </div>
 
-        {/* Day columns — bordered wrapper marks the visual calendar right edge */}
-        <div className={`flex flex-1 border-r ${borderCls}`}>
+        {/* Day columns */}
+        <div className="flex flex-1">
           {days.map((day) => {
             const dayAnchor = setHours(startOfDay(day), START_HOUR);
             const isToday = isSameDay(day, now);
@@ -609,8 +604,6 @@ export function ReceptionWeekGrid({
             );
           })}
         </div>
-        {/* Spacer OUTSIDE the border — clear breathing room beyond the calendar grid */}
-        <div className="w-5 shrink-0" style={{ height: TOTAL_PX }} />
       </div>
     </div>
   );

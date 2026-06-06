@@ -287,9 +287,9 @@ export function ReceptionCalendarPage() {
           />
         )}
 
-        {/* Calendar area — padded so the rounded container floats */}
-        <div className="flex min-h-0 flex-1 p-2 pr-4 pb-3">
-          <div className="flex min-h-0 flex-1 overflow-hidden rounded-2xl border border-line/15 pr-2">
+        {/* Calendar area — edge-to-edge on mobile, floating card on md+ */}
+        <div className="flex min-h-0 flex-1 md:p-2 md:pr-4 md:pb-3">
+          <div className="flex min-h-0 flex-1 overflow-hidden border-y border-line/15 md:rounded-2xl md:border">
             {view === "month" ? (
               <ReceptionMonthView
                 cursor={cursor}
