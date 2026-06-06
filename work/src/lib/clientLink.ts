@@ -1,13 +1,15 @@
 import { supabase } from "./supabase";
 import type { ClientRow } from "../types/database";
 
-export type ClientSuggestion = Pick<ClientRow, "id" | "name" | "last_name" | "phone" | "email">;
+export type ClientSuggestion = Pick<ClientRow, "id" | "name" | "phone" | "email"> & {
+  last_name?: string | null;
+};
 
 function digitsOnly(phone: string | null | undefined): string {
   return String(phone ?? "").replace(/\D/g, "");
 }
 
-export function clientDisplayName(client: Pick<ClientRow, "name" | "last_name">): string {
+export function clientDisplayName(client: { name: string; last_name?: string | null }): string {
   return [client.name, client.last_name].map((x) => String(x ?? "").trim()).filter(Boolean).join(" ").trim();
 }
 
@@ -34,7 +36,20 @@ export async function searchClients(term: string): Promise<ClientSuggestion[]> {
     .or(parts.join(","))
     .order("created_at", { ascending: false })
     .limit(8);
-  if (error || !data) return [];
+  if (error) {
+    if (error.code !== "42703") return [];
+    const fallbackParts = [`name.ilike.%${q}%`, `email.ilike.%${q}%`];
+    if (digits.length >= 2) fallbackParts.push(`phone.ilike.%${digits}%`);
+    const fallback = await supabase
+      .from("clients")
+      .select("id,name,phone,email")
+      .or(fallbackParts.join(","))
+      .order("created_at", { ascending: false })
+      .limit(8);
+    if (fallback.error || !fallback.data) return [];
+    return fallback.data.map((row) => ({ ...(row as Omit<ClientSuggestion, "last_name">), last_name: null }));
+  }
+  if (!data) return [];
   return data as ClientSuggestion[];
 }
 
