@@ -298,10 +298,10 @@ export function ReceptionWeekGrid({
     // new-booking popup, so it's an easy way to "deactivate" stretching).
     if (resizeModeId) { setResizeModeId(null); return; }
     const rect = e.currentTarget.getBoundingClientRect();
-    const scrollTop = bodyRef.current?.scrollTop ?? 0;
-    const yOffset = e.clientY - rect.top + scrollTop;
+    // rect.top is already in viewport coords (accounts for scroll), no need to add scrollTop
+    const yOffset = e.clientY - rect.top;
     const minutesFromStart = Math.floor((yOffset / PX_PER_HOUR) * 60);
-    const snappedMinutes = Math.max(0, Math.floor(minutesFromStart / 15) * 15);
+    const snappedMinutes = Math.max(0, Math.floor(minutesFromStart / 30) * 30);
     const dayAnchor = setHours(startOfDay(day), START_HOUR);
     const clickedTime = addMinutes(dayAnchor, snappedMinutes);
     onSlotClick(clickedTime, e.clientX, e.clientY);
