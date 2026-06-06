@@ -2016,6 +2016,7 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
   height: 100%;
   object-fit: contain;
   object-position: 58% center;
+  filter: brightness(1.24) contrast(1.04);
 }
 
 .mave-hero::before,
@@ -2029,7 +2030,7 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
 
 .mave-hero::before {
   background:
-    linear-gradient(90deg, rgba(5, 4, 3, 0) 0%, rgba(5, 4, 3, 0) 70%, rgba(5, 4, 3, 0.28) 82%, rgba(5, 4, 3, 0.74) 91%, #050403 100%),
+    linear-gradient(90deg, rgba(5, 4, 3, 0) 0%, rgba(5, 4, 3, 0) 78%, rgba(5, 4, 3, 0.12) 88%, rgba(5, 4, 3, 0.42) 96%, #050403 100%),
     radial-gradient(ellipse at 25% 52%, rgba(5, 4, 3, 0.9) 0%, rgba(5, 4, 3, 0.72) 26%, rgba(5, 4, 3, 0.28) 48%, rgba(5, 4, 3, 0) 70%),
     linear-gradient(
       90deg,
@@ -2038,7 +2039,7 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
       rgba(5, 4, 3, 0.72) 30%,
       rgba(5, 4, 3, 0.2) 50%,
       rgba(5, 4, 3, 0.06) 70%,
-      rgba(5, 4, 3, 0.3) 91%,
+      rgba(5, 4, 3, 0.14) 91%,
       #050403 100%
     );
 }
@@ -2047,12 +2048,12 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
   background: linear-gradient(
     180deg,
     #050403 0%,
-    rgba(5, 4, 3, 0.95) 5%,
-    rgba(5, 4, 3, 0.48) 18%,
+    rgba(5, 4, 3, 0.82) 5%,
+    rgba(5, 4, 3, 0.26) 18%,
     rgba(5, 4, 3, 0) 34%,
     rgba(5, 4, 3, 0) 64%,
-    rgba(5, 4, 3, 0.46) 81%,
-    rgba(5, 4, 3, 0.9) 94%,
+    rgba(5, 4, 3, 0.24) 81%,
+    rgba(5, 4, 3, 0.62) 94%,
     #050403 100%
   );
 }
