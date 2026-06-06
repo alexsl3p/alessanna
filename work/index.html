@@ -3,7 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/icon.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport is set by the inline script below before React mounts -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" id="viewport-meta" />
+    <script>
+      // Apply desktop viewport before React renders — dynamic changes after load are ignored by browsers
+      try {
+        if (localStorage.getItem("reception_desktop_mode") === "1") {
+          document.getElementById("viewport-meta").content = "width=1280";
+        }
+      } catch(e) {}
+    </script>
     <meta name="robots" content="noindex, nofollow" />
     <title>AlesSanna · CRM</title>
 

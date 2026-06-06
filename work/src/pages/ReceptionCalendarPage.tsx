@@ -31,9 +31,6 @@ type BookingPopupState = {
   editAppt?: AppointmentRow | null;
 };
 
-const VIEWPORT_DESKTOP = "width=1280";
-const VIEWPORT_MOBILE = "width=device-width, initial-scale=1.0";
-
 export function ReceptionCalendarPage() {
   const { t, i18n } = useTranslation();
   const { theme } = useTheme();
@@ -46,20 +43,18 @@ export function ReceptionCalendarPage() {
     return () => { document.title = prev; };
   }, []);
 
-  const [desktopMode, setDesktopMode] = useState(() => {
+  const desktopMode = (() => {
     try { return localStorage.getItem("reception_desktop_mode") === "1"; } catch { return false; }
-  });
+  })();
 
-  useEffect(() => {
-    const tag = document.querySelector<HTMLMetaElement>('meta[name="viewport"]');
-    if (tag) tag.content = desktopMode ? VIEWPORT_DESKTOP : VIEWPORT_MOBILE;
-    try { localStorage.setItem("reception_desktop_mode", desktopMode ? "1" : "0"); } catch { /* */ }
-    return () => {
-      // restore mobile viewport when leaving the reception page
-      const t2 = document.querySelector<HTMLMetaElement>('meta[name="viewport"]');
-      if (t2) t2.content = VIEWPORT_MOBILE;
-    };
-  }, [desktopMode]);
+  function toggleDesktopMode() {
+    try {
+      localStorage.setItem("reception_desktop_mode", desktopMode ? "0" : "1");
+    } catch { /* */ }
+    // Viewport meta is set by the inline script in index.html on page load,
+    // so we must reload for the new viewport to take effect (same as Chrome's "Request desktop site").
+    window.location.reload();
+  }
   const [cursor, setCursor] = useState(() => new Date());
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [appointments, setAppointments] = useState<AppointmentRow[]>([]);
@@ -280,7 +275,7 @@ export function ReceptionCalendarPage() {
             onViewChange={setView}
             dark={dark}
             desktopMode={desktopMode}
-            onToggleDesktopMode={() => setDesktopMode((d) => !d)}
+            onToggleDesktopMode={toggleDesktopMode}
           />
         </div>
 

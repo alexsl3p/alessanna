@@ -23,7 +23,6 @@ import { useTheme } from "../../context/ThemeContext";
 const START_HOUR = 0;
 const END_HOUR = 24;
 const PX_PER_HOUR = 64;
-const RIGHT_PAD = 6;
 const TOTAL_PX = (END_HOUR - START_HOUR) * PX_PER_HOUR;
 const HOURS = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i);
 
@@ -322,8 +321,8 @@ export function ReceptionWeekGrid({
 
   return (
     <div className={`flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden ${bg}`}>
-      {/* Day header row — right-pad by scrollbar width + trailing gap so columns align with body */}
-      <div className={`flex shrink-0 border-b ${borderCls} ${bg}`} style={{ paddingRight: scrollbarWidth + RIGHT_PAD }}>
+      {/* Day header row — right-pad by scrollbar width so columns align with body */}
+      <div className={`flex shrink-0 border-b ${borderCls} ${bg}`} style={{ paddingRight: scrollbarWidth }}>
         <div className={`flex w-14 shrink-0 items-end justify-center pb-1 text-[10px] ${mutedCls}`}>
           GMT+3
         </div>
@@ -383,6 +382,8 @@ export function ReceptionWeekGrid({
             </div>
           );
         })}
+        {/* Right spacer — matches the spacer inside the body so edges align */}
+        <div className="w-3 shrink-0" />
       </div>
 
       {/* Scrollable time body */}
@@ -410,8 +411,8 @@ export function ReceptionWeekGrid({
           )}
         </div>
 
-        {/* Day columns — RIGHT_PAD gives breathing room so the last column isn't flush with the edge */}
-        <div className="flex flex-1" style={{ paddingRight: RIGHT_PAD }}>
+        {/* Day columns */}
+        <div className="flex flex-1">
           {days.map((day) => {
             const dayAnchor = setHours(startOfDay(day), START_HOUR);
             const isToday = isSameDay(day, now);
@@ -604,6 +605,8 @@ export function ReceptionWeekGrid({
               </div>
             );
           })}
+          {/* Right spacer — matches header spacer so the last column has breathing room */}
+          <div className="w-3 shrink-0" style={{ height: TOTAL_PX }} />
         </div>
       </div>
     </div>
