@@ -1999,7 +1999,7 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
   position: relative;
   overflow: hidden;
   width: 100%;
-  min-height: clamp(33rem, 56vw, 47rem);
+  height: clamp(25rem, 38vw, 33rem);
   border: 0;
   border-radius: 0;
   background: #050403;
@@ -2014,8 +2014,8 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: center;
+  object-fit: contain;
+  object-position: 62% center;
 }
 
 .mave-hero::before,
@@ -2030,12 +2030,14 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
 .mave-hero::before {
   background: linear-gradient(
     90deg,
-    rgba(3, 3, 3, 0.98) 0%,
-    rgba(3, 3, 3, 0.94) 18%,
-    rgba(3, 3, 3, 0.72) 37%,
-    rgba(3, 3, 3, 0.36) 54%,
-    rgba(3, 3, 3, 0.12) 68%,
-    rgba(3, 3, 3, 0) 80%
+    #050403 0%,
+    rgba(5, 4, 3, 0.98) 14%,
+    rgba(5, 4, 3, 0.82) 31%,
+    rgba(5, 4, 3, 0.44) 48%,
+    rgba(5, 4, 3, 0.14) 65%,
+    rgba(5, 4, 3, 0) 78%,
+    rgba(5, 4, 3, 0.2) 91%,
+    #050403 100%
   );
 }
 
@@ -2055,12 +2057,13 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
 .mave-hero__content {
   position: relative;
   z-index: 1;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  min-height: inherit;
-  max-width: 30rem;
-  padding: clamp(2rem, 6vw, 4.6rem);
+  min-height: 100%;
+  max-width: 26rem;
+  padding: clamp(1.6rem, 4.4vw, 3.2rem);
   text-shadow: 0 2px 16px rgba(0, 0, 0, 0.72);
 }
 
@@ -2073,22 +2076,22 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
 }
 
 .mave-hero__title {
-  max-width: 9.5ch;
+  max-width: 12ch;
   margin: 0;
   color: var(--text);
   font-family: var(--font-display);
-  font-size: clamp(2.65rem, 7vw, 5.45rem);
+  font-size: clamp(2.1rem, 4.8vw, 4rem);
   font-weight: 400;
   font-style: italic;
   line-height: 0.94;
 }
 
 .mave-hero__lead {
-  max-width: 31rem;
-  margin: 1.25rem 0 0;
+  max-width: 25rem;
+  margin: 1rem 0 0;
   color: rgba(232, 232, 229, 0.74);
-  font-size: clamp(0.93rem, 1.25vw, 1.05rem);
-  line-height: 1.8;
+  font-size: clamp(0.9rem, 1.15vw, 1rem);
+  line-height: 1.72;
 }
 
 .mave-hero__actions {
@@ -2119,6 +2122,7 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
   .mave-hero {
     display: flex;
     flex-direction: column;
+    height: auto;
     min-height: 0;
   }
 
@@ -2130,8 +2134,9 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
   .mave-hero__image {
     position: relative;
     z-index: 0;
-    height: clamp(18rem, 72vw, 23rem);
+    height: clamp(15.5rem, 64vw, 19.5rem);
     object-position: 58% center;
+    object-fit: contain;
     -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 8%, #000 82%, transparent 100%);
     mask-image: linear-gradient(180deg, transparent 0%, #000 8%, #000 82%, transparent 100%);
   }
@@ -2146,7 +2151,7 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
 
   .mave-hero__title {
     max-width: 11ch;
-    font-size: clamp(2.55rem, 13vw, 3.25rem);
+    font-size: clamp(2.35rem, 11.5vw, 2.95rem);
   }
 
   .mave-hero__lead {
