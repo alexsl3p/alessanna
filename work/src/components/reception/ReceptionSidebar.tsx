@@ -36,6 +36,8 @@ type Props = {
   hideMiniCalendar?: boolean;
   view?: "day" | "week" | "month";
   onViewChange?: (v: "day" | "week" | "month") => void;
+  desktopMode?: boolean;
+  onToggleDesktopMode?: () => void;
 };
 
 const DAY_KEYS = [1, 2, 3, 4, 5, 6, 0] as const;
@@ -50,6 +52,8 @@ export function ReceptionSidebar({
   hideMiniCalendar,
   view,
   onViewChange,
+  desktopMode,
+  onToggleDesktopMode,
 }: Props) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -232,6 +236,36 @@ export function ReceptionSidebar({
             </button>
           ))}
         </div>
+
+        {/* Desktop / Mobile view toggle */}
+        {onToggleDesktopMode !== undefined && (
+          <button
+            type="button"
+            onClick={onToggleDesktopMode}
+            className={[
+              "mb-3 flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
+              dark
+                ? "border-white/10 text-muted hover:border-white/20 hover:text-fg"
+                : "border-line/20 text-muted hover:border-line/30 hover:text-fg",
+            ].join(" ")}
+          >
+            {desktopMode ? (
+              <>
+                <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="5" y="2" width="14" height="20" rx="2" /><line x1="12" y1="18" x2="12.01" y2="18" />
+                </svg>
+                Мобильная версия
+              </>
+            ) : (
+              <>
+                <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="3" width="20" height="14" rx="2" /><polyline points="8 21 12 17 16 21" /><line x1="12" y1="17" x2="12" y2="21" />
+                </svg>
+                Версия для ПК
+              </>
+            )}
+          </button>
+        )}
 
         {/* Theme picker */}
         <p className={`mb-1.5 text-[10px] font-semibold uppercase tracking-wide ${mutedCls}`}>
