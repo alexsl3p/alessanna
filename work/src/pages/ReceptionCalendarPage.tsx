@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { addDays, addMonths, addWeeks, subDays, startOfWeek, subMonths, subWeeks } from "date-fns";
 import { supabase } from "../lib/supabase";
@@ -160,6 +160,17 @@ export function ReceptionCalendarPage() {
     else setCursor((d) => (dir === 1 ? addMonths(d, 1) : subMonths(d, 1)));
   }
 
+  const swipeStartX = useRef<number | null>(null);
+  function handleTouchStart(e: React.TouchEvent) {
+    swipeStartX.current = e.touches[0].clientX;
+  }
+  function handleTouchEnd(e: React.TouchEvent) {
+    if (swipeStartX.current === null) return;
+    const dx = swipeStartX.current - e.changedTouches[0].clientX;
+    if (Math.abs(dx) > 50) navPeriod(dx > 0 ? 1 : -1);
+    swipeStartX.current = null;
+  }
+
   const uiLocale = i18n.language === "et" ? "et-EE" : "ru-RU";
   const periodLabel = view === "day"
     ? cursor.toLocaleString(uiLocale, { weekday: "long", day: "numeric", month: "long", year: "numeric" })
@@ -288,17 +299,19 @@ export function ReceptionCalendarPage() {
         )}
 
         {/* Calendar area — floating card on all screen sizes */}
-        <div className="flex min-h-0 flex-1 p-1.5 pr-2 pb-2 md:p-2 md:pr-4 md:pb-3">
+        <div
+          className="flex min-h-0 flex-1 p-1.5 pr-2 pb-2 md:p-2 md:pr-4 md:pb-3"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
           <div className="flex min-h-0 flex-1 overflow-hidden rounded-2xl border border-line/15">
             {view === "month" ? (
               <ReceptionMonthView
                 cursor={cursor}
                 staff={staff}
-                appointments={appointments}
                 workDates={workDates}
                 visibleStaffIds={visibleStaffIds}
                 onDayClick={handleDayClick}
-                onApptClick={handleApptClick}
                 dark={dark}
               />
             ) : (
