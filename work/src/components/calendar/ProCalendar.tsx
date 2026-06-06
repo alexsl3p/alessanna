@@ -329,7 +329,7 @@ export function ProCalendar({
       }
 
       const svc = services.find((s) => s.id === booking.service_id);
-      const duration = (svc?.duration_min ?? 60) + (svc?.buffer_after_min ?? 10);
+      const duration = svc?.duration_min ?? 60;
       const slotStart = setMinutes(setHours(startOfDay(day), parsed.hour), 0);
       const slotEnd = addMinutes(slotStart, duration);
 

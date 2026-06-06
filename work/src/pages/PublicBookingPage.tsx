@@ -238,7 +238,7 @@ export function PublicBookingPage() {
           id: String(s.id),
           name: String(s.name || "").trim(),
           duration_min: Number(s.duration || 0),
-          buffer_after_min: Number(s.buffer_after_min ?? 10),
+          buffer_after_min: 0,
           active: s.is_active !== false,
           categoryName: catName || null,
           price_eur,
@@ -480,7 +480,7 @@ export function PublicBookingPage() {
   }, [nowTick, bookYmd]);
 
   const svc = services.find((s) => s.id === serviceId);
-  const durationMin = svc ? svc.duration_min + svc.buffer_after_min : 60;
+  const durationMin = svc ? svc.duration_min : 60;
 
   const slotsByStaff = useMemo(() => {
     if (!svc) return new Map<string, Slot[]>();

@@ -175,7 +175,7 @@ export function BookingModal({
       setError("Нельзя создать запись в прошедшее время. Выберите актуальный слот.");
       return;
     }
-    const end = addMinutes(start, svc.duration_min + svc.buffer_after_min);
+    const end = addMinutes(start, svc.duration_min);
 
     const { data: existingRows, error: loadErr } = await supabase
       .from("appointments")

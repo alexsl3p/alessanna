@@ -23,7 +23,7 @@ export function computeSequentialSegments(
     const svc = listings.find((s) => s.id === item.serviceId);
     if (!svc) return null;
     const start = t;
-    const end = addMinutes(start, listingDurationMinutes(svc) + listingBufferMinutes(svc));
+    const end = addMinutes(start, listingDurationMinutes(svc));
     out.push({ serviceId: item.serviceId, staffId: item.staffId, start, end });
     t = end;
   }

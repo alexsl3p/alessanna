@@ -89,7 +89,7 @@ export function SimplePublicBookingPage() {
           id: String(s.id),
           name: String(s.name || "").trim(),
           duration_min: Number(s.duration || 0),
-          buffer_after_min: Number(s.buffer_after_min ?? 10),
+          buffer_after_min: 0,
           active: s.is_active !== false,
         })),
       );
@@ -180,7 +180,7 @@ export function SimplePublicBookingPage() {
   }, [loadDayData]);
 
   const svc = services.find((s) => s.id === serviceId);
-  const durationMin = svc ? svc.duration_min + svc.buffer_after_min : 60;
+  const durationMin = svc ? svc.duration_min : 60;
 
   const slots: Slot[] = useMemo(() => {
     if (!svc || !staffId) return [];

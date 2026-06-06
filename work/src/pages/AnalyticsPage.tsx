@@ -41,7 +41,7 @@ export function AnalyticsPage() {
           id: String(r.id),
           name: r.name_et ?? "",
           priceCents: Number(r.price_cents ?? 0),
-          totalMinutes: Number(r.duration_min ?? 0) + Number(r.buffer_after_min ?? 0),
+          totalMinutes: Number(r.duration_min ?? 0),
         });
       }
     }
@@ -56,7 +56,7 @@ export function AnalyticsPage() {
           id: String(r.id),
           name: r.name ?? "",
           priceCents: Math.round(euros * 100),
-          totalMinutes: Number(r.duration ?? 0) + Number(r.buffer_after_min ?? 0),
+          totalMinutes: Number(r.duration ?? 0),
         });
       }
     }
