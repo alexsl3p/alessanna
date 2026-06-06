@@ -2000,12 +2000,10 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
   overflow: hidden;
   width: 100%;
   min-height: clamp(33rem, 56vw, 47rem);
-  border: 1px solid var(--line-strong);
-  border-right: 0;
-  border-left: 0;
+  border: 0;
   border-radius: 0;
   background: #050403;
-  box-shadow: var(--shadow-card), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  box-shadow: none;
   isolation: isolate;
 }
 
@@ -2018,6 +2016,40 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
   height: 100%;
   object-fit: cover;
   object-position: center;
+}
+
+.mave-hero::before,
+.mave-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.mave-hero::before {
+  background: linear-gradient(
+    90deg,
+    rgba(3, 3, 3, 0.98) 0%,
+    rgba(3, 3, 3, 0.94) 18%,
+    rgba(3, 3, 3, 0.72) 37%,
+    rgba(3, 3, 3, 0.36) 54%,
+    rgba(3, 3, 3, 0.12) 68%,
+    rgba(3, 3, 3, 0) 80%
+  );
+}
+
+.mave-hero::after {
+  background: linear-gradient(
+    180deg,
+    #050403 0%,
+    rgba(5, 4, 3, 0.88) 4%,
+    rgba(5, 4, 3, 0.18) 16%,
+    rgba(5, 4, 3, 0) 34%,
+    rgba(5, 4, 3, 0) 70%,
+    rgba(5, 4, 3, 0.52) 88%,
+    #050403 100%
+  );
 }
 
 .mave-hero__content {
@@ -2090,11 +2122,18 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
     min-height: 0;
   }
 
+  .mave-hero::before,
+  .mave-hero::after {
+    display: none;
+  }
+
   .mave-hero__image {
     position: relative;
     z-index: 0;
     height: clamp(18rem, 72vw, 23rem);
     object-position: 58% center;
+    -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 8%, #000 82%, transparent 100%);
+    mask-image: linear-gradient(180deg, transparent 0%, #000 8%, #000 82%, transparent 100%);
   }
 
   .mave-hero__content {
@@ -2102,7 +2141,7 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
     min-height: auto;
     max-width: 100%;
     padding: 1.45rem 1.2rem 1.6rem;
-    background: linear-gradient(180deg, #090806, #050403);
+    background: linear-gradient(180deg, rgba(5, 4, 3, 0.72), #050403 1.65rem);
   }
 
   .mave-hero__title {
