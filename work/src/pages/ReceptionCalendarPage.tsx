@@ -6,6 +6,7 @@ import { useCalendarDataRealtime } from "../hooks/useSalonRealtime";
 import { loadServicesCatalog } from "../lib/loadServicesCatalog";
 import { isStaffRowAdmin, normalizeStaffMember } from "../lib/roles";
 import { useTheme } from "../context/ThemeContext";
+import { useEffectiveRole } from "../context/EffectiveRoleContext";
 import { ReceptionSidebar } from "../components/reception/ReceptionSidebar";
 import { ReceptionWeekGrid } from "../components/reception/ReceptionWeekGrid";
 import { ReceptionMonthView } from "../components/reception/ReceptionMonthView";
@@ -35,6 +36,7 @@ export function ReceptionCalendarPage() {
   const { t, i18n } = useTranslation();
   const { theme } = useTheme();
   const dark = theme === "onyx" || theme === "stone";
+  const { canManage } = useEffectiveRole();
   const [view, setView] = useState<View>("week");
 
   useEffect(() => {
@@ -256,8 +258,8 @@ export function ReceptionCalendarPage() {
           </button>
         </div>
 
-        {/* Settings gear + dropdown menu */}
-        <div className="relative shrink-0">
+        {/* Settings gear + dropdown menu — admin/manager only */}
+        {canManage && <div className="relative shrink-0">
           <button
             onClick={() => setShowSettingsMenu((v) => !v)}
             className={`flex h-9 w-9 items-center justify-center rounded-full ${navText} ${navHover}`}
@@ -282,7 +284,7 @@ export function ReceptionCalendarPage() {
               </div>
             </>
           )}
-        </div>
+        </div>}
       </div>
 
       {/* Main layout */}
