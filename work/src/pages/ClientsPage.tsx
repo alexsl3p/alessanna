@@ -144,8 +144,8 @@ export function ClientsPage() {
     <div className="space-y-6">
       <header className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-fg">{t("clients.title")}</h1>
-          <p className="text-sm text-muted">{t("clients.subtitle")}</p>
+          <h1 className="text-2xl font-semibold text-fg">Клиенты</h1>
+          <p className="text-sm text-muted">Наши клиенты</p>
         </div>
         <label className="flex max-w-md items-start justify-between gap-4 rounded-lg border border-line/15 bg-panel/60 p-3">
           <span>
