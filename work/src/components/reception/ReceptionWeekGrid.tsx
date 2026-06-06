@@ -122,6 +122,8 @@ export function ReceptionWeekGrid({
   useLayoutEffect(() => {
     if (bodyRef.current) {
       setScrollbarWidth(bodyRef.current.offsetWidth - bodyRef.current.clientWidth);
+      // Scroll to 9:30 on initial load
+      bodyRef.current.scrollTop = 9.5 * PX_PER_HOUR;
     }
   }, []);
   const staffHueMap = useMemo(() => buildStaffHueMap(staff.map((m) => m.id)), [staff]);
