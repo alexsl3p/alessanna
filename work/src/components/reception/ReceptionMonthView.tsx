@@ -99,8 +99,9 @@ export function ReceptionMonthView({
         ))}
       </div>
 
-      {/* Month grid */}
-      <div className="grid min-h-0 flex-1 grid-cols-7 grid-rows-6 overflow-hidden bg-canvas">
+      {/* Month grid — rows auto-size to content so all staff chips are visible */}
+      <div className="min-h-0 flex-1 overflow-y-auto bg-canvas">
+      <div className="grid grid-cols-7 bg-canvas">
         {gridDays.map((day) => {
           const key = format(day, "yyyy-MM-dd");
           const dayAppts = apptsByDay.get(key) ?? [];
@@ -115,9 +116,10 @@ export function ReceptionMonthView({
             <div
               key={key}
               className={[
-                "relative flex min-h-0 flex-col overflow-hidden border-b border-r border-line/10 p-1",
+                "relative flex flex-col border-b border-r border-line/10 p-1",
                 !isCurrentMonth ? offMonthBg : "",
               ].join(" ")}
+              style={{ minHeight: "4.5rem" }}
             >
               <button
                 onClick={() => onDayClick(day)}
@@ -183,6 +185,7 @@ export function ReceptionMonthView({
             </div>
           );
         })}
+      </div>
       </div>
     </div>
   );
