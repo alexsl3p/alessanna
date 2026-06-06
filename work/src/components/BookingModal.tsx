@@ -8,6 +8,9 @@ import { restrictAndOrderStaffByServiceHall, serviceRowToPublicCatalogEntry } fr
 import { overlapsExistingAppointments } from "../lib/slots";
 import { priceMaxEur } from "../lib/serviceListing";
 import { ServiceListPicker } from "./service-picker/ServiceListPicker";
+import { ClientAutocompleteInput } from "./ClientAutocompleteInput";
+import { clientDisplayName, resolveClientIdForVisit, type ClientSuggestion } from "../lib/clientLink";
+import { useAuth } from "../context/AuthContext";
 
 type Props = {
   open: boolean;
@@ -45,9 +48,12 @@ export function BookingModal({
   editAppointment = null,
 }: Props) {
   const { t, i18n } = useTranslation();
+  const { staffMember } = useAuth();
   const isEdit = editAppointment != null;
   const [clientName, setClientName] = useState("");
   const [clientPhone, setClientPhone] = useState("");
+  const [clientEmail, setClientEmail] = useState("");
+  const [pickedClientId, setPickedClientId] = useState<string | null>(null);
   const [staffId, setStaffId] = useState(initialStaffId);
   /* `services.id` приходит и как UUID (service_listings), и как bigint (services).
    * Поэтому serviceId — `string | number`, чтобы fallback-цепочки не ломались. */
@@ -114,12 +120,16 @@ export function BookingModal({
       setStaffId(editAppointment.staff_id);
       setClientName(editAppointment.client_name ?? "");
       setClientPhone(editAppointment.client_phone ?? "");
+      setClientEmail(editAppointment.client_email ?? "");
+      setPickedClientId(editAppointment.client_id ?? null);
       setServiceId(editAppointment.service_id as string | number);
       return;
     }
     setStaffId(initialStaffId);
     setClientName("");
     setClientPhone("");
+    setClientEmail("");
+    setPickedClientId(null);
     const firstSvc = eligibleServices[0]?.id ?? 0;
     setServiceId(firstSvc);
   }, [open, initialStaffId, eligibleServices, services, editAppointment]);
@@ -201,10 +211,16 @@ export function BookingModal({
      *  the 'source' column of 'appointments' in the schema cache» и запись не
      *  создаётся. Поэтому отправляем только реально существующие колонки. */
     const normalizedClientName = clientName.trim() || "Клиент (CRM)";
+    const resolvedClientId =
+      pickedClientId ?? (await resolveClientIdForVisit(normalizedClientName, clientPhone, clientEmail));
     const payload = {
+      client_id: resolvedClientId,
       client_name: normalizedClientName,
       client_phone: clientPhone.trim() || null,
+      client_email: clientEmail.trim() || null,
       note: null,
+      source: "crm",
+      created_by_staff_id: staffMember?.id ?? null,
       staff_id: staffId,
       service_id: serviceId,
       start_time: start.toISOString(),
@@ -227,6 +243,8 @@ export function BookingModal({
     onClose();
     setClientName("");
     setClientPhone("");
+    setClientEmail("");
+    setPickedClientId(null);
   }
 
   async function handleDelete() {
@@ -354,9 +372,18 @@ export function BookingModal({
           )}
           <div>
             <label className="text-xs text-muted">{t("modal.client")}</label>
-            <input
+            <ClientAutocompleteInput
               value={clientName}
-              onChange={(e) => setClientName(e.target.value)}
+              onChange={(value) => {
+                setClientName(value);
+                setPickedClientId(null);
+              }}
+              onPick={(client: ClientSuggestion) => {
+                setPickedClientId(client.id);
+                setClientName(clientDisplayName(client) || client.name);
+                setClientPhone(client.phone ?? "");
+                setClientEmail(client.email ?? "");
+              }}
               placeholder="Необязательно"
               className="mt-1 w-full rounded-lg border border-line/15 bg-panel px-3 py-2 text-sm text-fg"
             />
@@ -367,6 +394,16 @@ export function BookingModal({
               value={clientPhone}
               onChange={(e) => setClientPhone(e.target.value)}
               placeholder="Необязательно"
+              className="mt-1 w-full rounded-lg border border-line/15 bg-panel px-3 py-2 text-sm text-fg"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-muted">{t("modal.email", { defaultValue: "Email" })}</label>
+            <input
+              value={clientEmail}
+              onChange={(e) => setClientEmail(e.target.value)}
+              placeholder="email@example.com"
+              type="email"
               className="mt-1 w-full rounded-lg border border-line/15 bg-panel px-3 py-2 text-sm text-fg"
             />
           </div>

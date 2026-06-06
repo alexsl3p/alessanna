@@ -1,6 +1,6 @@
 import { addMinutes } from "date-fns";
 import type { ServiceListingRow } from "../types/database";
-import { listingBufferMinutes, listingDurationMinutes } from "./serviceListing";
+import { listingDurationMinutes } from "./serviceListing";
 
 export type ServiceStaffPick = { serviceId: string; staffId: string };
 

@@ -51,6 +51,7 @@ export function SimplePublicBookingPage() {
   const [pickedStart, setPickedStart] = useState<Date | null>(null);
   const [clientName, setClientName] = useState("");
   const [clientPhone, setClientPhone] = useState("");
+  const [clientEmail, setClientEmail] = useState("");
   const [clientNote, setClientNote] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
   const [msgIsSuccess, setMsgIsSuccess] = useState(false);
@@ -227,6 +228,7 @@ export function SimplePublicBookingPage() {
       const { data, error: rpcError } = await supabase.rpc("public_book_chain", {
         p_client_name: name,
         p_client_phone: clientPhone.trim() || "",
+        p_client_email: clientEmail.trim() || "",
         p_client_note: noteTrim || null,
         p_start_at: pickedStart.toISOString(),
         p_items: [{ service_id: svc.id, staff_id: staffId }],
@@ -254,6 +256,7 @@ export function SimplePublicBookingPage() {
       setPickedStart(null);
       setClientName("");
       setClientPhone("");
+      setClientEmail("");
       setClientNote("");
       void loadDayData();
     } catch {
@@ -415,6 +418,13 @@ export function SimplePublicBookingPage() {
                 placeholder={t("modal.phone", { defaultValue: "Телефон" }) as string}
                 value={clientPhone}
                 onChange={(e) => setClientPhone(e.target.value)}
+                className="w-full rounded-lg border border-zinc-700 bg-black px-3 py-2 text-sm"
+              />
+              <input
+                placeholder={t("modal.email", { defaultValue: "Email" }) as string}
+                value={clientEmail}
+                onChange={(e) => setClientEmail(e.target.value)}
+                type="email"
                 className="w-full rounded-lg border border-zinc-700 bg-black px-3 py-2 text-sm"
               />
               <textarea

@@ -137,6 +137,7 @@ export function PublicBookingPage() {
   const [calendarScope, setCalendarScope] = useState<PublicCalendarScope>("month");
   const [clientName, setClientName] = useState("");
   const [clientPhone, setClientPhone] = useState("");
+  const [clientEmail, setClientEmail] = useState("");
   const [clientNote, setClientNote] = useState("");
   const [pickedStart, setPickedStart] = useState<Date | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -865,6 +866,7 @@ export function PublicBookingPage() {
       const { data, error: rpcError } = await supabase.rpc("public_book_chain", {
         p_client_name: normalizedClientName || "Клиент",
         p_client_phone: clientPhone.trim() || "",
+        p_client_email: clientEmail.trim() || "",
         p_client_note: noteTrim || null,
         p_start_at: pickedStart.toISOString(),
         p_items: [{ service_id: svc.id, staff_id: finalStaffId }],
@@ -897,6 +899,7 @@ export function PublicBookingPage() {
     setPickedStart(null);
     setClientName("");
     setClientPhone("");
+    setClientEmail("");
     setClientNote("");
     void loadDayData();
     void loadCalendarRangeData();
@@ -1097,6 +1100,8 @@ export function PublicBookingPage() {
           setClientName={setClientName}
           clientPhone={clientPhone}
           setClientPhone={setClientPhone}
+          clientEmail={clientEmail}
+          setClientEmail={setClientEmail}
           clientNote={clientNote}
           setClientNote={setClientNote}
           booking={booking}

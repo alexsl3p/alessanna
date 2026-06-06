@@ -6,6 +6,9 @@ import { servicesEligibleForStaff } from "../../lib/roles";
 import { overlapsExistingAppointments } from "../../lib/slots";
 import { useTheme } from "../../context/ThemeContext";
 import type { AppointmentRow, ServiceRow, StaffMember, StaffServiceRow } from "../../types/database";
+import { ClientAutocompleteInput } from "../ClientAutocompleteInput";
+import { clientDisplayName, resolveClientIdForVisit, type ClientSuggestion } from "../../lib/clientLink";
+import { useAuth } from "../../context/AuthContext";
 
 type Props = {
   anchorX: number;
@@ -50,6 +53,7 @@ export function ReceptionBookingPopup({
   editAppt = null,
 }: Props) {
   const { t, i18n } = useTranslation();
+  const { staffMember } = useAuth();
   const { theme } = useTheme();
   const useGold = theme !== "white";
   const popupRef = useRef<HTMLDivElement>(null);
@@ -60,7 +64,9 @@ export function ReceptionBookingPopup({
   const [blockDuration, setBlockDuration] = useState(30);
   const [clientName, setClientName] = useState(() => editAppt?.client_name ?? "");
   const [clientPhone, setClientPhone] = useState(() => editAppt?.client_phone ?? "");
-  const [staffId, setStaffId] = useState<string>(() => editAppt?.staff_id ?? "");
+  const [clientEmail, setClientEmail] = useState(() => editAppt?.client_email ?? "");
+  const [pickedClientId, setPickedClientId] = useState<string | null>(() => editAppt?.client_id ?? null);
+  const [staffId, setStaffId] = useState<string>(() => editAppt?.staff_id ?? defaultStaffId ?? "");
   const [serviceId, setServiceId] = useState<string>(() => (editAppt && !isExistingBlock ? String(editAppt.service_id) : ""));
   const [startStr, setStartStr] = useState(() => timeToStr(editAppt ? new Date(editAppt.start_time) : initialStart));
   const [endStr, setEndStr] = useState(() =>
@@ -134,9 +140,13 @@ export function ReceptionBookingPopup({
     const others = ((existingRows ?? []) as { id: string; start_time: string; end_time: string }[])
       .filter((r) => !isEdit || r.id !== editAppt!.id);
     if (overlapsExistingAppointments(start, end, others)) { setSaving(false); setError(t("modal.overlap")); return; }
+    const normalizedClientName = clientName.trim() || t("modal.defaultClient");
+    const resolvedClientId = isBlock
+      ? null
+      : pickedClientId ?? (await resolveClientIdForVisit(normalizedClientName, clientPhone, clientEmail));
     const payload = isBlock
       ? { client_name: clientName.trim() || "— Закрыто —", client_phone: null as null, note: "block_time", staff_id: staffId, service_id: null as null, start_time: start.toISOString(), end_time: end.toISOString(), status: "confirmed" as const }
-      : { client_name: clientName.trim() || t("modal.defaultClient"), client_phone: clientPhone.trim() || null, note: null as null, staff_id: staffId, service_id: svc!.id, start_time: start.toISOString(), end_time: end.toISOString(), status: "confirmed" as const };
+      : { client_id: resolvedClientId, client_name: normalizedClientName, client_phone: clientPhone.trim() || null, client_email: clientEmail.trim() || null, note: null as null, source: "reception", created_by_staff_id: staffMember?.id ?? null, staff_id: staffId, service_id: svc!.id, start_time: start.toISOString(), end_time: end.toISOString(), status: "confirmed" as const };
     const { error: writeErr } = isEdit
       ? await supabase.from("appointments").update(payload).eq("id", editAppt!.id)
       : await supabase.from("appointments").insert(payload);
@@ -206,7 +216,13 @@ export function ReceptionBookingPopup({
       <form onSubmit={handleSubmit} className="space-y-3 p-4">
         {/* Client name */}
         {!isBlock ? (
-          <input autoFocus value={clientName} onChange={(e) => setClientName(e.target.value)}
+          <ClientAutocompleteInput autoFocus value={clientName} onChange={(value) => { setClientName(value); setPickedClientId(null); }}
+            onPick={(client: ClientSuggestion) => {
+              setPickedClientId(client.id);
+              setClientName(clientDisplayName(client) || client.name);
+              setClientPhone(client.phone ?? "");
+              setClientEmail(client.email ?? "");
+            }}
             placeholder={t("modal.addClient")}
             className={`w-full border-0 border-b border-line/20 bg-transparent pb-1 text-base font-medium text-fg placeholder:text-muted/50 focus:outline-none ${accentUnderline}`} />
         ) : (
@@ -286,6 +302,18 @@ export function ReceptionBookingPopup({
             </svg>
             <input value={clientPhone} onChange={(e) => setClientPhone(e.target.value)}
               placeholder={t("modal.phoneOptional")} type="tel"
+              className={inputCls + " placeholder:text-muted/50"} />
+          </div>
+        )}
+
+        {!isBlock && (
+          <div className="flex items-center gap-3">
+            <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0 text-muted" fill="currentColor">
+              <path d="M2.94 6.34A2 2 0 014.76 5h10.48a2 2 0 011.82 1.34L10 10.58 2.94 6.34z" />
+              <path d="M2.76 7.92V14a2 2 0 002 2h10.48a2 2 0 002-2V7.92l-6.73 4.04a1 1 0 01-1.02 0L2.76 7.92z" />
+            </svg>
+            <input value={clientEmail} onChange={(e) => setClientEmail(e.target.value)}
+              placeholder="Email" type="email"
               className={inputCls + " placeholder:text-muted/50"} />
           </div>
         )}

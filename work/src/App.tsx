@@ -24,6 +24,7 @@ import { ReceptionPage } from "./pages/ReceptionPage";
 import { PublicInvitePage } from "./pages/PublicInvitePage";
 import { AdminInvitesPage } from "./pages/AdminInvitesPage";
 import { PwaResetPasswordPage } from "./pages/PwaResetPasswordPage";
+import { ClientsPage } from "./pages/ClientsPage";
 
 function RequireManage({ children }: { children: React.ReactNode }) {
   const { canManage } = useEffectiveRole();
@@ -67,6 +68,14 @@ export default function App() {
         <Route index element={<DashboardPage />} />
         <Route path="calendar" element={<CalendarPage />} />
         <Route path="bookings" element={<BookingsPage />} />
+        <Route
+          path="clients"
+          element={
+            <RequireManage>
+              <ClientsPage />
+            </RequireManage>
+          }
+        />
         <Route
           path="admin/staff"
           element={

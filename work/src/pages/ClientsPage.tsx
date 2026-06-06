@@ -4,6 +4,7 @@ import { format, parseISO } from "date-fns";
 import { supabase } from "../lib/supabase";
 import { useBookingsRealtime } from "../hooks/useSalonRealtime";
 import type { ClientRow } from "../types/database";
+import { clientDisplayName, fetchClientAutocompleteEnabled } from "../lib/clientLink";
 
 type VisitRow = {
   id: string;
@@ -31,6 +32,8 @@ export function ClientsPage() {
   const [loading, setLoading] = useState(true);
   const [loadingVisits, setLoadingVisits] = useState(false);
   const [listErr, setListErr] = useState<string | null>(null);
+  const [autocompleteEnabled, setAutocompleteEnabled] = useState(true);
+  const [savingSetting, setSavingSetting] = useState(false);
 
   const loadClients = useCallback(async () => {
     setLoading(true);
@@ -43,6 +46,7 @@ export function ClientsPage() {
 
   useEffect(() => {
     void loadClients();
+    void fetchClientAutocompleteEnabled().then(setAutocompleteEnabled);
   }, [loadClients]);
 
   useBookingsRealtime(loadClients);
@@ -118,13 +122,46 @@ export function ClientsPage() {
     void loadVisits(client.id, client.phone);
   }
 
+  async function saveAutocompleteEnabled(nextEnabled: boolean) {
+    setSavingSetting(true);
+    const { error } = await supabase
+      .from("salon_settings")
+      .upsert(
+        { key: "crm_client_autocomplete_enabled", value: nextEnabled ? "true" : "false" },
+        { onConflict: "key" },
+      );
+    setSavingSetting(false);
+    if (error) {
+      setListErr(error.message);
+      return;
+    }
+    setAutocompleteEnabled(nextEnabled);
+  }
+
   if (loading) return <p className="text-muted">{t("common.loading")}</p>;
 
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold text-fg">{t("clients.title")}</h1>
-        <p className="text-sm text-muted">{t("clients.subtitle")}</p>
+      <header className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-fg">{t("clients.title")}</h1>
+          <p className="text-sm text-muted">{t("clients.subtitle")}</p>
+        </div>
+        <label className="flex max-w-md items-start justify-between gap-4 rounded-lg border border-line/15 bg-panel/60 p-3">
+          <span>
+            <span className="block text-sm font-medium text-fg">Подключить к календарю</span>
+            <span className="mt-1 block text-xs text-muted">
+              В форме записи будет выпадать список клиентов по имени, телефону или email.
+            </span>
+          </span>
+          <input
+            type="checkbox"
+            className="mt-1 h-4 w-4 accent-emerald-500"
+            checked={autocompleteEnabled}
+            disabled={savingSetting}
+            onChange={(e) => void saveAutocompleteEnabled(e.target.checked)}
+          />
+        </label>
       </header>
 
       {listErr && (
@@ -140,7 +177,10 @@ export function ClientsPage() {
               onClick={() => toggle(c)}
               className="flex w-full items-center justify-between gap-4 px-4 py-3 text-left hover:bg-surface/80"
             >
-              <span className="font-medium text-fg">{c.name}</span>
+              <span className="min-w-0">
+                <span className="block truncate font-medium text-fg">{clientDisplayName(c) || c.name}</span>
+                {c.email && <span className="mt-0.5 block truncate text-xs text-muted">{c.email}</span>}
+              </span>
               <span className="font-mono text-xs text-muted">{c.phone ?? "—"}</span>
             </button>
             {expanded === c.id && (

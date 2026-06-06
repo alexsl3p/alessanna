@@ -857,6 +857,8 @@ type BookingProps = {
   setClientName: Dispatch<SetStateAction<string>>;
   clientPhone: string;
   setClientPhone: Dispatch<SetStateAction<string>>;
+  clientEmail: string;
+  setClientEmail: Dispatch<SetStateAction<string>>;
   clientNote: string;
   setClientNote: Dispatch<SetStateAction<string>>;
   booking: boolean;
@@ -889,6 +891,8 @@ export function PublicBookingBookingSection({
   setClientName,
   clientPhone,
   setClientPhone,
+  clientEmail,
+  setClientEmail,
   clientNote,
   setClientNote,
   booking,
@@ -1045,6 +1049,13 @@ export function PublicBookingBookingSection({
             placeholder={isReceptionMode ? "Телефон (необязательно)" : (t("modal.phone") as string)}
             value={clientPhone}
             onChange={(e) => setClientPhone(e.target.value)}
+            className="w-full rounded-lg border border-zinc-700 bg-black px-3 py-2 text-sm"
+          />
+          <input
+            placeholder={t("modal.email", { defaultValue: "Email" }) as string}
+            value={clientEmail}
+            onChange={(e) => setClientEmail(e.target.value)}
+            type="email"
             className="w-full rounded-lg border border-zinc-700 bg-black px-3 py-2 text-sm"
           />
           <label className="block text-sm text-zinc-400">

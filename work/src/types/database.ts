@@ -85,6 +85,7 @@ export type AppointmentRow = {
   service_id: string | number | null;
   client_name: string;
   client_phone: string | null;
+  client_email?: string | null;
   start_time: string;
   end_time: string;
   status: "pending" | "confirmed" | "cancelled";
@@ -169,6 +170,7 @@ export type ServiceListingRow = {
 export type ClientRow = {
   id: string;
   name: string;
+  last_name: string | null;
   phone: string | null;
   email: string | null;
   notes: string | null;
@@ -228,6 +230,7 @@ export type Database = {
       staff_schedule: { Row: StaffScheduleRow; Insert: Partial<StaffScheduleRow>; Update: Partial<StaffScheduleRow> };
       staff_time_off: { Row: StaffTimeOffRow; Insert: Partial<StaffTimeOffRow>; Update: Partial<StaffTimeOffRow> };
       appointments: { Row: AppointmentRow; Insert: Partial<AppointmentRow>; Update: Partial<AppointmentRow> };
+      clients: { Row: ClientRow; Insert: Partial<ClientRow>; Update: Partial<ClientRow> };
       categories: { Row: CategoryRow; Insert: Partial<CategoryRow>; Update: Partial<CategoryRow> };
     };
     Functions: {

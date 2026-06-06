@@ -89,6 +89,7 @@ const ICON = {
   dashboard: <IconStroke d="M3 12 12 3l9 9M5 10v10h4v-6h6v6h4V10" />,
   calendar: <IconStroke d="M3 8h18M7 3v4m10-4v4M4 8h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z" />,
   bookings: <IconStroke d="M8 4h10a2 2 0 0 1 2 2v14l-4-3-4 3-4-3-4 3V6a2 2 0 0 1 2-2Z" />,
+  clients: <IconStroke d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" />,
   staff: <IconStroke d="M16 21v-1a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v1M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM22 21v-1a4 4 0 0 0-3-3.87M17 3.13a4 4 0 0 1 0 7.74" />,
   services: <IconStroke d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />,
   schedule: <IconStroke d="M12 8v5l3 2M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z" />,
@@ -212,6 +213,17 @@ export function CommandPalette({
         icon: ICON.bookings,
         perform: ({ navigate, close }) => {
           navigate("/bookings");
+          close();
+        },
+      },
+      {
+        id: "go./clients",
+        label: t("nav.clients"),
+        group: "go",
+        manageOnly: true,
+        icon: ICON.clients,
+        perform: ({ navigate, close }) => {
+          navigate("/clients");
           close();
         },
       },

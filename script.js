@@ -3195,11 +3195,12 @@
       return ANY_MASTER_ID;
     }
 
-    function chainBookingPayload(items, startIso, nameVal, phoneVal, noteVal) {
+    function chainBookingPayload(items, startIso, nameVal, phoneVal, noteVal, emailVal) {
       return {
         p_client_name: nameVal || "",
         p_client_phone: phoneVal || "",
         p_client_note: noteVal || "",
+        p_client_email: emailVal || "",
         p_start_at: startIso,
         p_source: "public_site",
         p_created_by_staff_id: null,
@@ -3292,7 +3293,7 @@
     /** Цепочка услуг (picked[] в dock) + Supabase RPC. Возвращает Promise, который резолвится
      *  в { handled: true, ok: true/false }. Если конфиг Supabase недоступен и запасной
      *  путь тоже провалился — резолвится в { handled: false } и caller идёт в mailto. */
-    function trySubmitViaBookChain(nameVal, phoneVal, noteVal) {
+    function trySubmitViaBookChain(nameVal, phoneVal, noteVal, emailVal) {
       var chainApi = globalThis.__SITE_BOOKING_CHAIN__;
       var items = chainApi && typeof chainApi.getItems === "function" ? chainApi.getItems() : [];
 
@@ -3324,7 +3325,7 @@
       var startIso = buildChainStartIso(selectedKey, timeSelect.value);
       if (!startIso) return Promise.resolve({ handled: false });
 
-      var payload = chainBookingPayload(items, startIso, nameVal, phoneVal, noteVal);
+      var payload = chainBookingPayload(items, startIso, nameVal, phoneVal, noteVal, emailVal);
 
       return fetch(cfg.url + "/rest/v1/rpc/public_book_chain", {
         method: "POST",
@@ -3385,6 +3386,7 @@
 
       var nameVal = (bookingForm.querySelector('[name="name"]') || { value: "" }).value.trim();
       var phoneVal = (bookingForm.querySelector('[name="phone"]') || { value: "" }).value.trim();
+      var emailVal = (bookingForm.querySelector('[name="email"]') || { value: "" }).value.trim();
       var noteVal = (bookingForm.querySelector("[data-field-services-detail]") || { value: "" }).value.trim();
       if (!nameVal) {
         var nameFieldEl = bookingForm.querySelector('[name="name"]');
@@ -3393,7 +3395,7 @@
       }
 
       /* 1) RPC public_book_chain → наш CRM-календарь. 2) Legacy API/mailto, если Supabase недоступен. */
-      trySubmitViaBookChain(nameVal, phoneVal, noteVal).then(function (res) {
+      trySubmitViaBookChain(nameVal, phoneVal, noteVal, emailVal).then(function (res) {
         if (res && res.handled) return;
         continueLegacySubmit();
       });
