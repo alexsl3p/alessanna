@@ -2015,7 +2015,7 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  object-position: 62% center;
+  object-position: right center;
 }
 
 .mave-hero::before,
@@ -2028,17 +2028,18 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
 }
 
 .mave-hero::before {
-  background: linear-gradient(
-    90deg,
-    #050403 0%,
-    rgba(5, 4, 3, 0.98) 14%,
-    rgba(5, 4, 3, 0.82) 31%,
-    rgba(5, 4, 3, 0.44) 48%,
-    rgba(5, 4, 3, 0.14) 65%,
-    rgba(5, 4, 3, 0) 78%,
-    rgba(5, 4, 3, 0.2) 91%,
-    #050403 100%
-  );
+  background:
+    radial-gradient(ellipse at 50% 52%, rgba(5, 4, 3, 0.9) 0%, rgba(5, 4, 3, 0.76) 22%, rgba(5, 4, 3, 0.28) 44%, rgba(5, 4, 3, 0) 68%),
+    linear-gradient(
+      90deg,
+      #050403 0%,
+      rgba(5, 4, 3, 0.98) 10%,
+      rgba(5, 4, 3, 0.62) 28%,
+      rgba(5, 4, 3, 0.18) 48%,
+      rgba(5, 4, 3, 0.08) 72%,
+      rgba(5, 4, 3, 0.32) 91%,
+      #050403 100%
+    );
 }
 
 .mave-hero::after {
@@ -2061,9 +2062,12 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  align-items: center;
   min-height: 100%;
-  max-width: 26rem;
+  max-width: 31rem;
+  margin-inline: auto;
   padding: clamp(1.6rem, 4.4vw, 3.2rem);
+  text-align: center;
   text-shadow: 0 2px 16px rgba(0, 0, 0, 0.72);
 }
 
@@ -2098,6 +2102,7 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
+  justify-content: center;
   align-items: center;
   margin-top: 1.65rem;
 }
