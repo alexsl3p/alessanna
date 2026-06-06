@@ -60,7 +60,7 @@ export function ReceptionBookingPopup({
   const [blockDuration, setBlockDuration] = useState(30);
   const [clientName, setClientName] = useState(() => editAppt?.client_name ?? "");
   const [clientPhone, setClientPhone] = useState(() => editAppt?.client_phone ?? "");
-  const [staffId, setStaffId] = useState<string>(() => editAppt?.staff_id ?? defaultStaffId ?? staff[0]?.id ?? "");
+  const [staffId, setStaffId] = useState<string>(() => editAppt?.staff_id ?? "");
   const [serviceId, setServiceId] = useState<string>(() => (editAppt && !isExistingBlock ? String(editAppt.service_id) : ""));
   const [startStr, setStartStr] = useState(() => timeToStr(editAppt ? new Date(editAppt.start_time) : initialStart));
   const [endStr, setEndStr] = useState(() =>
@@ -81,12 +81,8 @@ export function ReceptionBookingPopup({
   const svc = useMemo(() => eligibleServices.find((s) => String(s.id) === serviceId) ?? null, [eligibleServices, serviceId]);
 
   useEffect(() => {
-    if (!isBlock && !serviceId && eligibleServices.length > 0) setServiceId(String(eligibleServices[0]!.id));
-  }, [eligibleServices, serviceId, isBlock]);
-
-  useEffect(() => {
     if (!isBlock && serviceId && !eligibleServices.some((s) => String(s.id) === serviceId)) {
-      setServiceId(eligibleServices[0] ? String(eligibleServices[0].id) : "");
+      setServiceId("");
     }
   }, [staffId, eligibleServices, serviceId, isBlock]);
 
@@ -252,6 +248,7 @@ export function ReceptionBookingPopup({
             <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
           </svg>
           <select value={staffId} onChange={(e) => { setStaffId(e.target.value); setServiceId(""); setEndManual(false); }} className={inputCls}>
+            <option value="" disabled>— мастер —</option>
             {staff.filter((s) => s.active).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
         </div>
@@ -306,7 +303,7 @@ export function ReceptionBookingPopup({
             className={`rounded-lg px-3 py-1.5 text-sm font-medium ${accentCancelText}`}>
             {t("common.cancel")}
           </button>
-          <button type="submit" disabled={saving || (!isBlock && !serviceId) || !staffId}
+          <button type="submit" disabled={saving || (!isBlock && (!serviceId || !clientName.trim())) || !staffId}
             className={`rounded-lg px-4 py-1.5 text-sm font-medium disabled:opacity-40 ${isBlock ? "bg-rose-500 hover:bg-rose-600 text-white" : accentSaveBg}`}>
             {saving ? t("modal.saving") : (isBlock ? "Закрыть время" : t("common.save"))}
           </button>
