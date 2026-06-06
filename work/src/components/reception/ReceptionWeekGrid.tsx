@@ -360,7 +360,7 @@ export function ReceptionWeekGrid({
               </span>
               {workingStaff.length > 0 && (
                 <div className="mt-0.5 flex flex-wrap justify-center gap-0.5 px-0.5">
-                  {workingStaff.slice(0, 3).map((m) => {
+                  {workingStaff.map((m) => {
                     const c = googleStaffColor(m, staffHueMap);
                     return (
                       <span
@@ -372,11 +372,6 @@ export function ReceptionWeekGrid({
                       </span>
                     );
                   })}
-                  {workingStaff.length > 3 && (
-                    <span className={`rounded px-1 py-0.5 text-[9px] ${mutedCls}`}>
-                      +{workingStaff.length - 3}
-                    </span>
-                  )}
                 </div>
               )}
             </div>
