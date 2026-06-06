@@ -258,8 +258,8 @@ export function ReceptionCalendarPage() {
           </button>
         </div>
 
-        {/* Settings gear + dropdown menu — admin/manager only */}
-        {canManage && <div className="relative shrink-0">
+        {/* Settings gear + dropdown menu */}
+        <div className="relative shrink-0">
           <button
             onClick={() => setShowSettingsMenu((v) => !v)}
             className={`flex h-9 w-9 items-center justify-center rounded-full ${navText} ${navHover}`}
@@ -273,8 +273,9 @@ export function ReceptionCalendarPage() {
               <div className="fixed inset-0 z-40" onClick={() => setShowSettingsMenu(false)} />
               <div className="absolute right-0 top-full z-50 mt-1 w-56 overflow-hidden rounded-xl border border-line/15 bg-panel shadow-xl">
                 <button
-                  onClick={() => { setShowSettings(true); setShowSettingsMenu(false); }}
-                  className={`flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-fg ${navHover}`}
+                  onClick={() => { if (canManage) { setShowSettings(true); setShowSettingsMenu(false); } }}
+                  disabled={!canManage}
+                  className={`flex w-full items-center gap-3 px-4 py-3 text-left text-sm transition-colors ${canManage ? `text-fg ${navHover}` : "cursor-not-allowed text-muted/40"}`}
                 >
                   <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0 text-muted" fill="currentColor">
                     <path fillRule="evenodd" d="M4 2a2 2 0 00-2 2v11a3 3 0 106 0V4a2 2 0 00-2-2H4zm1 14a1 1 0 100-2 1 1 0 000 2zm5-1.757l4.9-4.9a2 2 0 000-2.828L13.485 5.1a2 2 0 00-2.828 0L10 5.757v8.486zM16 18H9.071l6-6H16a2 2 0 012 2v2a2 2 0 01-2 2z" clipRule="evenodd"/>
@@ -284,7 +285,7 @@ export function ReceptionCalendarPage() {
               </div>
             </>
           )}
-        </div>}
+        </div>
       </div>
 
       {/* Main layout */}
