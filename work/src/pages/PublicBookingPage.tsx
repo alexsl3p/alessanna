@@ -501,7 +501,7 @@ export function PublicBookingPage() {
         day: salonDayStart,
         salonDayStartUtc: salonDayStart,
         salonWeekdaySun0: salonWeekdaySun0(bookYmd),
-        stepMinutes: 15,
+        stepMinutes: 30,
         staffId: member.id,
       });
       const slots = rawSlots.filter((s) => s.start.getTime() >= nowTick);
@@ -613,7 +613,7 @@ export function PublicBookingPage() {
           day: dayStart,
           salonDayStartUtc: dayStart,
           salonWeekdaySun0: weekday,
-          stepMinutes: 15,
+          stepMinutes: 30,
           staffId: m.id,
         });
         const slotsForDay = rawSlotsForDay.filter((s) =>

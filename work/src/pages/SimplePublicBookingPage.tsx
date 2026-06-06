@@ -201,7 +201,7 @@ export function SimplePublicBookingPage() {
       day: salonDayStart,
       salonDayStartUtc: salonDayStart,
       salonWeekdaySun0: salonWeekdaySun0(bookYmd),
-      stepMinutes: 15,
+      stepMinutes: 30,
       staffId: member.id,
     });
     return raw.filter((s) => s.start.getTime() >= nowTick).sort((a, b) => a.start.getTime() - b.start.getTime());
