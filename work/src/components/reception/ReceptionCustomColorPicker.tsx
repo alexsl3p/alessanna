@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-
-// ── colour math ────────────────────────────────────────────────────────────
+import { useTheme } from "../../context/ThemeContext";
 
 function hsvToHex(h: number, s: number, v: number): string {
   s /= 100; v /= 100;
@@ -46,8 +45,6 @@ function luminance(hex: string): number {
   return 0.2126 * lin(parseInt(m[1], 16)) + 0.7152 * lin(parseInt(m[2], 16)) + 0.0722 * lin(parseInt(m[3], 16));
 }
 
-// ── component ──────────────────────────────────────────────────────────────
-
 type Props = {
   staffName: string;
   initialHex: string;
@@ -59,6 +56,8 @@ const hasEyeDropper = typeof window !== "undefined" && "EyeDropper" in window;
 
 export function ReceptionCustomColorPicker({ staffName, initialHex, onSave, onCancel }: Props) {
   const { t } = useTranslation();
+  const { theme } = useTheme();
+  const useGold = theme !== "white";
   const [h, s0, v0] = hexToHsv(initialHex);
   const [hue, setHue] = useState(h);
   const [sat, setSat] = useState(s0);
@@ -71,19 +70,13 @@ export function ReceptionCustomColorPicker({ staffName, initialHex, onSave, onCa
   const textColor = luminance(currentHex) > 0.35 ? "#3c4043" : "#ffffff";
   const initial = (staffName?.charAt(0) ?? "A").toUpperCase();
 
-  // Keep hex input in sync with picker
-  useEffect(() => {
-    setHexInput(currentHex.toUpperCase());
-  }, [currentHex]);
+  useEffect(() => { setHexInput(currentHex.toUpperCase()); }, [currentHex]);
 
-  // Escape → cancel
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") { e.stopPropagation(); onCancel(); } };
     document.addEventListener("keydown", onKey, true);
     return () => document.removeEventListener("keydown", onKey, true);
   }, [onCancel]);
-
-  // ── pointer helpers ────────────────────────────────────────────────────
 
   function readPicker(e: React.PointerEvent | PointerEvent) {
     if (!pickerRef.current) return;
@@ -124,18 +117,19 @@ export function ReceptionCustomColorPicker({ staffName, initialHex, onSave, onCa
     } catch { /* cancelled */ }
   }
 
+  const accentCancel = useGold ? "text-gold hover:bg-gold/10" : "text-[#1a73e8] hover:bg-surface";
+  const accentSave = useGold ? "bg-gold/15 text-gold hover:bg-gold/25" : "bg-[#e8f0fe] text-[#1a73e8] hover:bg-[#d2e3fc]";
+
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30"
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }}
     >
-      <div className="w-[340px] rounded-2xl bg-white px-6 pb-5 pt-6 shadow-2xl">
-        {/* Title */}
-        <h2 className="mb-1 text-xl font-normal text-[#3c4043]">{t("reception.customColorTitle")}</h2>
-        <p className="mb-5 text-sm leading-snug text-[#5f6368]">{t("reception.customColorSubtitle")}</p>
+      <div className="w-[340px] rounded-2xl border border-line/15 bg-panel px-6 pb-5 pt-6 shadow-2xl">
+        <h2 className="mb-1 text-xl font-normal text-fg">{t("reception.customColorTitle")}</h2>
+        <p className="mb-5 text-sm leading-snug text-muted">{t("reception.customColorSubtitle")}</p>
 
         <div className="mb-4 flex gap-3">
-          {/* Preview + eyedropper */}
           <div className="flex flex-col items-center gap-2 pt-0.5">
             <div
               className="flex h-12 w-12 items-center justify-center rounded-full text-base font-medium select-none"
@@ -147,29 +141,22 @@ export function ReceptionCustomColorPicker({ staffName, initialHex, onSave, onCa
               onClick={() => void handleEyeDropper()}
               disabled={!hasEyeDropper}
               title={t("reception.eyeDropper")}
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-[#dadce0] text-[#5f6368] transition-colors hover:bg-[#f1f3f4] disabled:opacity-40"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-line/20 text-muted transition-colors hover:bg-surface disabled:opacity-40"
             >
-              {/* eyedropper icon */}
               <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
                 <path d="M20.71 5.63l-2.34-2.34a1 1 0 00-1.41 0l-3.12 3.12-1.41-1.42-1.42 1.42 1.41 1.41-6.6 6.6A2 2 0 005 16v3h3a2 2 0 001.42-.59l6.6-6.6 1.41 1.42 1.42-1.42-1.42-1.41 3.12-3.12a1 1 0 000-1.65zM8 17H7v-1l6.6-6.58 1 1z"/>
               </svg>
             </button>
           </div>
 
-          {/* 2D saturation-value picker */}
           <div
             ref={pickerRef}
             className="relative flex-1 cursor-crosshair select-none rounded"
-            style={{
-              height: 140,
-              background: `linear-gradient(to right, #fff, hsl(${hue}, 100%, 50%))`,
-            }}
+            style={{ height: 140, background: `linear-gradient(to right, #fff, hsl(${hue}, 100%, 50%))` }}
             onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); readPicker(e); }}
             onPointerMove={(e) => { if (e.buttons) readPicker(e); }}
           >
-            {/* black overlay top→bottom */}
             <div className="pointer-events-none absolute inset-0 rounded" style={{ background: "linear-gradient(to bottom,transparent,#000)" }} />
-            {/* indicator */}
             <div
               className="pointer-events-none absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white"
               style={{ left: `${sat}%`, top: `${100 - val}%`, boxShadow: "0 0 0 1.5px rgba(0,0,0,0.28)" }}
@@ -192,29 +179,22 @@ export function ReceptionCustomColorPicker({ staffName, initialHex, onSave, onCa
         </div>
 
         {/* Hex input */}
-        <div className="mb-6 rounded border border-[#dadce0] px-3 pb-2 pt-1.5 focus-within:border-[#1a73e8]">
-          <div className="mb-0.5 text-xs text-[#5f6368]">{t("reception.hexCode")}</div>
+        <div className="mb-6 rounded border border-line/20 px-3 pb-2 pt-1.5 focus-within:border-line/40">
+          <div className="mb-0.5 text-xs text-muted">{t("reception.hexCode")}</div>
           <input
             value={hexInput}
             onChange={(e) => handleHexInput(e.target.value)}
-            className="w-full text-sm uppercase text-[#3c4043] outline-none"
+            className="w-full bg-transparent text-sm uppercase text-fg outline-none"
             maxLength={7}
             spellCheck={false}
           />
         </div>
 
-        {/* Buttons */}
         <div className="flex justify-end gap-2">
-          <button
-            onClick={onCancel}
-            className="rounded-full px-5 py-2 text-sm font-medium text-[#1a73e8] transition-colors hover:bg-[#f1f3f4]"
-          >
+          <button onClick={onCancel} className={`rounded-full px-5 py-2 text-sm font-medium transition-colors ${accentCancel}`}>
             {t("common.cancel")}
           </button>
-          <button
-            onClick={() => onSave(currentHex)}
-            className="rounded-full bg-[#e8f0fe] px-5 py-2 text-sm font-medium text-[#1a73e8] transition-colors hover:bg-[#d2e3fc]"
-          >
+          <button onClick={() => onSave(currentHex)} className={`rounded-full px-5 py-2 text-sm font-medium transition-colors ${accentSave}`}>
             {t("common.save")}
           </button>
         </div>

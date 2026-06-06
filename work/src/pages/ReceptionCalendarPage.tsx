@@ -65,6 +65,7 @@ export function ReceptionCalendarPage() {
   const [visibleStaffIds, setVisibleStaffIds] = useState<Set<string>>(new Set());
   const [popup, setPopup] = useState<BookingPopupState | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [dayPopup, setDayPopup] = useState<{ day: Date; x: number; y: number } | null>(null);
   const [showSidebar, setShowSidebar] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -255,16 +256,33 @@ export function ReceptionCalendarPage() {
           </button>
         </div>
 
-        {/* Settings gear */}
-        <button
-          onClick={() => setShowSettings(true)}
-          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${navText} ${navHover}`}
-          title={t("reception.colorSettings")}
-        >
-          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
-            <path d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96a7.01 7.01 0 00-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.48.48 0 00-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.11.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
-          </svg>
-        </button>
+        {/* Settings gear + dropdown menu */}
+        <div className="relative shrink-0">
+          <button
+            onClick={() => setShowSettingsMenu((v) => !v)}
+            className={`flex h-9 w-9 items-center justify-center rounded-full ${navText} ${navHover}`}
+          >
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
+              <path d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96a7.01 7.01 0 00-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.48.48 0 00-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.11.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+            </svg>
+          </button>
+          {showSettingsMenu && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setShowSettingsMenu(false)} />
+              <div className="absolute right-0 top-full z-50 mt-1 w-56 overflow-hidden rounded-xl border border-line/15 bg-panel shadow-xl">
+                <button
+                  onClick={() => { setShowSettings(true); setShowSettingsMenu(false); }}
+                  className={`flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-fg ${navHover}`}
+                >
+                  <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0 text-muted" fill="currentColor">
+                    <path fillRule="evenodd" d="M4 2a2 2 0 00-2 2v11a3 3 0 106 0V4a2 2 0 00-2-2H4zm1 14a1 1 0 100-2 1 1 0 000 2zm5-1.757l4.9-4.9a2 2 0 000-2.828L13.485 5.1a2 2 0 00-2.828 0L10 5.757v8.486zM16 18H9.071l6-6H16a2 2 0 012 2v2a2 2 0 01-2 2z" clipRule="evenodd"/>
+                  </svg>
+                  {t("reception.colorSettings")}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Main layout */}
