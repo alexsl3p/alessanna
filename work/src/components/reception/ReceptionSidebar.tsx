@@ -17,6 +17,7 @@ import type { StaffMember } from "../../types/database";
 import { buildStaffHueMap } from "../../lib/staffHue";
 import { googleStaffColor } from "./receptionColors";
 import { useTheme, type ThemeId } from "../../context/ThemeContext";
+import { useEffectiveRole } from "../../context/EffectiveRoleContext";
 
 const SWATCHES: Record<ThemeId, [string, string, string]> = {
   white:     ["#ffffff", "#f1f3f4", "#1a73e8"],
@@ -58,6 +59,7 @@ export function ReceptionSidebar({
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
+  const { canManage } = useEffectiveRole();
   const currentLang = i18n.language.split("-")[0] ?? "ru";
   const uiLocale = currentLang === "et" ? "et-EE" : "ru-RU";
   const [miniCursor, setMiniCursor] = useState(() => new Date());
@@ -188,12 +190,13 @@ export function ReceptionSidebar({
             return (
               <label
                 key={member.id}
-                className={`flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 transition-colors ${hoverCls}`}
+                className={`flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors ${canManage ? `cursor-pointer ${hoverCls}` : "cursor-default"}`}
               >
                 <input
                   type="checkbox"
                   checked={checked}
-                  onChange={() => onToggleStaff(member.id)}
+                  onChange={() => { if (canManage) onToggleStaff(member.id); }}
+                  readOnly={!canManage}
                   className="sr-only"
                 />
                 <span
