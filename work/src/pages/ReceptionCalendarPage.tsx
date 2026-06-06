@@ -177,6 +177,29 @@ export function ReceptionCalendarPage() {
           </svg>
         </button>
 
+        {/* Mobile ↔ Desktop view toggle — visible only on mobile */}
+        <button
+          onClick={() => setView(view === "week" ? "day" : "week")}
+          className={`flex h-9 shrink-0 items-center gap-1 rounded-lg border border-line/15 px-2.5 text-xs font-medium transition-colors md:hidden ${navText} ${navHover}`}
+          title={view === "week" ? "Переключить на день (мобильный)" : "Переключить на неделю (ПК)"}
+        >
+          {view === "week" ? (
+            <>
+              <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="5" y="2" width="14" height="20" rx="2" /><line x1="12" y1="18" x2="12" y2="18.01" />
+              </svg>
+              <span>Моб</span>
+            </>
+          ) : (
+            <>
+              <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="2" y="3" width="20" height="14" rx="2" /><polyline points="8 21 12 17 16 21" /><line x1="12" y1="17" x2="12" y2="21" />
+              </svg>
+              <span>ПК</span>
+            </>
+          )}
+        </button>
+
         {/* Today */}
         <button
           onClick={() => setCursor(new Date())}
