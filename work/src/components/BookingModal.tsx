@@ -5,7 +5,6 @@ import { supabase } from "../lib/supabase";
 import type { StaffMember, StaffServiceRow, ServiceRow, AppointmentRow } from "../types/database";
 import { staffEligibleForService, servicesEligibleForStaff } from "../lib/roles";
 import { restrictAndOrderStaffByServiceHall, serviceRowToPublicCatalogEntry } from "../lib/publicMasterPanel";
-import { overlapsExistingAppointments } from "../lib/slots";
 import { priceMaxEur } from "../lib/serviceListing";
 import { ServiceListPicker } from "./service-picker/ServiceListPicker";
 import { ClientAutocompleteInput } from "./ClientAutocompleteInput";
@@ -186,25 +185,6 @@ export function BookingModal({
       return;
     }
     const end = addMinutes(start, svc.duration_min);
-
-    const { data: existingRows, error: loadErr } = await supabase
-      .from("appointments")
-      .select("id, start_time, end_time")
-      .eq("staff_id", staffId)
-      .neq("status", "cancelled")
-      .limit(500);
-    if (loadErr) {
-      setSaving(false);
-      setError(t("auth.error.rpcFailed", { message: loadErr.message }));
-      return;
-    }
-    const others = ((existingRows ?? []) as { id: string; start_time: string; end_time: string }[])
-      .filter((r) => !isEdit || r.id !== editAppointment!.id);
-    if (overlapsExistingAppointments(start, end, others)) {
-      setSaving(false);
-      setError(t("modal.overlap"));
-      return;
-    }
 
     /* Колонки `source` и `notes` нет в актуальной схеме `appointments` (миграции
      *  030/031). Если включить их в payload — PostgREST падает с «Could not find

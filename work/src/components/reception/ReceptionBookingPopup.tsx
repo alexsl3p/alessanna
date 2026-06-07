@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import { addMinutes, format, setHours, setMinutes, startOfDay } from "date-fns";
 import { supabase } from "../../lib/supabase";
 import { servicesEligibleForStaff } from "../../lib/roles";
-import { overlapsExistingAppointments } from "../../lib/slots";
 import { useTheme } from "../../context/ThemeContext";
 import type { AppointmentRow, ServiceRow, StaffMember, StaffServiceRow } from "../../types/database";
 import { ClientAutocompleteInput } from "../ClientAutocompleteInput";
@@ -134,12 +133,6 @@ export function ReceptionBookingPopup({
     const end = applyTimeStr(initialStart, endStr);
     if (end <= start) { setError(t("modal.endAfterStart")); return; }
     setSaving(true); setError("");
-    const { data: existingRows, error: loadErr } = await supabase
-      .from("appointments").select("id, start_time, end_time").eq("staff_id", staffId).neq("status", "cancelled").limit(500);
-    if (loadErr) { setSaving(false); setError(loadErr.message); return; }
-    const others = ((existingRows ?? []) as { id: string; start_time: string; end_time: string }[])
-      .filter((r) => !isEdit || r.id !== editAppt!.id);
-    if (overlapsExistingAppointments(start, end, others)) { setSaving(false); setError(t("modal.overlap")); return; }
     const normalizedClientName = clientName.trim() || t("modal.defaultClient");
     const resolvedClientId = isBlock
       ? null
