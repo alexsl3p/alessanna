@@ -50,6 +50,13 @@ function getSteps(os: string, browser: string): Step[] | null {
       { icon: "add-home", text: "Выберите «Установить»" },
     ];
   }
+  if (os === "android") {
+    return [
+      { icon: "menu", text: "Нажмите кнопку «⋮» (три точки) в правом верхнем углу браузера" },
+      { icon: "add-home", text: "Выберите «Добавить на главный экран» или «Установить приложение»" },
+      { icon: "confirm", text: "Нажмите «Добавить» или «Установить»" },
+    ];
+  }
   if (os === "desktop") {
     return [
       { icon: "address-bar", text: "Нажмите на значок установки в адресной строке (справа)" },
