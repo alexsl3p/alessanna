@@ -21,6 +21,8 @@ export function AdminDaySchedulePopup({ day, anchorX, anchorY, allStaff, workDat
   const { t, i18n } = useTranslation();
   const [saving, setSaving] = useState<string | null>(null);
   const [savingHoliday, setSavingHoliday] = useState(false);
+  // Optimistic state: null = use server value, true/false = pending DB write
+  const [optimisticHoliday, setOptimisticHoliday] = useState<boolean | null>(null);
   const hueMap = buildStaffHueMap(allStaff.map((m) => m.id));
 
   const popupW = 272;
@@ -30,7 +32,16 @@ export function AdminDaySchedulePopup({ day, anchorX, anchorY, allStaff, workDat
   const uiLocale = i18n.language === "et" ? "et-EE" : "ru-RU";
   const dayLabel = day.toLocaleString(uiLocale, { weekday: "long", day: "numeric", month: "long" });
 
-  const isHoliday = holidays.includes(dateStr);
+  const serverIsHoliday = holidays.includes(dateStr);
+  // Show optimistic value immediately; fall back to server value once load() completes
+  const isHoliday = optimisticHoliday ?? serverIsHoliday;
+
+  // Sync optimistic state back to null once server confirms the change
+  useEffect(() => {
+    if (optimisticHoliday !== null && optimisticHoliday === serverIsHoliday) {
+      setOptimisticHoliday(null);
+    }
+  }, [serverIsHoliday, optimisticHoliday]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -41,13 +52,19 @@ export function AdminDaySchedulePopup({ day, anchorX, anchorY, allStaff, workDat
   }, [onClose]);
 
   async function toggleHoliday() {
+    const next = !isHoliday;
+    setOptimisticHoliday(next); // instant visual feedback — no flicker on refresh
     setSavingHoliday(true);
-    if (isHoliday) {
-      await supabase.from("salon_holidays").delete().eq("holiday_date", dateStr);
-    } else {
-      await supabase.from("salon_holidays").insert({ holiday_date: dateStr, reason: null });
-    }
+    const { error } = next
+      ? await supabase.from("salon_holidays").insert({ holiday_date: dateStr })
+      : await supabase.from("salon_holidays").delete().eq("holiday_date", dateStr);
     setSavingHoliday(false);
+    if (error) {
+      // Rollback optimistic update on failure
+      setOptimisticHoliday(!next);
+      console.error("holiday toggle:", error.message);
+      return;
+    }
     onSaved();
   }
 
