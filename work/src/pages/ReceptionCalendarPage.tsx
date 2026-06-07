@@ -164,14 +164,19 @@ export function ReceptionCalendarPage() {
   }
 
   const swipeStartX = useRef<number | null>(null);
+  const swipeStartY = useRef<number | null>(null);
   function handleTouchStart(e: React.TouchEvent) {
     swipeStartX.current = e.touches[0].clientX;
+    swipeStartY.current = e.touches[0].clientY;
   }
   function handleTouchEnd(e: React.TouchEvent) {
-    if (swipeStartX.current === null) return;
+    if (swipeStartX.current === null || swipeStartY.current === null) return;
     const dx = swipeStartX.current - e.changedTouches[0].clientX;
-    if (Math.abs(dx) > 50) navPeriod(dx > 0 ? 1 : -1);
+    const dy = swipeStartY.current - e.changedTouches[0].clientY;
     swipeStartX.current = null;
+    swipeStartY.current = null;
+    // Only navigate if horizontal distance > 50px AND clearly dominates vertical (ratio ≥ 2:1)
+    if (Math.abs(dx) > 50 && Math.abs(dx) >= Math.abs(dy) * 2) navPeriod(dx > 0 ? 1 : -1);
   }
 
   const uiLocale = i18n.language === "et" ? "et-EE" : "ru-RU";
