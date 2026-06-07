@@ -59,23 +59,6 @@ function parseDatePart(part: string): string | null {
   return null;
 }
 
-/** Returns array of "YYYY-MM-DD" strings (single day or range). */
-function parseHolidayInput(input: string): string[] | null {
-  const parts = input.trim().split(/\s+до\s+/i);
-  if (parts.length === 1) {
-    const d = parseDatePart(parts[0]!);
-    return d ? [d] : null;
-  }
-  if (parts.length === 2) {
-    const start = parseDatePart(parts[0]!);
-    const end = parseDatePart(parts[1]!);
-    if (!start || !end) return null;
-    const s = parseISO(start), e = parseISO(end);
-    if (e < s || eachDayOfInterval({ start: s, end: e }).length > 60) return null;
-    return eachDayOfInterval({ start: s, end: e }).map((d) => format(d, "yyyy-MM-dd"));
-  }
-  return null;
-}
 
 export function AdminSchedulePage() {
   const [staff, setStaff] = useState<StaffMember[]>([]);
@@ -86,11 +69,12 @@ export function AdminSchedulePage() {
   const [dayPopup, setDayPopup] = useState<{ day: Date; x: number; y: number } | null>(null);
 
   // Holiday input state
-  const [holidayInput, setHolidayInput] = useState("");
+  const [holidayStart, setHolidayStart] = useState("");
+  const [holidayEnd, setHolidayEnd] = useState("");
   const [holidayError, setHolidayError] = useState("");
   const [holidaySaving, setHolidaySaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const startRef = useRef<HTMLInputElement>(null);
 
   const hueMap = useMemo(() => buildStaffHueMap(staff.map((m) => m.id)), [staff]);
 
@@ -134,22 +118,35 @@ export function AdminSchedulePage() {
   }
 
   async function addHoliday() {
-    const dates = parseHolidayInput(holidayInput);
-    if (!dates) {
-      setHolidayError("Неверный формат. Пример: 03.06 или 06.06 до 09.06");
+    const start = parseDatePart(holidayStart);
+    if (!start) {
+      setHolidayError("Неверный формат начала. Пример: 03.06 или 03.06.26");
       return;
+    }
+    let dates: string[];
+    if (holidayEnd.trim()) {
+      const end = parseDatePart(holidayEnd);
+      if (!end) {
+        setHolidayError("Неверный формат конца. Пример: 09.06 или 09.06.26");
+        return;
+      }
+      const s = parseISO(start), e = parseISO(end);
+      if (e < s) { setHolidayError("Дата конца раньше начала"); return; }
+      if (eachDayOfInterval({ start: s, end: e }).length > 60) { setHolidayError("Диапазон не может быть больше 60 дней"); return; }
+      dates = eachDayOfInterval({ start: s, end: e }).map((d) => format(d, "yyyy-MM-dd"));
+    } else {
+      dates = [start];
     }
     const newDates = dates.filter((d) => !holidaySet.has(d));
-    if (!newDates.length) {
-      setHolidayError("Эти даты уже добавлены");
-      return;
-    }
+    if (!newDates.length) { setHolidayError("Эти даты уже добавлены"); return; }
     setHolidaySaving(true);
     setHolidayError("");
     const { error } = await supabase.from("salon_holidays").insert(newDates.map((d) => ({ holiday_date: d })));
     setHolidaySaving(false);
     if (error) { setHolidayError(error.message); return; }
-    setHolidayInput("");
+    setHolidayStart("");
+    setHolidayEnd("");
+    startRef.current?.focus();
     void load();
   }
 
@@ -277,34 +274,56 @@ export function AdminSchedulePage() {
         )}
 
         {/* Add form */}
-        <div className="flex gap-2">
-          <div className="flex-1">
-            <input
-              ref={inputRef}
-              type="text"
-              value={holidayInput}
-              onChange={(e) => { setHolidayInput(e.target.value); setHolidayError(""); }}
-              onKeyDown={(e) => { if (e.key === "Enter") { void addHoliday(); } }}
-              placeholder="03.06  или  06.06 до 09.06"
-              className={[
-                "w-full rounded-lg border bg-surface px-3 py-2 text-sm text-fg placeholder:text-muted/50 focus:outline-none focus:ring-1",
-                holidayError ? "border-rose-400 focus:border-rose-400 focus:ring-rose-400/30" : "border-line/20 focus:border-gold focus:ring-gold/30",
-              ].join(" ")}
-            />
-            {holidayError && <p className="mt-1 text-xs text-rose-400">{holidayError}</p>}
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-start gap-2">
+            {/* Start field */}
+            <div className="flex flex-col gap-1">
+              <label className="text-[11px] font-medium uppercase tracking-wide text-muted">Начало</label>
+              <input
+                ref={startRef}
+                type="text"
+                inputMode="numeric"
+                value={holidayStart}
+                onChange={(e) => { setHolidayStart(e.target.value); setHolidayError(""); }}
+                onKeyDown={(e) => { if (e.key === "Enter") { void addHoliday(); } }}
+                placeholder="03.06"
+                className={[
+                  "w-28 rounded-lg border bg-surface px-3 py-2 text-sm text-fg placeholder:text-muted/50 focus:outline-none focus:ring-1",
+                  holidayError && !holidayStart.trim() ? "border-rose-400 focus:ring-rose-400/30" : "border-line/20 focus:border-gold focus:ring-gold/30",
+                ].join(" ")}
+              />
+            </div>
+
+            {/* Arrow separator */}
+            <span className="mt-7 text-muted">→</span>
+
+            {/* End field */}
+            <div className="flex flex-col gap-1">
+              <label className="text-[11px] font-medium uppercase tracking-wide text-muted">Конец <span className="normal-case text-muted/60">(необязательно)</span></label>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={holidayEnd}
+                onChange={(e) => { setHolidayEnd(e.target.value); setHolidayError(""); }}
+                onKeyDown={(e) => { if (e.key === "Enter") { void addHoliday(); } }}
+                placeholder="09.06"
+                className="w-28 rounded-lg border border-line/20 bg-surface px-3 py-2 text-sm text-fg placeholder:text-muted/50 focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold/30"
+              />
+            </div>
+
+            <button
+              type="button"
+              disabled={!holidayStart.trim() || holidaySaving}
+              onClick={() => { void addHoliday(); }}
+              className="mt-6 shrink-0 rounded-lg bg-rose-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-rose-600 disabled:opacity-40"
+            >
+              {holidaySaving ? "…" : "+ Добавить"}
+            </button>
           </div>
-          <button
-            type="button"
-            disabled={!holidayInput.trim() || holidaySaving}
-            onClick={() => { void addHoliday(); }}
-            className="shrink-0 rounded-lg bg-rose-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-rose-600 disabled:opacity-40"
-          >
-            {holidaySaving ? "…" : "+ Добавить"}
-          </button>
+
+          {holidayError && <p className="text-xs text-rose-400">{holidayError}</p>}
+          <p className="text-xs text-muted">Формат: <span className="font-mono">03.06</span> или <span className="font-mono">03.06.26</span></p>
         </div>
-        <p className="text-xs text-muted">
-          Форматы: <span className="font-mono">03.06</span> · <span className="font-mono">03.06.26</span> · <span className="font-mono">06.06 до 09.06</span>
-        </p>
       </section>
 
       {dayPopup && (
