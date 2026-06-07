@@ -269,8 +269,8 @@ export function ReceptionCalendarPage() {
           {t("calendar.today")}
         </button>
 
-        {/* View switcher */}
-        <div className="flex items-center rounded-lg border border-line/15 p-0.5">
+        {/* View switcher — hidden on portrait mobile (use sidebar); visible on landscape/desktop */}
+        <div className={`${isWide ? "flex" : "hidden"} items-center rounded-lg border border-line/15 p-0.5`}>
           {(["day", "week", "month"] as const).map((v) => (
             <button
               key={v}
