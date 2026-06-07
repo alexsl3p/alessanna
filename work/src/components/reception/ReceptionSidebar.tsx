@@ -316,7 +316,7 @@ export function ReceptionSidebar({
               onSubmit={(e) => {
                 e.preventDefault();
                 if (pwValue === "2025alessanna") {
-                  navigate("/");
+                  navigate("/calendar");
                 } else {
                   setPwError(true);
                   setPwValue("");
