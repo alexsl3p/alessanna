@@ -1641,24 +1641,6 @@ export function ServicesPage() {
                 >
                   {/* === Compact summary row (always visible) === */}
                   <div className="flex items-center gap-2 px-3 py-2 pl-4">
-                    {canManage && (
-                      <div className="flex flex-col shrink-0">
-                        <button type="button" onClick={() => void moveServiceUp(s, categoryName)}
-                          className="flex h-5 w-5 items-center justify-center rounded text-muted hover:text-fg disabled:opacity-20"
-                          disabled={list.findIndex(x => String(x.id) === String(s.id)) === 0}>
-                          <svg viewBox="0 0 20 20" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2">
-                            <polyline points="4 13 10 7 16 13" />
-                          </svg>
-                        </button>
-                        <button type="button" onClick={() => void moveServiceDown(s, categoryName)}
-                          className="flex h-5 w-5 items-center justify-center rounded text-muted hover:text-fg disabled:opacity-20"
-                          disabled={list.findIndex(x => String(x.id) === String(s.id)) === list.length - 1}>
-                          <svg viewBox="0 0 20 20" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2">
-                            <polyline points="4 7 10 13 16 7" />
-                          </svg>
-                        </button>
-                      </div>
-                    )}
                     <button
                       type="button"
                       onClick={() => toggleExpanded(String(s.id))}
