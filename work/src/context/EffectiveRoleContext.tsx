@@ -27,9 +27,20 @@ type Ctx = {
 
 const EffectiveRoleContext = createContext<Ctx | null>(null);
 
+function readAndClearRoleOverride(): Role | null {
+  try {
+    const v = sessionStorage.getItem("crm_role_override");
+    if (v === "admin" || v === "manager" || v === "worker") {
+      sessionStorage.removeItem("crm_role_override");
+      return v;
+    }
+  } catch { /* */ }
+  return null;
+}
+
 export function EffectiveRoleProvider({ children }: { children: ReactNode }) {
   const { staffMember } = useAuth();
-  const [previewRole, setPreviewRoleState] = useState<Role | null>(null);
+  const [previewRole, setPreviewRoleState] = useState<Role | null>(() => readAndClearRoleOverride());
 
   const setPreviewRole = useCallback((r: Role | null) => {
     setPreviewRoleState(r);

@@ -316,6 +316,7 @@ export function ReceptionSidebar({
               onSubmit={(e) => {
                 e.preventDefault();
                 if (pwValue === "2025alessanna") {
+                  try { sessionStorage.setItem("crm_role_override", "manager"); } catch { /* */ }
                   navigate("/calendar");
                 } else {
                   setPwError(true);
