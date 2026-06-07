@@ -27,6 +27,7 @@ import { AdminInvitesPage } from "./pages/AdminInvitesPage";
 import { PwaResetPasswordPage } from "./pages/PwaResetPasswordPage";
 import { ClientsPage } from "./pages/ClientsPage";
 import { InstallPage } from "./pages/InstallPage";
+import { SetupGuidePage } from "./pages/SetupGuidePage";
 
 function RequireManage({ children }: { children: React.ReactNode }) {
   const { canManage } = useEffectiveRole();
@@ -60,6 +61,7 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/install" element={<InstallPage />} />
+      <Route path="/setupguide" element={<SetupGuidePage />} />
       <Route path="/help" element={<MyHelpPage />} />
       <Route path="/book" element={<PublicBookingPage />} />
       <Route path="/book/simple" element={<SimplePublicBookingPage />} />
