@@ -137,27 +137,31 @@ function groupRows(rows) {
   const groups = Array.from(map.values());
   for (const g of groups) {
     g.items.sort(function (a, b) {
+      const sa = a.sort_order != null ? Number(a.sort_order) : 999999;
+      const sb = b.sort_order != null ? Number(b.sort_order) : 999999;
+      if (sa !== sb) return sa - sb;
       return String(a.name || "").localeCompare(String(b.name || ""), "et");
     });
   }
   return groups.sort(function (a, b) {
+    /* Sort by category sort_order taken from the first item's category join. */
+    const sa = a.items[0]?.category?.sort_order != null ? Number(a.items[0].category.sort_order) : 999999;
+    const sb = b.items[0]?.category?.sort_order != null ? Number(b.items[0].category.sort_order) : 999999;
+    if (sa !== sb) return sa - sb;
     return a.name.localeCompare(b.name, "et");
   });
 }
 
 function groupsFromCategoryNames(names) {
-  const uniq = Array.from(
-    new Set(
-      (names || [])
-        .map(function (n) {
-          return String(n || "").trim();
-        })
-        .filter(Boolean)
-    )
-  );
-  uniq.sort(function (a, b) {
-    return a.localeCompare(b, "et");
-  });
+  /* Preserve insertion order — caller already sorted by sort_order. */
+  const seen = new Set();
+  const uniq = (names || [])
+    .map(function (n) { return String(n || "").trim(); })
+    .filter(function (n) {
+      if (!n || seen.has(n)) return false;
+      seen.add(n);
+      return true;
+    });
   return uniq.map(function (name) {
     return { id: "n:" + name, name, items: [] };
   });
@@ -559,13 +563,14 @@ async function fetchPublicApiFallback() {
 }
 
 async function fetchCategoryNames(client) {
-  const modern = await client.from("service_categories").select("name").order("name", { ascending: true });
+  const modern = await client.from("service_categories").select("name,sort_order").order("sort_order", { ascending: true });
   if (!modern.error) {
     return (modern.data || [])
       .map(function (r) {
         return String(r.name || "").trim();
       })
       .filter(Boolean);
+    /* Already in sort_order order from DB — no extra sort needed. */
   }
 
   const legacy = await client.from("categories").select("name").order("name", { ascending: true });
@@ -592,13 +597,15 @@ async function fetchPriceList(client) {
       `
       id,
       name,
+      sort_order,
       price,
       price_max,
       duration,
       buffer_after_min,
-      category:service_categories(name)
+      category:service_categories(name,sort_order)
     `
     )
+    .order("sort_order", { ascending: true })
     .order("name", { ascending: true });
 
   info("Supabase response: service_listings (primary)", {
@@ -618,13 +625,15 @@ async function fetchPriceList(client) {
       `
       id,
       name,
+      sort_order,
       price,
       price_max,
       duration,
       is_active,
-      category:service_categories(name)
+      category:service_categories(name,sort_order)
     `
     )
+    .order("sort_order", { ascending: true })
     .order("name", { ascending: true });
 
   info("Supabase response: service_listings (with is_active)", {
