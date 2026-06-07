@@ -11,6 +11,7 @@ import { ReceptionSidebar } from "../components/reception/ReceptionSidebar";
 import { ReceptionWeekGrid } from "../components/reception/ReceptionWeekGrid";
 import { ReceptionMonthView } from "../components/reception/ReceptionMonthView";
 import { ReceptionBookingPopup } from "../components/reception/ReceptionBookingPopup";
+import { ReceptionApptInfoPopup } from "../components/reception/ReceptionApptInfoPopup";
 import { ReceptionStaffColorSettings } from "../components/reception/ReceptionStaffColorSettings";
 import { AdminDaySchedulePopup } from "../components/reception/AdminDaySchedulePopup";
 import type {
@@ -31,6 +32,12 @@ type BookingPopupState = {
   initialStart: Date;
   defaultStaffId: string | null;
   editAppt?: AppointmentRow | null;
+};
+
+type InfoPopupState = {
+  appt: AppointmentRow;
+  anchorX: number;
+  anchorY: number;
 };
 
 export function ReceptionCalendarPage() {
@@ -68,6 +75,7 @@ export function ReceptionCalendarPage() {
   const [holidays, setHolidays] = useState<SalonHolidayRow[]>([]);
   const [visibleStaffIds, setVisibleStaffIds] = useState<Set<string>>(new Set());
   const [popup, setPopup] = useState<BookingPopupState | null>(null);
+  const [infoPopup, setInfoPopup] = useState<InfoPopupState | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [dayPopup, setDayPopup] = useState<{ day: Date; x: number; y: number } | null>(null);
@@ -157,9 +165,14 @@ export function ReceptionCalendarPage() {
   }
 
   function handleApptClick(appt: AppointmentRow, x: number, y: number) {
+    setInfoPopup({ appt, anchorX: x, anchorY: y });
+  }
+
+  function openEditFromInfo(appt: AppointmentRow, anchorX: number, anchorY: number) {
+    setInfoPopup(null);
     setPopup({
-      anchorX: x,
-      anchorY: y,
+      anchorX,
+      anchorY,
       initialStart: new Date(appt.start_time),
       defaultStaffId: appt.staff_id,
       editAppt: appt,
@@ -413,6 +426,18 @@ export function ReceptionCalendarPage() {
           </div>
         </div>
       </div>
+
+      {infoPopup && (
+        <ReceptionApptInfoPopup
+          appt={infoPopup.appt}
+          staff={staff}
+          services={services}
+          canManage={canManage}
+          onClose={() => setInfoPopup(null)}
+          onEdit={() => openEditFromInfo(infoPopup.appt, infoPopup.anchorX, infoPopup.anchorY)}
+          onSaved={() => { setInfoPopup(null); void load(); }}
+        />
+      )}
 
       {popup && (
         <ReceptionBookingPopup
