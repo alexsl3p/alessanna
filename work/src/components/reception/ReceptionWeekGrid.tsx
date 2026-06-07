@@ -348,14 +348,14 @@ export function ReceptionWeekGrid({
               {birthdayStaff.length > 0 && (
                 <button
                   type="button"
-                  className="absolute right-0.5 top-0.5 text-sm leading-none transition-transform hover:scale-125 active:scale-110"
+                  className="absolute right-2 top-1.5 text-sm leading-none transition-transform hover:scale-125 active:scale-110"
                   title="День рождения!"
                   onClick={(e) => {
                     e.stopPropagation();
                     setBirthdayPopup({ x: e.clientX, y: e.clientY, names: birthdayStaff.map((m) => m.name) });
                   }}
                 >
-                  🍰
+                  🎂
                 </button>
               )}
               <span className={`text-[11px] font-medium uppercase tracking-wide ${mutedCls}`}>
@@ -674,7 +674,7 @@ export function ReceptionWeekGrid({
             top: Math.min(birthdayPopup.y + 12, (typeof window !== "undefined" ? window.innerHeight : 600) - 200),
           }}
         >
-          <div className="mb-2 text-4xl">🍰🎉🌸</div>
+          <div className="mb-2 text-4xl">🎂🎉🌸</div>
           {birthdayPopup.names.map((name) => (
             <div key={name}>
               <p className="font-semibold text-fg">Сегодня день рождения у {name}!</p>
