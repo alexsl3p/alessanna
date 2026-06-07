@@ -12,6 +12,7 @@ import {
 import type { StaffMember, StaffWorkDateRow } from "../../types/database";
 import { buildStaffHueMap } from "../../lib/staffHue";
 import { googleStaffColor } from "./receptionColors";
+import { useTheme } from "../../context/ThemeContext";
 
 const WEEKDAY_KEYS = [1, 2, 3, 4, 5, 6, 0] as const; // Mon→1 … Sun→0
 
@@ -33,12 +34,15 @@ export function ReceptionMonthView({
   dark,
 }: Props) {
   const { t } = useTranslation();
+  const { theme } = useTheme();
   const today = new Date();
+  const useGold = theme !== "white";
   const staffHueMap = useMemo(() => buildStaffHueMap(staff.map((m) => m.id)), [staff]);
 
   const hoverCls = dark ? "hover:bg-white/5" : "hover:bg-surface/60";
-  const inactiveDay = dark ? "text-fg/30" : "text-fg/30";
+  const inactiveDay = "text-fg/30";
   const offMonthBg = dark ? "bg-canvas/50" : "bg-line/5";
+  const todayBubble = useGold ? "bg-gold text-canvas font-bold" : "bg-[#1a73e8] text-white font-bold";
 
   const staffMap = useMemo(() => {
     const m = new Map<string, StaffMember>();
@@ -99,7 +103,7 @@ export function ReceptionMonthView({
                   className={[
                     "mb-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-medium",
                     isToday
-                      ? "bg-[#1a73e8] text-white"
+                      ? todayBubble
                       : isCurrentMonth
                       ? "text-fg"
                       : inactiveDay,
