@@ -16,6 +16,8 @@ export type StaffMember = {
   show_on_marketing_site?: boolean;
   calendar_color_hex?: string | null;
   calendar_foreground_hex?: string | null;
+  /** Birthday in MM-DD format, e.g. "06-22". Used to show 🎂 in calendar. */
+  birthday?: string | null;
 };
 
 /** How the salon pays an employee (finance / payouts). */
@@ -52,6 +54,8 @@ export type StaffTableRow = {
   calendar_foreground_hex?: string | null;
   /** Email для входа через PWA (Supabase Auth email+password). */
   email?: string | null;
+  /** Birthday MM-DD, e.g. "06-22". */
+  birthday?: string | null;
 };
 
 export type CategoryRow = {

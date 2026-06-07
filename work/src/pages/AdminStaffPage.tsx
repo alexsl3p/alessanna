@@ -173,6 +173,7 @@ export function AdminStaffPage() {
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
   const [editEmail, setEditEmail] = useState("");
+  const [editBirthday, setEditBirthday] = useState("");
   const [pwdResetMsg, setPwdResetMsg] = useState<Record<string, string>>({});
   /** Компактный список: детали (роли, услуги) только в раскрытой строке. */
   const [expandedById, setExpandedById] = useState<Record<string, boolean>>({});
@@ -407,6 +408,9 @@ export function AdminStaffPage() {
     setEditName(r.name);
     setEditPhone(r.phone ?? "");
     setEditEmail(r.email ?? "");
+    /* Birthday stored as MM-DD, display as DD.MM */
+    const bd = r.birthday ?? "";
+    setEditBirthday(bd ? `${bd.slice(3, 5)}.${bd.slice(0, 2)}` : "");
     setExpandedById((prev) => ({ ...prev, [r.id]: true }));
   }
 
@@ -414,12 +418,20 @@ export function AdminStaffPage() {
     if (!editingId) return;
     setErr(null);
     const emailVal = editEmail.trim().toLowerCase() || null;
+    /* Parse DD.MM → MM-DD for storage */
+    const bdRaw = editBirthday.trim();
+    let birthdayVal: string | null = null;
+    if (bdRaw) {
+      const m = bdRaw.match(/^(\d{1,2})[.\-/](\d{1,2})$/);
+      if (m) birthdayVal = `${m[2]!.padStart(2, "0")}-${m[1]!.padStart(2, "0")}`;
+    }
     const { error } = await supabase
       .from("staff")
       .update({
         name: editName.trim(),
         phone: digitsOnly(editPhone) || null,
         email: emailVal,
+        birthday: birthdayVal,
       })
       .eq("id", editingId);
     if (error) {
@@ -1268,13 +1280,30 @@ export function AdminStaffPage() {
                 </td>
                 <td className="px-3 py-2">
                   {editingId === r.id ? (
-                    <input
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                      className="w-full rounded border border-line/25 bg-canvas px-1 py-0.5 text-xs"
-                    />
+                    <div className="flex flex-col gap-1">
+                      <input
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        className="w-full rounded border border-line/25 bg-canvas px-1 py-0.5 text-xs"
+                        placeholder="имя"
+                      />
+                      <input
+                        value={editBirthday}
+                        onChange={(e) => setEditBirthday(e.target.value)}
+                        className="w-24 rounded border border-line/25 bg-canvas px-1 py-0.5 text-xs"
+                        placeholder="🎂 ДД.ММ"
+                        maxLength={5}
+                      />
+                    </div>
                   ) : (
-                    r.name
+                    <div className="flex items-center gap-1.5">
+                      <span>{r.name}</span>
+                      {r.birthday && (
+                        <span className="text-xs text-muted" title={`День рождения: ${r.birthday.slice(3, 5)}.${r.birthday.slice(0, 2)}`}>
+                          🎂 {r.birthday.slice(3, 5)}.{r.birthday.slice(0, 2)}
+                        </span>
+                      )}
+                    </div>
                   )}
                 </td>
                     <td className="max-w-[14rem] px-3 py-2 text-xs text-muted">{roleLabelsSummary(r)}</td>

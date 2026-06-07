@@ -141,6 +141,7 @@ export function ReceptionWeekGrid({
   const pointerDownY = useRef(0);
   const [resizeModeId, setResizeModeId] = useState<string | null>(null);
   const [preview, setPreview] = useState<{ id: string; start: Date; end: Date } | null>(null);
+  const [birthdayPopup, setBirthdayPopup] = useState<{ x: number; y: number; names: string[] } | null>(null);
 
   // Active handle drag (only while a booking is in resize mode)
   const handleDragRef = useRef<{
@@ -314,6 +315,7 @@ export function ReceptionWeekGrid({
   }, [services]);
 
   return (
+    <>
     <div className={`flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden ${bg}`}>
       {/* Day header row — right-pad by scrollbar width so columns align with body */}
       <div className={`flex shrink-0 border-b ${borderCls} ${bg}`} style={{ paddingRight: scrollbarWidth }}>
@@ -323,12 +325,16 @@ export function ReceptionWeekGrid({
         {days.map((day, i) => {
           const isToday = isSameDay(day, now);
           const dateStr = format(day, "yyyy-MM-dd");
+          const dayMMDD = format(day, "MM-dd");
           const workingIds = new Set(
             workDates.filter((r) => r.work_date === dateStr).map((r) => r.staff_id),
           );
           const workingStaff = staff
             .filter((m) => workingIds.has(m.id) && visibleStaffIds.has(m.id))
             .sort((a, b) => a.name.localeCompare(b.name, "et", { sensitivity: "base" }));
+          const birthdayStaff = staff.filter(
+            (m) => m.birthday === dayMMDD && visibleStaffIds.has(m.id),
+          );
           const ruDay = t(`weekday.${WEEKDAY_KEYS[i] ?? 1}`);
           return (
             <div
@@ -342,16 +348,31 @@ export function ReceptionWeekGrid({
               <span className={`text-[11px] font-medium uppercase tracking-wide ${mutedCls}`}>
                 {ruDay}
               </span>
-              <span
-                className={[
-                  "flex h-7 w-7 items-center justify-center rounded-full text-base font-medium md:h-8 md:w-8 md:text-lg",
-                  isToday
-                    ? useGold ? "bg-gold text-canvas" : "bg-[#1a73e8] text-white"
-                    : textCls,
-                ].join(" ")}
-              >
-                {format(day, "d")}
-              </span>
+              <div className="relative flex items-center justify-center gap-1">
+                <span
+                  className={[
+                    "flex h-7 w-7 items-center justify-center rounded-full text-base font-medium md:h-8 md:w-8 md:text-lg",
+                    isToday
+                      ? useGold ? "bg-gold text-canvas" : "bg-[#1a73e8] text-white"
+                      : textCls,
+                  ].join(" ")}
+                >
+                  {format(day, "d")}
+                </span>
+                {birthdayStaff.length > 0 && (
+                  <button
+                    type="button"
+                    className="text-base leading-none transition-transform hover:scale-125 active:scale-110"
+                    title="День рождения!"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setBirthdayPopup({ x: e.clientX, y: e.clientY, names: birthdayStaff.map((m) => m.name) });
+                    }}
+                  >
+                    🎂
+                  </button>
+                )}
+              </div>
               {workingStaff.length > 0 && (
                 <div className="mt-0.5 flex flex-wrap justify-center gap-0.5 px-0.5">
                   {workingStaff.map((m) => {
@@ -403,6 +424,12 @@ export function ReceptionWeekGrid({
           {days.map((day) => {
             const dayAnchor = setHours(startOfDay(day), START_HOUR);
             const isToday = isSameDay(day, now);
+
+            const dayMMDD2 = format(day, "MM-dd");
+            const birthdayMembersForDay = staff.filter(
+              (m) => m.birthday === dayMMDD2 && visibleStaffIds.has(m.id),
+            );
+            const FLOWER_EMOJIS = ["🌸", "🌷", "🌺", "🌼", "💐"];
 
             const dayAppts = appointments.filter((a) => {
               if (!visibleStaffIds.has(a.staff_id)) return false;
@@ -481,6 +508,36 @@ export function ReceptionWeekGrid({
                 )}
 
                 {/* Appointment cards */}
+                {/* Birthday flowers in free 30-min slots (9:00–20:00) */}
+                {birthdayMembersForDay.flatMap((member) => {
+                  const FLOWER_START_H = 9;
+                  const FLOWER_END_H = 20;
+                  const slotStart = setHours(startOfDay(day), FLOWER_START_H);
+                  const totalSlots = (FLOWER_END_H - FLOWER_START_H) * 2;
+                  return Array.from({ length: totalSlots }, (_, si) => {
+                    const cur = addMinutes(slotStart, si * 30);
+                    const slotEnd = addMinutes(cur, 30);
+                    const occupied = appointments.some((a) => {
+                      if (a.staff_id !== member.id) return false;
+                      const iv = appointmentInterval(a);
+                      if (!iv) return false;
+                      return intervalsOverlap(cur, slotEnd, iv.start, iv.end);
+                    });
+                    if (occupied) return null;
+                    const topPx = timeToPx(cur, dayAnchor);
+                    const emoji = FLOWER_EMOJIS[si % FLOWER_EMOJIS.length]!;
+                    return (
+                      <div
+                        key={`flower-${member.id}-${si}`}
+                        className="pointer-events-none absolute inset-x-0 flex items-center justify-center text-base opacity-70"
+                        style={{ top: topPx, height: PX_PER_HOUR / 2, zIndex: 1 }}
+                      >
+                        {emoji}
+                      </div>
+                    );
+                  });
+                })}
+
                 {layouts.map(({ appt, col, totalCols }) => {
                   const iv = appointmentInterval(appt);
                   if (!iv) return null;
@@ -607,5 +664,28 @@ export function ReceptionWeekGrid({
         </div>
       </div>
     </div>
+
+    {/* Birthday popup */}
+    {birthdayPopup && (
+      <>
+        <div className="fixed inset-0 z-[49]" onClick={() => setBirthdayPopup(null)} />
+        <div
+          className="fixed z-50 w-64 rounded-2xl border border-pink-400/30 bg-surface px-5 py-5 text-center shadow-2xl"
+          style={{
+            left: Math.min(birthdayPopup.x - 128, (typeof window !== "undefined" ? window.innerWidth : 800) - 272),
+            top: Math.min(birthdayPopup.y + 12, (typeof window !== "undefined" ? window.innerHeight : 600) - 200),
+          }}
+        >
+          <div className="mb-2 text-4xl">🎂🎉🌸</div>
+          {birthdayPopup.names.map((name) => (
+            <div key={name}>
+              <p className="font-semibold text-fg">Сегодня день рождения у {name}!</p>
+              <p className="mt-1 text-sm text-pink-300">С днем рождения, {name}! 💐🥂✨</p>
+            </div>
+          ))}
+        </div>
+      </>
+    )}
+    </>
   );
 }
