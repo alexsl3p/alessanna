@@ -41,6 +41,7 @@ type AuthState = {
   loginWithEmail: (email: string, password: string) => Promise<LoginResult>;
   registerWithEmail: (email: string, password: string) => Promise<LoginResult>;
   sendPasswordReset: (email: string) => Promise<{ error?: string }>;
+  loginWithGoogle: () => Promise<void>;
   logout: () => void;
   /** Удалить device_token с этого устройства (без revoke в БД). */
   forgetThisDevice: () => void;
@@ -172,9 +173,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (payload.status === "ok" && payload.staff) {
               const row = staffTableRowToMember(payload.staff);
               localStorage.setItem(STORAGE_KEY, JSON.stringify(row));
-              if (!cancelled) {
-                setStaffMember(row);
-              }
+              if (!cancelled) setStaffMember(row);
+            } else {
+              // Supabase session exists but no matching staff row — sign out and flag error
+              await supabaseAuth.auth.signOut();
+              sessionStorage.setItem("google_auth_error", "no_staff");
             }
           }
         } catch {
@@ -316,6 +319,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { ok: true };
   }, []);
 
+  const loginWithGoogle = useCallback(async () => {
+    await supabaseAuth.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}/login` },
+    });
+  }, []);
+
   const sendPasswordReset = useCallback(async (email: string): Promise<{ error?: string }> => {
     const redirectTo = `${window.location.origin}/auth/reset-password`;
     const { error } = await supabaseAuth.auth.resetPasswordForEmail(email, { redirectTo });
@@ -344,6 +354,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loginWithEmail,
       registerWithEmail,
       sendPasswordReset,
+      loginWithGoogle,
       logout,
       forgetThisDevice,
       hasDeviceToken,
@@ -353,7 +364,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isReceptionMode: receptionMode,
       setReceptionMode,
     }),
-    [staffMember, loading, login, loginWithEmail, registerWithEmail, sendPasswordReset, logout, forgetThisDevice, hasDeviceToken, receptionMode, setReceptionMode]
+    [staffMember, loading, login, loginWithEmail, registerWithEmail, sendPasswordReset, loginWithGoogle, logout, forgetThisDevice, hasDeviceToken, receptionMode, setReceptionMode]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
