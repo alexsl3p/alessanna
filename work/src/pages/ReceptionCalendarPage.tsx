@@ -354,7 +354,7 @@ export function ReceptionCalendarPage() {
         >
           <ReceptionSidebar
             cursor={cursor}
-            onDateSelect={(date) => { setCursor(date); setView("week"); setShowSidebar(false); }}
+            onDateSelect={(date) => { setCursor(date); setView("week"); if (!isWide) setShowSidebar(false); }}
             staff={staff}
             visibleStaffIds={visibleStaffIds}
             onToggleStaff={handleToggleStaff}
