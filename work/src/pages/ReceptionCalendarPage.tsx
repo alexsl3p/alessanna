@@ -165,18 +165,33 @@ export function ReceptionCalendarPage() {
 
   const swipeStartX = useRef<number | null>(null);
   const swipeStartY = useRef<number | null>(null);
+  // null = undecided, "h" = locked horizontal, "v" = locked vertical
+  const swipeAxis = useRef<"h" | "v" | null>(null);
+
   function handleTouchStart(e: React.TouchEvent) {
     swipeStartX.current = e.touches[0].clientX;
     swipeStartY.current = e.touches[0].clientY;
+    swipeAxis.current = null;
+  }
+  function handleTouchMove(e: React.TouchEvent) {
+    if (swipeAxis.current !== null) return; // axis already locked
+    if (swipeStartX.current === null || swipeStartY.current === null) return;
+    const dx = Math.abs(e.touches[0].clientX - swipeStartX.current);
+    const dy = Math.abs(e.touches[0].clientY - swipeStartY.current);
+    // Lock axis as soon as one direction reaches 8px and clearly leads
+    if (dx > 8 || dy > 8) {
+      swipeAxis.current = dx > dy ? "h" : "v";
+    }
   }
   function handleTouchEnd(e: React.TouchEvent) {
-    if (swipeStartX.current === null || swipeStartY.current === null) return;
-    const dx = swipeStartX.current - e.changedTouches[0].clientX;
-    const dy = swipeStartY.current - e.changedTouches[0].clientY;
+    const axis = swipeAxis.current;
+    const startX = swipeStartX.current;
     swipeStartX.current = null;
     swipeStartY.current = null;
-    // Only navigate if horizontal distance > 50px AND clearly dominates vertical (ratio ≥ 2:1)
-    if (Math.abs(dx) > 50 && Math.abs(dx) >= Math.abs(dy) * 2) navPeriod(dx > 0 ? 1 : -1);
+    swipeAxis.current = null;
+    if (axis !== "h" || startX === null) return;
+    const dx = startX - e.changedTouches[0].clientX;
+    if (Math.abs(dx) > 50) navPeriod(dx > 0 ? 1 : -1);
   }
 
   const uiLocale = i18n.language === "et" ? "et-EE" : "ru-RU";
@@ -328,6 +343,7 @@ export function ReceptionCalendarPage() {
         <div
           className="flex min-h-0 flex-1 p-1.5 pr-2 pb-2 md:p-2 md:pr-4 md:pb-3"
           onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
           <div className="flex min-h-0 flex-1 overflow-hidden rounded-2xl border border-line/15">
