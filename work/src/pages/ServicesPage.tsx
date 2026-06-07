@@ -392,13 +392,14 @@ export function ServicesPage() {
       loadedCategories = (cLegacy.data as CategoryRow[]).filter((c) => !isHiddenCategoryName(c.name));
       setCategories(loadedCategories);
     } else {
-      const cModern = await supabase.from("service_categories").select("id,name").order("created_at", { ascending: true });
+      const cModern = await supabase.from("service_categories").select("id,name,sort_order").order("sort_order", { ascending: true });
       if (cModern.data) {
-        loadedCategories = (cModern.data as Array<{ id: string; name: string }>)
+        loadedCategories = (cModern.data as Array<{ id: string; name: string; sort_order?: number | null }>)
           .filter((r) => !isHiddenCategoryName(r.name))
           .map((r) => ({
             id: String(r.id) as unknown as number,
             name: cleanCategoryName(r.name),
+            sort_order: r.sort_order ?? 9999,
           }));
         setCategories(loadedCategories);
       }
@@ -794,6 +795,52 @@ export function ServicesPage() {
     load();
   }
 
+  async function moveCategoryUp(catName: string) {
+    const idx = categories.findIndex(c => c.name === catName);
+    if (idx <= 0) return;
+    const a = categories[idx - 1], b = categories[idx];
+    await Promise.all([
+      supabase.from("service_categories").update({ sort_order: (b as unknown as { sort_order: number }).sort_order }).eq("id", String(a.id)),
+      supabase.from("service_categories").update({ sort_order: (a as unknown as { sort_order: number }).sort_order }).eq("id", String(b.id)),
+    ]);
+    void load();
+  }
+
+  async function moveCategoryDown(catName: string) {
+    const idx = categories.findIndex(c => c.name === catName);
+    if (idx < 0 || idx >= categories.length - 1) return;
+    const a = categories[idx], b = categories[idx + 1];
+    await Promise.all([
+      supabase.from("service_categories").update({ sort_order: (b as unknown as { sort_order: number }).sort_order }).eq("id", String(a.id)),
+      supabase.from("service_categories").update({ sort_order: (a as unknown as { sort_order: number }).sort_order }).eq("id", String(b.id)),
+    ]);
+    void load();
+  }
+
+  async function moveServiceUp(svc: ServiceRow, catName: string) {
+    const catServices = groupedServices.find(([c]) => c === catName)?.[1] ?? [];
+    const idx = catServices.findIndex(s => String(s.id) === String(svc.id));
+    if (idx <= 0) return;
+    const a = catServices[idx - 1], b = catServices[idx];
+    await Promise.all([
+      supabase.from("service_listings").update({ sort_order: b.sort_order }).eq("id", String(a.id)),
+      supabase.from("service_listings").update({ sort_order: a.sort_order }).eq("id", String(b.id)),
+    ]);
+    void load();
+  }
+
+  async function moveServiceDown(svc: ServiceRow, catName: string) {
+    const catServices = groupedServices.find(([c]) => c === catName)?.[1] ?? [];
+    const idx = catServices.findIndex(s => String(s.id) === String(svc.id));
+    if (idx < 0 || idx >= catServices.length - 1) return;
+    const a = catServices[idx], b = catServices[idx + 1];
+    await Promise.all([
+      supabase.from("service_listings").update({ sort_order: b.sort_order }).eq("id", String(a.id)),
+      supabase.from("service_listings").update({ sort_order: a.sort_order }).eq("id", String(b.id)),
+    ]);
+    void load();
+  }
+
   function openQuickCreate(categoryName: string) {
     const clean = cleanCategoryName(categoryName);
     if (!clean || isHiddenCategoryName(clean)) return;
@@ -1070,7 +1117,7 @@ export function ServicesPage() {
           return staffLinksForService(String(b.id)).length - staffLinksForService(String(a.id)).length;
         case "name":
         default:
-          return String(a.name_et || "").localeCompare(String(b.name_et || ""), "ru");
+          return (a.sort_order ?? 999) - (b.sort_order ?? 999);
       }
     };
 
@@ -1530,6 +1577,29 @@ export function ServicesPage() {
               </div>
               {canManage && (
                 <div className="flex items-center gap-2">
+                  {/* Category reorder buttons */}
+                  <button
+                    type="button"
+                    onClick={() => void moveCategoryUp(categoryName)}
+                    className="flex h-7 w-7 items-center justify-center rounded text-muted hover:bg-surface hover:text-fg disabled:opacity-30"
+                    disabled={groupedServices.findIndex(([c]) => c === categoryName) === 0}
+                    title="Выше"
+                  >
+                    <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="4 13 10 7 16 13" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void moveCategoryDown(categoryName)}
+                    className="flex h-7 w-7 items-center justify-center rounded text-muted hover:bg-surface hover:text-fg disabled:opacity-30"
+                    disabled={groupedServices.findIndex(([c]) => c === categoryName) === groupedServices.length - 1}
+                    title="Ниже"
+                  >
+                    <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="4 7 10 13 16 7" />
+                    </svg>
+                  </button>
                   {categoryForGroup && (
                     <>
                       <button
@@ -1571,6 +1641,24 @@ export function ServicesPage() {
                 >
                   {/* === Compact summary row (always visible) === */}
                   <div className="flex items-center gap-2 px-3 py-2 pl-4">
+                    {canManage && (
+                      <div className="flex flex-col shrink-0">
+                        <button type="button" onClick={() => void moveServiceUp(s, categoryName)}
+                          className="flex h-5 w-5 items-center justify-center rounded text-muted hover:text-fg disabled:opacity-20"
+                          disabled={list.findIndex(x => String(x.id) === String(s.id)) === 0}>
+                          <svg viewBox="0 0 20 20" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polyline points="4 13 10 7 16 13" />
+                          </svg>
+                        </button>
+                        <button type="button" onClick={() => void moveServiceDown(s, categoryName)}
+                          className="flex h-5 w-5 items-center justify-center rounded text-muted hover:text-fg disabled:opacity-20"
+                          disabled={list.findIndex(x => String(x.id) === String(s.id)) === list.length - 1}>
+                          <svg viewBox="0 0 20 20" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polyline points="4 7 10 13 16 7" />
+                          </svg>
+                        </button>
+                      </div>
+                    )}
                     <button
                       type="button"
                       onClick={() => toggleExpanded(String(s.id))}
@@ -1613,6 +1701,22 @@ export function ServicesPage() {
                       className="flex shrink-0 items-center gap-1.5 text-[10px] text-muted"
                       onClick={(e) => e.stopPropagation()}
                     >
+                      {canManage && (
+                        <div className="flex flex-col">
+                          <button type="button" onClick={() => void moveServiceUp(s, categoryName)}
+                            disabled={list.findIndex((x) => String(x.id) === String(s.id)) === 0}
+                            className="flex h-5 w-5 items-center justify-center rounded text-muted hover:text-fg disabled:opacity-20"
+                            title="Выше">
+                            <svg viewBox="0 0 20 20" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="4 13 10 7 16 13" /></svg>
+                          </button>
+                          <button type="button" onClick={() => void moveServiceDown(s, categoryName)}
+                            disabled={list.findIndex((x) => String(x.id) === String(s.id)) === list.length - 1}
+                            className="flex h-5 w-5 items-center justify-center rounded text-muted hover:text-fg disabled:opacity-20"
+                            title="Ниже">
+                            <svg viewBox="0 0 20 20" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="4 7 10 13 16 7" /></svg>
+                          </button>
+                        </div>
+                      )}
                       <ToggleSwitch
                         disabled={!canManage}
                         checked={s.active}

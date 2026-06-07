@@ -62,24 +62,33 @@ async function fetchFromListings(): Promise<ServiceRow[]> {
   /* Schema-drift fallback: некоторые старые проекты не имеют buffer_after_min/is_active. */
   let res = await supabase
     .from("service_listings")
-    .select("id,name,price,price_max,duration,category_id,buffer_after_min,is_active,service_categories(name)")
+    .select("id,name,price,price_max,duration,category_id,buffer_after_min,is_active,sort_order,service_categories(name)")
     .order("name", { ascending: true });
 
   if (res.error && String(res.error.message || "").includes("buffer_after_min")) {
     res = (await supabase
       .from("service_listings")
-      .select("id,name,price,duration,category_id,is_active,service_categories(name)")
+      .select("id,name,price,duration,category_id,is_active,sort_order,service_categories(name)")
       .order("name", { ascending: true })) as typeof res;
   }
   if (res.error && String(res.error.message || "").includes("is_active")) {
     res = (await supabase
       .from("service_listings")
-      .select("id,name,price,duration,category_id,service_categories(name)")
+      .select("id,name,price,duration,category_id,sort_order,service_categories(name)")
       .order("name", { ascending: true })) as typeof res;
   }
   if (res.error || !res.data?.length) return [];
 
-  return (res.data as ListingCatalogRow[]).map((r, idx) => {
+  /* Fetch category sort_order to pre-sort by category then service. */
+  const catSortMap = new Map<string, number>();
+  const catRes = await supabase.from("service_categories").select("id,sort_order");
+  if (!catRes.error && catRes.data) {
+    for (const c of catRes.data as Array<{ id: string; sort_order?: number | null }>) {
+      catSortMap.set(String(c.id), c.sort_order ?? 9999);
+    }
+  }
+
+  const rows = (res.data as Array<ListingCatalogRow & { sort_order?: number | null }>).map((r) => {
     const catName = String(r.service_categories?.name || "").trim();
     return {
       id: String(r.id),
@@ -93,10 +102,19 @@ async function fetchFromListings(): Promise<ServiceRow[]> {
       price_cents: Math.round(Number(r.price || 0) * 100),
       price_max_cents: listingPriceMaxCents(r.price_max),
       active: r.is_active !== false,
-      sort_order: idx,
+      sort_order: r.sort_order ?? 9999,
       catalogSource: "listing" as const,
     };
   });
+
+  rows.sort((a, b) => {
+    const catA = catSortMap.get(a.category_id ?? "") ?? 9999;
+    const catB = catSortMap.get(b.category_id ?? "") ?? 9999;
+    if (catA !== catB) return catA - catB;
+    return (a.sort_order ?? 9999) - (b.sort_order ?? 9999);
+  });
+
+  return rows;
 }
 
 async function fetchFromLegacyServices(): Promise<ServiceRow[]> {
