@@ -746,7 +746,7 @@
     "fillAll": "Täida kõik väljad.",
     "closeBooking": "Sulge salvestamata",
     "editBooking": "Muuda broneeringut",
-    "addClient": "Lisa klient",
+    "addClient": "Kliendi nimi",
     "start": "Algus",
     "end": "Lõpp",
     "resetAuto": "Lähtesta automaatselt",

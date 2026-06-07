@@ -313,7 +313,7 @@ export function ReceptionBookingPopup({
               <path d="M2.76 7.92V14a2 2 0 002 2h10.48a2 2 0 002-2V7.92l-6.73 4.04a1 1 0 01-1.02 0L2.76 7.92z" />
             </svg>
             <input value={clientEmail} onChange={(e) => setClientEmail(e.target.value)}
-              placeholder="Email" type="email"
+              placeholder="Email (необязательно)" type="email"
               className={inputCls + " placeholder:text-muted/50"} />
           </div>
         )}
