@@ -20,6 +20,8 @@ import { appointmentInterval, intervalsOverlap } from "../../lib/slots";
 import { googleStaffColor } from "./receptionColors";
 import { useTheme } from "../../context/ThemeContext";
 
+const PERSONAL_COLOR = { bg: "#7c3aed", fg: "#ffffff" };
+
 const START_HOUR = 0;
 const END_HOUR = 24;
 const PX_PER_HOUR = 64;
@@ -575,10 +577,13 @@ export function ReceptionWeekGrid({
                   const widthPct = 100 / totalCols;
                   const leftPct = (col / totalCols) * 100;
                   const member = staff.find((s) => s.id === appt.staff_id);
-                  const c = member
-                    ? googleStaffColor(member, staffHueMap)
-                    : { bg: "#7986cb", fg: "#ffffff", border: "#5c6bc0" };
-                  const isBlockTime = !appt.service_id || appt.note === "block_time";
+                  const isPersonal = appt.note === "block_personal";
+                  const isBlockTime = !appt.service_id || appt.note === "block_time" || isPersonal;
+                  const c = isPersonal
+                    ? PERSONAL_COLOR
+                    : member
+                      ? googleStaffColor(member, staffHueMap)
+                      : { bg: "#7986cb", fg: "#ffffff" };
                   const svc = appt.service_id ? serviceMap.get(String(appt.service_id)) : undefined;
                   const isPast = effEnd.getTime() < now.getTime();
 
@@ -598,7 +603,7 @@ export function ReceptionWeekGrid({
                         left: `calc(${leftPct}% + 1px)`,
                         width: `calc(${widthPct}% - 2px)`,
                         backgroundColor: c.bg,
-                        backgroundImage: isBlockTime ? "repeating-linear-gradient(45deg,transparent,transparent 5px,rgba(0,0,0,0.12) 5px,rgba(0,0,0,0.12) 10px)" : undefined,
+                        backgroundImage: isBlockTime && !isPersonal ? "repeating-linear-gradient(45deg,transparent,transparent 5px,rgba(0,0,0,0.12) 5px,rgba(0,0,0,0.12) 10px)" : undefined,
                         color: c.fg,
                         opacity: isPast && !inResizeMode ? 0.45 : 1,
                         cursor: "pointer",
@@ -615,7 +620,14 @@ export function ReceptionWeekGrid({
                       onPointerCancel={handleCardPointerCancel}
                     >
                       <p className="truncate text-[11px] font-semibold leading-tight">
-                        {isBlockTime ? (
+                        {isPersonal ? (
+                          <span className="inline-flex items-center gap-0.5">
+                            <svg viewBox="0 0 16 16" className="h-2.5 w-2.5 shrink-0" fill="currentColor">
+                              <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm-5 6s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1H3Z"/>
+                            </svg>
+                            {appt.client_name && appt.client_name !== "— Закрыто —" ? appt.client_name : "Личные дела"}
+                          </span>
+                        ) : isBlockTime ? (
                           <span className="inline-flex items-center gap-0.5">
                             <svg viewBox="0 0 16 16" className="h-2.5 w-2.5 shrink-0" fill="currentColor">
                               <path d="M11 7V5a3 3 0 1 0-6 0v2H4a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1h-1ZM6 5a2 2 0 1 1 4 0v2H6V5Z"/>

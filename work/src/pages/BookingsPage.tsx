@@ -38,7 +38,7 @@ const STATUS_FILTERS: StatusFilter[] = [
 ];
 
 function passesFilter(filter: StatusFilter, row: AppointmentRow): boolean {
-  const isBlock = row.note === "block_time";
+  const isBlock = row.note === "block_time" || row.note === "block_personal";
   if (filter === "all") return true;
   if (filter === "all_active") return row.status !== "cancelled";
   if (filter === "client") return row.status !== "cancelled" && !isBlock;
@@ -422,8 +422,8 @@ export function BookingsPage() {
                     <td className="px-4 py-3 text-muted">{em?.name ?? t("common.dash")}</td>
                     <td className="px-4 py-3 text-fg">
                       <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center rounded-full border border-rose-700/50 bg-rose-950/40 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-rose-300">
-                          Закрыто
+                        <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide ${b.note === "block_personal" ? "border-violet-700/50 bg-violet-950/40 text-violet-300" : "border-rose-700/50 bg-rose-950/40 text-rose-300"}`}>
+                          {b.note === "block_personal" ? "Личные дела" : "Закрыто"}
                         </span>
                         {b.client_name && b.client_name !== "— Закрыто —" && (
                           <span className="text-sm text-muted">{b.client_name}</span>

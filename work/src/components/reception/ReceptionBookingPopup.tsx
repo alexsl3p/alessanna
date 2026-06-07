@@ -73,6 +73,9 @@ export function ReceptionBookingPopup({
 
   const isExistingBlock = isEdit && !editAppt!.service_id;
   const [isBlock, setIsBlock] = useState(() => isExistingBlock);
+  const [blockType, setBlockType] = useState<"block_time" | "block_personal">(() =>
+    editAppt?.note === "block_personal" ? "block_personal" : "block_time",
+  );
   const [blockDuration, setBlockDuration] = useState(30);
   const [clientName, setClientName] = useState(() => editAppt?.client_name ?? "");
   const [clientPhone, setClientPhone] = useState(() => editAppt?.client_phone ?? "");
@@ -96,6 +99,10 @@ export function ReceptionBookingPopup({
   const top = Math.max(8, Math.min(anchorY - 8, window.innerHeight - POPUP_H - 8));
 
   const selectedStaff = useMemo(() => staff.find((s) => s.id === staffId) ?? null, [staff, staffId]);
+  const isManagerOrAdmin = useMemo(
+    () => selectedStaff?.roles?.includes("manager") || selectedStaff?.roles?.includes("admin") || false,
+    [selectedStaff],
+  );
   const eligibleServices = useMemo(
     () => servicesEligibleForStaff(services, links, staffId, selectedStaff, { implicitAll: false, privilegedCanDoAll: false }),
     [services, links, staffId, selectedStaff],
@@ -151,7 +158,7 @@ export function ReceptionBookingPopup({
   function handleEndBlur() {
     if (!isValidTime(endStr)) setEndStr(lastValidEndRef.current);
   }
-  function handleModeToggle(block: boolean) { setIsBlock(block); setEndManual(false); setError(""); }
+  function handleModeToggle(block: boolean) { setIsBlock(block); setBlockType("block_time"); setEndManual(false); setError(""); }
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
@@ -183,7 +190,7 @@ export function ReceptionBookingPopup({
       ? null
       : pickedClientId ?? (await resolveClientIdForVisit(normalizedClientName, clientPhone, clientEmail));
     const payload = isBlock
-      ? { client_name: clientName.trim() || "— Закрыто —", client_phone: null as null, note: "block_time", staff_id: staffId, service_id: null as null, start_time: start.toISOString(), end_time: end.toISOString(), status: "confirmed" as const }
+      ? { client_name: clientName.trim() || "— Закрыто —", client_phone: null as null, note: blockType, staff_id: staffId, service_id: null as null, start_time: start.toISOString(), end_time: end.toISOString(), status: "confirmed" as const }
       : { client_id: resolvedClientId, client_name: normalizedClientName, client_phone: clientPhone.trim() || null, client_email: clientEmail.trim() || null, note: null as null, source: "reception", created_by_staff_id: staffMember?.id ?? null, staff_id: staffId, service_id: svc!.id, start_time: start.toISOString(), end_time: end.toISOString(), status: "confirmed" as const };
     const { error: writeErr } = isEdit
       ? await supabase.from("appointments").update(payload).eq("id", editAppt!.id)
@@ -257,6 +264,26 @@ export function ReceptionBookingPopup({
       )}
 
       <form onSubmit={handleSubmit} className="space-y-3 p-4">
+        {/* Block sub-type selector — only for managers/admins */}
+        {isBlock && isManagerOrAdmin && (
+          <div className="flex gap-1 rounded-xl border border-line/15 bg-canvas/40 p-1">
+            <button
+              type="button"
+              onClick={() => setBlockType("block_time")}
+              className={`flex-1 rounded-lg py-1.5 text-xs font-medium transition-colors ${blockType === "block_time" ? "bg-rose-500/15 text-rose-400" : "text-muted hover:bg-surface"}`}
+            >
+              🔒 Закрыть время
+            </button>
+            <button
+              type="button"
+              onClick={() => setBlockType("block_personal")}
+              className={`flex-1 rounded-lg py-1.5 text-xs font-medium transition-colors ${blockType === "block_personal" ? "bg-violet-500/15 text-violet-400" : "text-muted hover:bg-surface"}`}
+            >
+              🫧 Личные дела
+            </button>
+          </div>
+        )}
+
         {/* Client name */}
         {!isBlock ? (
           <ClientAutocompleteInput autoFocus value={clientName} onChange={(value) => { setClientName(value); setPickedClientId(null); }}
@@ -389,8 +416,8 @@ export function ReceptionBookingPopup({
             {t("common.cancel")}
           </button>
           <button type="submit" disabled={saving || (!isBlock && (!serviceId || !clientName.trim())) || !staffId}
-            className={`rounded-lg px-4 py-1.5 text-sm font-medium disabled:opacity-40 ${isBlock ? "bg-rose-500 hover:bg-rose-600 text-white" : accentSaveBg}`}>
-            {saving ? t("modal.saving") : (isBlock ? "Закрыть время" : t("common.save"))}
+            className={`rounded-lg px-4 py-1.5 text-sm font-medium disabled:opacity-40 ${isBlock && blockType === "block_personal" ? "bg-violet-600 hover:bg-violet-700 text-white" : isBlock ? "bg-rose-500 hover:bg-rose-600 text-white" : accentSaveBg}`}>
+            {saving ? t("modal.saving") : (isBlock && blockType === "block_personal" ? "Личные дела" : isBlock ? "Закрыть время" : t("common.save"))}
           </button>
         </div>
       </form>
