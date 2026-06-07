@@ -2,6 +2,7 @@ import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "./context/AuthContext";
 import { EffectiveRoleProvider, useEffectiveRole } from "./context/EffectiveRoleContext";
+import { isWorkerOnlyView } from "./lib/roles";
 import { Layout } from "./components/Layout";
 import { LoginPage } from "./pages/LoginPage";
 import { DashboardPage } from "./pages/DashboardPage";
@@ -47,6 +48,9 @@ function Protected({ children }: { children: React.ReactNode }) {
   if (!staffMember) {
     const next = location.pathname !== "/" ? `?next=${encodeURIComponent(location.pathname)}` : "";
     return <Navigate to={`/login${next}`} replace />;
+  }
+  if (isWorkerOnlyView(staffMember.roles)) {
+    return <Navigate to="/reception" replace />;
   }
   return <EffectiveRoleProvider>{children}</EffectiveRoleProvider>;
 }

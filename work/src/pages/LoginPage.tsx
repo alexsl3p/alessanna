@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useAuth, type LoginResult } from "../context/AuthContext";
 import { isSupabaseConfigured } from "../lib/supabase";
 import { LanguageSwitcher } from "../components/LanguageSwitcher";
+import { isWorkerOnlyView } from "../lib/roles";
 
 type Step = "phone" | "pin";
 type EmailMode = "login" | "register" | "forgot";
@@ -47,7 +48,10 @@ export function LoginPage() {
   const [emailConfirm, setEmailConfirm] = useState("");
   const [forgotSent, setForgotSent] = useState(false);
 
-  if (staffMember) return <Navigate to={redirectAfterLogin} replace />;
+  if (staffMember) {
+    const dest = isWorkerOnlyView(staffMember.roles) ? "/reception" : redirectAfterLogin;
+    return <Navigate to={dest} replace />;
+  }
   /* Пока AuthContext пробует автологин по device_token — не показываем форму,
    * чтобы не моргала. Успешный автологин сам редиректнет выше по условию. */
   if (loading) {
