@@ -88,7 +88,7 @@ export function CalendarPage() {
     ]);
     if (st.data) {
       const normalized = (st.data as Record<string, unknown>[])
-        .filter((row) => !isStaffRowAdmin(row))
+        .filter((row) => !isStaffRowAdmin(row) && row.show_on_marketing_site !== false)
         .map((r) => normalizeStaffMember(r as StaffMember));
       setStaff(normalized);
     }
