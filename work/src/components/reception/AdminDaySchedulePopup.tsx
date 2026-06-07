@@ -12,20 +12,25 @@ type Props = {
   anchorY: number;
   allStaff: StaffMember[];
   workDates: StaffWorkDateRow[];
+  holidays: string[]; // "YYYY-MM-DD"
   onClose: () => void;
   onSaved: () => void;
 };
 
-export function AdminDaySchedulePopup({ day, anchorX, anchorY, allStaff, workDates, onClose, onSaved }: Props) {
+export function AdminDaySchedulePopup({ day, anchorX, anchorY, allStaff, workDates, holidays, onClose, onSaved }: Props) {
   const { t, i18n } = useTranslation();
   const [saving, setSaving] = useState<string | null>(null);
+  const [savingHoliday, setSavingHoliday] = useState(false);
   const hueMap = buildStaffHueMap(allStaff.map((m) => m.id));
 
-  const x = Math.min(anchorX + 8, window.innerWidth - 290);
-  const y = Math.min(anchorY, window.innerHeight - 420);
+  const popupW = 272;
+  const x = Math.max(8, Math.min(anchorX + 8, window.innerWidth - popupW - 8));
+  const y = Math.min(anchorY, window.innerHeight - 460);
   const dateStr = format(day, "yyyy-MM-dd");
   const uiLocale = i18n.language === "et" ? "et-EE" : "ru-RU";
   const dayLabel = day.toLocaleString(uiLocale, { weekday: "long", day: "numeric", month: "long" });
+
+  const isHoliday = holidays.includes(dateStr);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -34,6 +39,17 @@ export function AdminDaySchedulePopup({ day, anchorX, anchorY, allStaff, workDat
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
+
+  async function toggleHoliday() {
+    setSavingHoliday(true);
+    if (isHoliday) {
+      await supabase.from("salon_holidays").delete().eq("holiday_date", dateStr);
+    } else {
+      await supabase.from("salon_holidays").insert({ holiday_date: dateStr, reason: null });
+    }
+    setSavingHoliday(false);
+    onSaved();
+  }
 
   async function toggle(staffId: string, isWorking: boolean) {
     setSaving(staffId);
@@ -51,10 +67,11 @@ export function AdminDaySchedulePopup({ day, anchorX, anchorY, allStaff, workDat
     <>
       <div className="fixed inset-0 z-40" onClick={onClose} />
       <div
-        className="fixed z-50 w-64 overflow-hidden rounded-xl bg-panel shadow-2xl ring-1 ring-line/15"
-        style={{ left: x, top: y }}
+        className="fixed z-50 overflow-hidden rounded-xl bg-panel shadow-2xl ring-1 ring-line/15"
+        style={{ left: x, top: y, width: popupW }}
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Header */}
         <div className="flex items-center justify-between border-b border-line/15 px-4 py-3">
           <span className="text-sm font-medium capitalize text-fg">{dayLabel}</span>
           <button
@@ -68,6 +85,42 @@ export function AdminDaySchedulePopup({ day, anchorX, anchorY, allStaff, workDat
           </button>
         </div>
 
+        {/* Holiday toggle */}
+        <div className={`border-b border-line/15 px-4 py-3 ${isHoliday ? "bg-rose-500/10" : ""}`}>
+          <button
+            type="button"
+            disabled={savingHoliday}
+            onClick={() => { void toggleHoliday(); }}
+            className={[
+              "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors",
+              isHoliday
+                ? "bg-rose-500/15 text-rose-400 hover:bg-rose-500/20"
+                : "text-fg hover:bg-surface",
+            ].join(" ")}
+          >
+            {/* Toggle switch */}
+            <div className={[
+              "relative flex h-5 w-9 shrink-0 items-center rounded-full transition-colors",
+              isHoliday ? "bg-rose-500" : "bg-line/30",
+            ].join(" ")}>
+              <span className={[
+                "absolute h-3.5 w-3.5 rounded-full bg-white shadow transition-transform",
+                isHoliday ? "translate-x-[18px]" : "translate-x-[3px]",
+              ].join(" ")} />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium">
+                {isHoliday ? "🔴 Салон закрыт" : "Закрыть день (праздник)"}
+              </p>
+              {isHoliday && (
+                <p className="mt-0.5 text-xs text-rose-400/80">Весь день отмечен как выходной</p>
+              )}
+            </div>
+            {savingHoliday && <span className="text-[10px] text-muted">…</span>}
+          </button>
+        </div>
+
+        {/* Staff list */}
         <div className="px-1 py-2">
           <p className="px-3 pb-1 text-[11px] font-medium uppercase tracking-wide text-muted">
             {t("reception.worksOn")} {day.toLocaleString(uiLocale, { day: "numeric", month: "long" })}

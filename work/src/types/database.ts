@@ -170,6 +170,14 @@ export type ServiceListingRow = {
   created_at?: string;
 };
 
+/** Дни закрытия салона (праздники / выходные). */
+export type SalonHolidayRow = {
+  id: string;
+  holiday_date: string; // "YYYY-MM-DD"
+  reason: string | null;
+  created_at?: string;
+};
+
 /** CRM client/visit rows. */
 export type ClientRow = {
   id: string;

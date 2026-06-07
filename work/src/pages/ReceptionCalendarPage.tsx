@@ -15,6 +15,7 @@ import { ReceptionStaffColorSettings } from "../components/reception/ReceptionSt
 import { AdminDaySchedulePopup } from "../components/reception/AdminDaySchedulePopup";
 import type {
   AppointmentRow,
+  SalonHolidayRow,
   ServiceRow,
   StaffMember,
   StaffServiceRow,
@@ -64,6 +65,7 @@ export function ReceptionCalendarPage() {
   const [timeOff, setTimeOff] = useState<StaffTimeOffRow[]>([]);
   const [workDates, setWorkDates] = useState<StaffWorkDateRow[]>([]);
   const [staffServiceLinks, setStaffServiceLinks] = useState<StaffServiceRow[]>([]);
+  const [holidays, setHolidays] = useState<SalonHolidayRow[]>([]);
   const [visibleStaffIds, setVisibleStaffIds] = useState<Set<string>>(new Set());
   const [popup, setPopup] = useState<BookingPopupState | null>(null);
   const [showSettings, setShowSettings] = useState(false);
@@ -97,13 +99,14 @@ export function ReceptionCalendarPage() {
   }, []);
 
   const load = useCallback(async () => {
-    const [st, to, ap, svCatalog, ss, wd] = await Promise.all([
+    const [st, to, ap, svCatalog, ss, wd, hol] = await Promise.all([
       supabase.from("staff").select("*").eq("is_active", true).order("name"),
       supabase.from("staff_time_off").select("*"),
       supabase.from("appointments").select("*").neq("status", "cancelled"),
       loadServicesCatalog({ activeOnly: true }),
       supabase.from("staff_services").select("*"),
       supabase.from("staff_work_dates").select("*"),
+      supabase.from("salon_holidays").select("*"),
     ]);
 
     if (st.data) {
@@ -120,6 +123,7 @@ export function ReceptionCalendarPage() {
     if (wd.data) setWorkDates(wd.data as StaffWorkDateRow[]);
     if (ap.data) setAppointments(ap.data as AppointmentRow[]);
     if (ss.data) setStaffServiceLinks(ss.data as StaffServiceRow[]);
+    if (hol.data) setHolidays(hol.data as SalonHolidayRow[]);
     setServices(svCatalog);
     setLoading(false);
   }, []);
@@ -395,6 +399,7 @@ export function ReceptionCalendarPage() {
                 services={services}
                 timeOff={timeOff}
                 workDates={workDates}
+                holidays={holidays.map((h) => h.holiday_date)}
                 visibleStaffIds={visibleStaffIds}
                 onSlotClick={handleSlotClick}
                 onApptClick={handleApptClick}
@@ -429,6 +434,7 @@ export function ReceptionCalendarPage() {
           anchorY={dayPopup.y}
           allStaff={staff}
           workDates={workDates}
+          holidays={holidays.map((h) => h.holiday_date)}
           onClose={() => setDayPopup(null)}
           onSaved={() => { void load(); }}
         />

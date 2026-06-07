@@ -188,6 +188,7 @@ export function AdminSchedulePage() {
           anchorY={dayPopup.y}
           allStaff={staff}
           workDates={workDates}
+          holidays={[]}
           onClose={() => setDayPopup(null)}
           onSaved={() => { void load(); }}
         />

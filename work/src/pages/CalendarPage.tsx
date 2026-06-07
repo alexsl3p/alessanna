@@ -373,6 +373,7 @@ export function CalendarPage() {
               services={services}
               timeOff={timeOff}
               workDates={workDates}
+              holidays={[]}
               visibleStaffIds={effectiveVisibleIds}
               onSlotClick={(start) => {
                 if (!canUseCalendar) return;
@@ -499,6 +500,7 @@ export function CalendarPage() {
           anchorY={dayPopup.y}
           allStaff={activeStaffForCalendar}
           workDates={workDates}
+          holidays={[]}
           onClose={() => setDayPopup(null)}
           onSaved={() => { void load(); }}
         />

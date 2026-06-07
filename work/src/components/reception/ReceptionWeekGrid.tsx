@@ -79,6 +79,7 @@ type Props = {
   services: ServiceRow[];
   timeOff: StaffTimeOffRow[];
   workDates: StaffWorkDateRow[];
+  holidays: string[]; // "YYYY-MM-DD"
   visibleStaffIds: Set<string>;
   onSlotClick: (start: Date, anchorX: number, anchorY: number) => void;
   onApptClick: (appt: AppointmentRow, x: number, y: number) => void;
@@ -94,6 +95,7 @@ export function ReceptionWeekGrid({
   services,
   timeOff,
   workDates,
+  holidays,
   visibleStaffIds,
   onSlotClick,
   onApptClick,
@@ -326,6 +328,7 @@ export function ReceptionWeekGrid({
           const isToday = isSameDay(day, now);
           const dateStr = format(day, "yyyy-MM-dd");
           const dayMMDD = format(day, "MM-dd");
+          const isHoliday = holidays.includes(dateStr);
           const workingIds = new Set(
             workDates.filter((r) => r.work_date === dateStr).map((r) => r.staff_id),
           );
@@ -341,20 +344,23 @@ export function ReceptionWeekGrid({
               key={day.toISOString()}
               className={[
                 `flex min-w-0 flex-1 flex-col items-center border-l ${borderCls} py-1`,
+                isHoliday ? "bg-rose-500/[0.08]" : "",
                 onDayHeaderClick ? `cursor-pointer ${hoverCls}` : "",
               ].join(" ")}
               onClick={onDayHeaderClick ? (e) => onDayHeaderClick(day, e.clientX, e.clientY) : undefined}
             >
-              <span className={`text-[11px] font-medium uppercase tracking-wide ${mutedCls}`}>
+              <span className={`text-[11px] font-medium uppercase tracking-wide ${isHoliday ? "text-rose-400" : mutedCls}`}>
                 {ruDay}
               </span>
               <div className="flex items-center justify-center gap-1">
                 <span
                   className={[
                     "flex h-7 w-7 items-center justify-center rounded-full text-base font-medium md:h-8 md:w-8 md:text-lg",
-                    isToday
-                      ? useGold ? "bg-gold text-canvas" : "bg-[#1a73e8] text-white"
-                      : textCls,
+                    isHoliday
+                      ? "bg-rose-500 text-white"
+                      : isToday
+                        ? useGold ? "bg-gold text-canvas" : "bg-[#1a73e8] text-white"
+                        : textCls,
                   ].join(" ")}
                 >
                   {format(day, "d")}
@@ -373,7 +379,12 @@ export function ReceptionWeekGrid({
                   </button>
                 )}
               </div>
-              {workingStaff.length > 0 && (
+              {isHoliday && (
+                <span className="mt-0.5 text-[9px] font-medium uppercase tracking-wide text-rose-400 md:text-[10px]">
+                  закрыто
+                </span>
+              )}
+              {!isHoliday && workingStaff.length > 0 && (
                 <div className="mt-0.5 flex flex-wrap justify-center gap-0.5 px-0.5">
                   {workingStaff.map((m) => {
                     const c = googleStaffColor(m, staffHueMap);
@@ -424,6 +435,7 @@ export function ReceptionWeekGrid({
           {days.map((day) => {
             const dayAnchor = setHours(startOfDay(day), START_HOUR);
             const isToday = isSameDay(day, now);
+            const isDayHoliday = holidays.includes(format(day, "yyyy-MM-dd"));
 
             const dayMMDD2 = format(day, "MM-dd");
             const birthdayMembersForDay = staff.filter(
@@ -455,11 +467,22 @@ export function ReceptionWeekGrid({
                 key={day.toISOString()}
                 className={[
                   `relative min-w-0 flex-1 cursor-pointer select-none border-l ${borderCls}`,
-                  isToday ? todayBg : "",
+                  isDayHoliday ? "bg-rose-500/[0.06]" : isToday ? todayBg : "",
                 ].join(" ")}
                 style={{ height: TOTAL_PX }}
                 onClick={(e) => handleBodyClick(e, day)}
               >
+                {/* Holiday full-day overlay */}
+                {isDayHoliday && (
+                  <div
+                    className="pointer-events-none absolute inset-0 z-20"
+                    style={{
+                      backgroundImage: "repeating-linear-gradient(-45deg, rgba(239,68,68,0.10) 0, rgba(239,68,68,0.10) 1px, transparent 0, transparent 8px)",
+                      backgroundSize: "11px 11px",
+                    }}
+                  />
+                )}
+
                 {/* Hour lines + half-hour marks */}
                 {HOURS.map((h) => (
                   <React.Fragment key={h}>
