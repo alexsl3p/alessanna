@@ -32,10 +32,10 @@ function getSteps(os: string, browser: string): Step[] | null {
       { icon: "confirm", text: "Нажмите «Добавить» в правом верхнем углу" },
     ];
   }
-  if (os === "ios" && browser !== "safari") {
+  if (os === "ios") {
     return [
-      { icon: "info", text: "Для установки на iPhone/iPad откройте эту страницу в браузере Safari" },
-      { icon: "safari-share", text: "Нажмите кнопку «Поделиться» и выберите «На экран «Домой»»" },
+      { icon: "info", text: "Для установки на iPhone/iPad нужен браузер Safari — другие браузеры не поддерживают установку" },
+      { icon: "safari-share", text: "Откройте эту страницу в Safari, нажмите «Поделиться» и выберите «На экран «Домой»»" },
     ];
   }
   if (browser === "samsung") {
@@ -66,6 +66,133 @@ function getSteps(os: string, browser: string): Step[] | null {
   return null;
 }
 
+// ── Browser mockups ──────────────────────────────────────────────────
+
+function BrowserHintIOS() {
+  return (
+    <div className="mb-5 overflow-hidden rounded-2xl border border-zinc-700 bg-zinc-900">
+      <p className="pt-3 text-center text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+        Safari · нижняя панель
+      </p>
+      <div className="flex items-end justify-around px-5 pb-4 pt-3">
+        <svg viewBox="0 0 24 24" className="h-6 w-6 text-zinc-600" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg>
+        <svg viewBox="0 0 24 24" className="h-6 w-6 text-zinc-600" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
+        {/* Share — highlighted */}
+        <div className="flex flex-col items-center gap-1.5">
+          <div className="rounded-xl bg-sky-600 p-2.5 ring-4 ring-sky-500/30">
+            <svg viewBox="0 0 24 24" className="h-7 w-7 text-white" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13"/>
+            </svg>
+          </div>
+          <span className="text-xs font-bold text-sky-400">Эта кнопка</span>
+        </div>
+        <svg viewBox="0 0 24 24" className="h-6 w-6 text-zinc-600" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
+        <svg viewBox="0 0 24 24" className="h-6 w-6 text-zinc-600" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/></svg>
+      </div>
+    </div>
+  );
+}
+
+function BrowserHintAndroid() {
+  return (
+    <div className="mb-5 overflow-hidden rounded-2xl border border-zinc-700 bg-zinc-900">
+      <p className="pt-3 text-center text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+        Chrome / Android · верхняя панель
+      </p>
+      <div className="flex items-center gap-2 px-4 py-4">
+        <div className="flex-1 rounded-lg bg-zinc-800 px-3 py-2.5 text-xs text-zinc-500">
+          work.alessannailu.com
+        </div>
+        <div className="flex flex-col items-center gap-1">
+          <div className="rounded-lg bg-sky-600 px-2.5 py-2 ring-4 ring-sky-500/30">
+            <svg viewBox="0 0 24 24" className="h-5 w-5 text-white" fill="currentColor">
+              <circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/>
+            </svg>
+          </div>
+          <span className="text-[11px] font-bold text-sky-400">Сюда!</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BrowserHintSamsung() {
+  return (
+    <div className="mb-5 overflow-hidden rounded-2xl border border-zinc-700 bg-zinc-900">
+      <p className="pt-3 text-center text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+        Samsung Internet · верхняя панель
+      </p>
+      <div className="flex items-center gap-2 px-4 py-4">
+        <div className="flex-1 rounded-lg bg-zinc-800 px-3 py-2.5 text-xs text-zinc-500">
+          work.alessannailu.com
+        </div>
+        <div className="flex flex-col items-center gap-1">
+          <div className="rounded-lg bg-sky-600 px-2.5 py-2 ring-4 ring-sky-500/30">
+            <svg viewBox="0 0 24 24" className="h-5 w-5 text-white" fill="currentColor">
+              <circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/>
+            </svg>
+          </div>
+          <span className="text-[11px] font-bold text-sky-400">Сюда!</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BrowserHintDesktop() {
+  return (
+    <div className="mb-5 overflow-hidden rounded-2xl border border-zinc-700 bg-zinc-900">
+      <p className="pt-3 text-center text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+        Chrome / Edge · адресная строка
+      </p>
+      <div className="flex items-center gap-1.5 px-4 py-4">
+        <div className="flex-1 rounded-lg bg-zinc-800 px-3 py-2 text-xs text-zinc-500">
+          work.alessannailu.com
+        </div>
+        {/* Install icon in address bar */}
+        <div className="flex flex-col items-center gap-1">
+          <div className="rounded-lg bg-sky-600 px-2 py-1.5 ring-4 ring-sky-500/30">
+            <svg viewBox="0 0 24 24" className="h-5 w-5 text-white" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2v13M5 9l7 7 7-7"/><path d="M3 21h18"/>
+            </svg>
+          </div>
+          <span className="text-[11px] font-bold text-sky-400">Этот значок</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BrowserHintIOSNotSafari() {
+  return (
+    <div className="mb-5 rounded-2xl border border-amber-800/50 bg-amber-950/30 p-4 text-center">
+      <div className="mb-2 flex justify-center">
+        <svg viewBox="0 0 24 24" className="h-10 w-10 text-amber-400" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
+        </svg>
+      </div>
+      <p className="text-sm font-semibold text-amber-300">Только через Safari</p>
+      <p className="mt-1 text-xs leading-relaxed text-amber-200/70">
+        На iPhone/iPad установка работает только в браузере Safari. Скопируйте ссылку и откройте в Safari.
+      </p>
+      <div className="mt-3 rounded-lg bg-amber-900/40 px-3 py-2 font-mono text-xs text-amber-300">
+        {window.location.host}/install
+      </div>
+    </div>
+  );
+}
+
+function BrowserHint({ os, browser }: { os: string; browser: string }) {
+  if (os === "ios" && browser === "safari") return <BrowserHintIOS />;
+  if (os === "ios") return <BrowserHintIOSNotSafari />;
+  if (browser === "samsung") return <BrowserHintSamsung />;
+  if (os === "android") return <BrowserHintAndroid />;
+  if (os === "desktop") return <BrowserHintDesktop />;
+  return null;
+}
+
+// ── Icons ────────────────────────────────────────────────────────────
+
 const ICON: Record<string, React.ReactNode> = {
   "safari-share": (
     <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -83,8 +210,8 @@ const ICON: Record<string, React.ReactNode> = {
     </svg>
   ),
   "menu": (
-    <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/>
+    <svg viewBox="0 0 24 24" className="h-7 w-7" fill="currentColor">
+      <circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/>
     </svg>
   ),
   "address-bar": (
@@ -98,6 +225,8 @@ const ICON: Record<string, React.ReactNode> = {
     </svg>
   ),
 };
+
+// ── Page ─────────────────────────────────────────────────────────────
 
 export function InstallPage() {
   const { os, browser } = detect();
@@ -130,7 +259,6 @@ export function InstallPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-950 px-4 py-10">
       <div className="w-full max-w-sm">
-        {/* Logo */}
         <img src="/alessanna-logo.png" alt="AlesSanna" className="mx-auto mb-8 h-16 object-contain" />
 
         {installed ? (
@@ -150,7 +278,7 @@ export function InstallPage() {
               Добавьте AlesSanna на экран — работает как обычное приложение, без браузера.
             </p>
 
-            {/* One-tap install button for Chrome/Edge */}
+            {/* One-tap install button for Chrome/Edge when prompt available */}
             {canPrompt && !prompted && (
               <button
                 onClick={() => void handleInstall()}
@@ -160,12 +288,15 @@ export function InstallPage() {
                 <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 2v13M5 9l7 7 7-7"/><path d="M3 21h18"/>
                 </svg>
-                {installing ? "Установка…" : "Установить"}
+                {installing ? "Установка…" : "Установить одним нажатием"}
               </button>
             )}
 
+            {/* Visual browser mockup */}
+            <BrowserHint os={os} browser={browser} />
+
             {/* Step-by-step instructions */}
-            {steps ? (
+            {steps && (
               <div className="space-y-3">
                 {steps.map((step, i) => (
                   <div key={i} className="flex gap-4 rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
@@ -179,15 +310,8 @@ export function InstallPage() {
                   </div>
                 ))}
               </div>
-            ) : (
-              <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-5 text-center">
-                <p className="text-sm text-zinc-300">
-                  Откройте эту страницу в <span className="font-semibold text-white">Chrome</span> или <span className="font-semibold text-white">Safari</span> и следуйте инструкциям браузера для добавления на экран.
-                </p>
-              </div>
             )}
 
-            {/* URL hint */}
             <p className="mt-6 text-center text-xs text-zinc-600">
               Ссылка для установки: <span className="text-zinc-400">{window.location.host}/install</span>
             </p>
