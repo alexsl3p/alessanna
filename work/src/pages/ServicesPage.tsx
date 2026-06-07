@@ -72,24 +72,27 @@ async function fetchServicesFromListingsCatalog(): Promise<ServiceRow[]> {
    * у PostgrestSingleResponse, а TS отказывается их объединять. */
   let res = await supabase
     .from("service_listings")
-    .select("id,name,price,price_max,duration,category_id,buffer_after_min,is_active,service_categories(name)")
+    .select("id,name,price,price_max,duration,category_id,buffer_after_min,is_active,sort_order,service_categories(name)")
+    .order("sort_order", { ascending: true })
     .order("name", { ascending: true });
 
   if (res.error && String(res.error.message || "").includes("buffer_after_min")) {
     res = (await supabase
       .from("service_listings")
-      .select("id,name,price,price_max,duration,category_id,is_active,service_categories(name)")
+      .select("id,name,price,price_max,duration,category_id,is_active,sort_order,service_categories(name)")
+      .order("sort_order", { ascending: true })
       .order("name", { ascending: true })) as typeof res;
   }
   if (res.error && String(res.error.message || "").includes("is_active")) {
     res = (await supabase
       .from("service_listings")
-      .select("id,name,price,price_max,duration,category_id,service_categories(name)")
+      .select("id,name,price,price_max,duration,category_id,sort_order,service_categories(name)")
+      .order("sort_order", { ascending: true })
       .order("name", { ascending: true })) as typeof res;
   }
   if (res.error || !res.data?.length) return [];
 
-  return (res.data as ListingCatalogRow[]).map((r, idx) => {
+  return (res.data as Array<ListingCatalogRow & { sort_order?: number | null }>).map((r, idx) => {
     const catName = String(r.service_categories?.name || "").trim();
     return {
       id: String(r.id),
@@ -103,7 +106,9 @@ async function fetchServicesFromListingsCatalog(): Promise<ServiceRow[]> {
       price_cents: Math.round(Number(r.price || 0) * 100),
       price_max_cents: listingPriceMaxCents(r.price_max),
       active: r.is_active !== false,
-      sort_order: idx,
+      /* Use DB sort_order when set; otherwise give nulls a large base so they
+       * sort after any explicitly-set values without colliding with them. */
+      sort_order: r.sort_order ?? (100000 + idx),
       catalogSource: "listing",
     };
   });
@@ -120,6 +125,10 @@ export function ServicesPage() {
    * иначе load пересоздаётся при каждом setCategories и зацикливает перезагрузку. */
   const categoriesRef = useRef<CategoryRow[]>([]);
   useEffect(() => { categoriesRef.current = categories; }, [categories]);
+  /* Maps category name → {id: UUID, sort_order} from service_categories — always
+   * populated regardless of which categories table drives the display list.
+   * Used by moveCategoryUp/Down which must update service_categories by UUID. */
+  const catModernMapRef = useRef<Map<string, { id: string; sort_order: number }>>(new Map());
   const [services, setServices] = useState<ServiceRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [newCat, setNewCat] = useState("");
@@ -387,9 +396,27 @@ export function ServicesPage() {
   const load = useCallback(async () => {
     let loadedCategories: CategoryRow[] = [];
 
+    /* Always fetch service_categories to get UUID ids + sort_orders for reorder ops. */
+    const cModernAll = await supabase.from("service_categories").select("id,name,sort_order").order("sort_order", { ascending: true });
+    const modernMap = new Map<string, { id: string; sort_order: number }>();
+    if (!cModernAll.error && cModernAll.data) {
+      for (const r of cModernAll.data as Array<{ id: string; name: string; sort_order?: number | null }>) {
+        const nm = cleanCategoryName(r.name);
+        if (nm) modernMap.set(nm, { id: String(r.id), sort_order: r.sort_order ?? 9999 });
+      }
+    }
+    catModernMapRef.current = modernMap;
+
     const cLegacy = await supabase.from("categories").select("*").order("created_at", { ascending: true });
     if (!cLegacy.error && cLegacy.data) {
       loadedCategories = (cLegacy.data as CategoryRow[]).filter((c) => !isHiddenCategoryName(c.name));
+      /* Sort legacy categories by service_categories sort_order so display matches
+       * what the reorder buttons actually persist. */
+      loadedCategories.sort((a, b) => {
+        const sa = modernMap.get(cleanCategoryName(a.name))?.sort_order ?? 9999;
+        const sb = modernMap.get(cleanCategoryName(b.name))?.sort_order ?? 9999;
+        return sa - sb;
+      });
       setCategories(loadedCategories);
     } else {
       const cModern = await supabase.from("service_categories").select("id,name,sort_order").order("sort_order", { ascending: true });
@@ -798,10 +825,14 @@ export function ServicesPage() {
   async function moveCategoryUp(catName: string) {
     const idx = categories.findIndex(c => c.name === catName);
     if (idx <= 0) return;
-    const a = categories[idx - 1], b = categories[idx];
+    const nameA = cleanCategoryName(categories[idx - 1].name);
+    const nameB = cleanCategoryName(categories[idx].name);
+    const mA = catModernMapRef.current.get(nameA);
+    const mB = catModernMapRef.current.get(nameB);
+    if (!mA || !mB) return;
     await Promise.all([
-      supabase.from("service_categories").update({ sort_order: (b as unknown as { sort_order: number }).sort_order }).eq("id", String(a.id)),
-      supabase.from("service_categories").update({ sort_order: (a as unknown as { sort_order: number }).sort_order }).eq("id", String(b.id)),
+      supabase.from("service_categories").update({ sort_order: mB.sort_order }).eq("id", mA.id),
+      supabase.from("service_categories").update({ sort_order: mA.sort_order }).eq("id", mB.id),
     ]);
     void load();
   }
@@ -809,10 +840,14 @@ export function ServicesPage() {
   async function moveCategoryDown(catName: string) {
     const idx = categories.findIndex(c => c.name === catName);
     if (idx < 0 || idx >= categories.length - 1) return;
-    const a = categories[idx], b = categories[idx + 1];
+    const nameA = cleanCategoryName(categories[idx].name);
+    const nameB = cleanCategoryName(categories[idx + 1].name);
+    const mA = catModernMapRef.current.get(nameA);
+    const mB = catModernMapRef.current.get(nameB);
+    if (!mA || !mB) return;
     await Promise.all([
-      supabase.from("service_categories").update({ sort_order: (b as unknown as { sort_order: number }).sort_order }).eq("id", String(a.id)),
-      supabase.from("service_categories").update({ sort_order: (a as unknown as { sort_order: number }).sort_order }).eq("id", String(b.id)),
+      supabase.from("service_categories").update({ sort_order: mB.sort_order }).eq("id", mA.id),
+      supabase.from("service_categories").update({ sort_order: mA.sort_order }).eq("id", mB.id),
     ]);
     void load();
   }
@@ -822,9 +857,13 @@ export function ServicesPage() {
     const idx = catServices.findIndex(s => String(s.id) === String(svc.id));
     if (idx <= 0) return;
     const a = catServices[idx - 1], b = catServices[idx];
+    /* If both sort_orders are identical (e.g. both null-derived), assign distinct
+     * position-based values so the swap actually changes the DB order. */
+    const soA = a.sort_order !== b.sort_order ? (a.sort_order ?? (idx - 1) * 10) : (idx - 1) * 10;
+    const soB = a.sort_order !== b.sort_order ? (b.sort_order ?? idx * 10) : idx * 10;
     await Promise.all([
-      supabase.from("service_listings").update({ sort_order: b.sort_order }).eq("id", String(a.id)),
-      supabase.from("service_listings").update({ sort_order: a.sort_order }).eq("id", String(b.id)),
+      supabase.from("service_listings").update({ sort_order: soB }).eq("id", String(a.id)),
+      supabase.from("service_listings").update({ sort_order: soA }).eq("id", String(b.id)),
     ]);
     void load();
   }
@@ -834,9 +873,11 @@ export function ServicesPage() {
     const idx = catServices.findIndex(s => String(s.id) === String(svc.id));
     if (idx < 0 || idx >= catServices.length - 1) return;
     const a = catServices[idx], b = catServices[idx + 1];
+    const soA = a.sort_order !== b.sort_order ? (a.sort_order ?? idx * 10) : idx * 10;
+    const soB = a.sort_order !== b.sort_order ? (b.sort_order ?? (idx + 1) * 10) : (idx + 1) * 10;
     await Promise.all([
-      supabase.from("service_listings").update({ sort_order: b.sort_order }).eq("id", String(a.id)),
-      supabase.from("service_listings").update({ sort_order: a.sort_order }).eq("id", String(b.id)),
+      supabase.from("service_listings").update({ sort_order: soB }).eq("id", String(a.id)),
+      supabase.from("service_listings").update({ sort_order: soA }).eq("id", String(b.id)),
     ]);
     void load();
   }
