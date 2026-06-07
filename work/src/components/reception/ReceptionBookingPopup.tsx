@@ -90,6 +90,11 @@ export function ReceptionBookingPopup({
   const lastValidStartRef = useRef(startStr);
   const lastValidEndRef = useRef(endStr);
   const [endManual, setEndManual] = useState(isEdit);
+  const [staffNote, setStaffNote] = useState(() => {
+    if (!isEdit || isExistingBlock) return "";
+    const n = editAppt?.note ?? "";
+    return n && !["block_time", "block_personal"].includes(n) ? n : "";
+  });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [showServicePicker, setShowServicePicker] = useState(false);
@@ -191,7 +196,7 @@ export function ReceptionBookingPopup({
       : pickedClientId ?? (await resolveClientIdForVisit(normalizedClientName, clientPhone, clientEmail));
     const payload = isBlock
       ? { client_name: clientName.trim() || "— Закрыто —", client_phone: null as null, note: blockType, staff_id: staffId, service_id: null as null, start_time: start.toISOString(), end_time: end.toISOString(), status: "confirmed" as const }
-      : { client_id: resolvedClientId, client_name: normalizedClientName, client_phone: clientPhone.trim() || null, client_email: clientEmail.trim() || null, note: null as null, source: "reception", created_by_staff_id: staffMember?.id ?? null, staff_id: staffId, service_id: svc!.id, start_time: start.toISOString(), end_time: end.toISOString(), status: "confirmed" as const };
+      : { client_id: resolvedClientId, client_name: normalizedClientName, client_phone: clientPhone.trim() || null, client_email: clientEmail.trim() || null, note: staffNote.trim() || null, source: "reception", created_by_staff_id: staffMember?.id ?? null, staff_id: staffId, service_id: svc!.id, start_time: start.toISOString(), end_time: end.toISOString(), status: "confirmed" as const };
     const { error: writeErr } = isEdit
       ? await supabase.from("appointments").update(payload).eq("id", editAppt!.id)
       : await supabase.from("appointments").insert(payload);
@@ -399,6 +404,22 @@ export function ReceptionBookingPopup({
             <input value={clientEmail} onChange={(e) => setClientEmail(e.target.value)}
               placeholder="Email (необязательно)" type="email"
               className={inputCls + " placeholder:text-muted/50"} />
+          </div>
+        )}
+
+        {/* Master note — edit mode only, non-block */}
+        {isEdit && !isBlock && (
+          <div className="flex items-start gap-3">
+            <svg viewBox="0 0 20 20" className="mt-2 h-4 w-4 shrink-0 text-muted" fill="currentColor">
+              <path fillRule="evenodd" d="M18 5v8a2 2 0 01-2 2h-5l-5 4v-4H4a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2zM7 8H5v2h2V8zm2 0h2v2H9V8zm6 0h-2v2h2V8z" clipRule="evenodd" />
+            </svg>
+            <textarea
+              value={staffNote}
+              onChange={(e) => setStaffNote(e.target.value)}
+              rows={2}
+              placeholder="Заметка мастера…"
+              className={`flex-1 resize-none rounded-lg border border-line/20 bg-surface px-2 py-1.5 text-sm text-fg placeholder:text-muted/50 focus:outline-none focus:ring-1 ${accentFocus}`}
+            />
           </div>
         )}
 
