@@ -670,11 +670,15 @@ export function ReceptionWeekGrid({
       <>
         <div className="fixed inset-0 z-[49]" onClick={() => setBirthdayPopup(null)} />
         <div
-          className="fixed z-50 w-64 rounded-2xl border border-pink-400/30 bg-surface px-5 py-5 text-center shadow-2xl"
-          style={{
-            left: Math.min(birthdayPopup.x - 128, (typeof window !== "undefined" ? window.innerWidth : 800) - 272),
-            top: Math.min(birthdayPopup.y + 12, (typeof window !== "undefined" ? window.innerHeight : 600) - 200),
-          }}
+          className="fixed z-50 rounded-2xl border border-pink-400/30 bg-surface px-5 py-5 text-center shadow-2xl"
+          style={(() => {
+            const iw = typeof window !== "undefined" ? window.innerWidth : 800;
+            const ih = typeof window !== "undefined" ? window.innerHeight : 600;
+            const w = Math.min(256, iw - 16);
+            const left = Math.max(8, Math.min(birthdayPopup.x - w / 2, iw - w - 8));
+            const top = Math.min(birthdayPopup.y + 12, ih - 200);
+            return { left, top, width: w };
+          })()}
         >
           <div className="mb-2 text-4xl">🎂🎉🌸</div>
           {birthdayPopup.names.map((name) => (
