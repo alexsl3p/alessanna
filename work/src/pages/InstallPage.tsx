@@ -40,7 +40,7 @@ function getSteps(os: string, browser: string): Step[] | null {
   }
   if (browser === "samsung") {
     return [
-      { icon: "menu", text: "Нажмите кнопку «⋮» (меню) в правом верхнем углу" },
+      { icon: "menu", text: "Нажмите кнопку «⋮» (меню) в нижней панели браузера" },
       { icon: "add-home", text: "Нажмите «+ Добавить страницу»" },
       { icon: "confirm", text: "Выберите «Главный экран»" },
     ];
@@ -121,19 +121,21 @@ function BrowserHintSamsung() {
   return (
     <div className="mb-5 overflow-hidden rounded-2xl border border-zinc-700 bg-zinc-900">
       <p className="pt-3 text-center text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-        Samsung Internet · верхняя панель
+        Samsung Internet · нижняя панель
       </p>
-      <div className="flex items-center gap-2 px-4 py-4">
-        <div className="flex-1 rounded-lg bg-zinc-800 px-3 py-2.5 text-xs text-zinc-500">
-          work.alessannailu.com
-        </div>
-        <div className="flex flex-col items-center gap-1">
-          <div className="rounded-lg bg-sky-600 px-2.5 py-2 ring-4 ring-sky-500/30">
-            <svg viewBox="0 0 24 24" className="h-5 w-5 text-white" fill="currentColor">
-              <circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/>
+      <div className="flex items-end justify-around px-5 pb-4 pt-3">
+        <svg viewBox="0 0 24 24" className="h-6 w-6 text-zinc-600" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg>
+        <svg viewBox="0 0 24 24" className="h-6 w-6 text-zinc-600" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
+        <svg viewBox="0 0 24 24" className="h-6 w-6 text-zinc-600" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+        <svg viewBox="0 0 24 24" className="h-6 w-6 text-zinc-600" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/></svg>
+        {/* Three dots — highlighted */}
+        <div className="flex flex-col items-center gap-1.5">
+          <div className="rounded-xl bg-sky-600 p-2.5 ring-4 ring-sky-500/30">
+            <svg viewBox="0 0 24 24" className="h-6 w-6 text-white" fill="currentColor">
+              <circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/>
             </svg>
           </div>
-          <span className="text-[11px] font-bold text-sky-400">Сюда!</span>
+          <span className="text-xs font-bold text-sky-400">Эта кнопка</span>
         </div>
       </div>
     </div>
