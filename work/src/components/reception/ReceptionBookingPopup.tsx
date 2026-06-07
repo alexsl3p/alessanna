@@ -410,7 +410,7 @@ export function ReceptionBookingPopup({
               ))}
               {groupedServices.sorted.map(([cat, svcs]) => (
                 <div key={cat}>
-                  <div className="px-4 pb-1 pt-3 text-xs font-bold uppercase tracking-wide text-fg/70">{cat}</div>
+                  <div className={`border-t border-line/10 bg-white/[0.04] px-4 pb-1.5 pt-2.5 text-[11px] font-bold uppercase tracking-widest ${useGold ? "text-gold" : "text-[#1a73e8]"}`}>{cat}</div>
                   {svcs.map((s) => (
                     <button key={String(s.id)} type="button"
                       onClick={() => { setServiceId(String(s.id)); setEndManual(false); setShowServicePicker(false); }}
