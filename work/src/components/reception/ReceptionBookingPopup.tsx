@@ -91,7 +91,7 @@ export function ReceptionBookingPopup({
   const lastValidEndRef = useRef(endStr);
   const [endManual, setEndManual] = useState(isEdit);
   const [staffNote, setStaffNote] = useState(() => {
-    if (!isEdit || isExistingBlock) return "";
+    if (isExistingBlock) return "";
     const n = editAppt?.note ?? "";
     return n && !["block_time", "block_personal"].includes(n) ? n : "";
   });
@@ -407,8 +407,8 @@ export function ReceptionBookingPopup({
           </div>
         )}
 
-        {/* Master note — edit mode only, non-block */}
-        {isEdit && !isBlock && (
+        {/* Master note */}
+        {!isBlock && (
           <div className="flex items-start gap-3">
             <svg viewBox="0 0 20 20" className="mt-2 h-4 w-4 shrink-0 text-muted" fill="currentColor">
               <path fillRule="evenodd" d="M18 5v8a2 2 0 01-2 2h-5l-5 4v-4H4a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2zM7 8H5v2h2V8zm2 0h2v2H9V8zm6 0h-2v2h2V8z" clipRule="evenodd" />

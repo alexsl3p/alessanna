@@ -21,10 +21,7 @@ export function ReceptionApptInfoPopup({ appt, staff, services, canManage, onClo
   const ref = useRef<HTMLDivElement>(null);
   const isBlock = !appt.service_id || appt.note === "block_time" || appt.note === "block_personal";
   const isPersonal = appt.note === "block_personal";
-  const initialNote = appt.note && !["block_time", "block_personal"].includes(appt.note) ? appt.note : "";
-  const [staffNote, setStaffNote] = useState(initialNote);
-  const [savingNote, setSavingNote] = useState(false);
-  const noteDirty = staffNote !== initialNote;
+  const noteText = appt.note && !["block_time", "block_personal"].includes(appt.note) ? appt.note : null;
 
   const member = staff.find((s) => s.id === appt.staff_id);
   const svc = services.find((s) => String(s.id) === String(appt.service_id));
@@ -36,12 +33,6 @@ export function ReceptionApptInfoPopup({ appt, staff, services, canManage, onClo
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
-
-  async function handleSaveNote() {
-    setSavingNote(true);
-    await supabase.from("appointments").update({ note: staffNote || null }).eq("id", appt.id);
-    setSavingNote(false);
-  }
 
   async function handleCancel() {
     if (!window.confirm("Отменить эту запись?")) return;
@@ -173,33 +164,17 @@ export function ReceptionApptInfoPopup({ appt, staff, services, canManage, onClo
               </div>
             </div>
 
-            {/* Note / master comment */}
-            {!isBlock && (
+            {/* Master comment — read-only */}
+            {!isBlock && noteText && (
               <div className="flex items-start gap-3 pt-4">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface text-muted">
                   <svg viewBox="0 0 20 20" className="h-5 w-5" fill="currentColor">
                     <path fillRule="evenodd" d="M18 5v8a2 2 0 01-2 2h-5l-5 4v-4H4a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2zM7 8H5v2h2V8zm2 0h2v2H9V8zm6 0h-2v2h2V8z" clipRule="evenodd" />
                   </svg>
                 </div>
-                <div className="flex-1">
+                <div>
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-muted">Комментарий</p>
-                  <textarea
-                    value={staffNote}
-                    onChange={(e) => setStaffNote(e.target.value)}
-                    rows={3}
-                    placeholder="Заметка мастера…"
-                    className="mt-1.5 w-full resize-none rounded-lg border border-line/20 bg-surface px-3 py-2 text-sm text-fg placeholder:text-muted/50 focus:border-line/40 focus:outline-none focus:ring-1 focus:ring-line/20"
-                  />
-                  {noteDirty && (
-                    <button
-                      type="button"
-                      onClick={() => void handleSaveNote()}
-                      disabled={savingNote}
-                      className="mt-1.5 rounded-lg bg-surface px-3 py-1 text-xs font-medium text-fg hover:bg-surface/80 disabled:opacity-40 border border-line/20"
-                    >
-                      {savingNote ? "Сохраняю…" : "Сохранить заметку"}
-                    </button>
-                  )}
+                  <p className="mt-0.5 text-sm leading-relaxed text-fg">{noteText}</p>
                 </div>
               </div>
             )}
