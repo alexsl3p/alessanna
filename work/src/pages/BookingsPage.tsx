@@ -24,21 +24,26 @@ import type { AppointmentRow } from "../types/database";
 type StaffName = { id: string; name: string };
 type ServiceName = { id: string; name: string };
 
-type StatusFilter = "all" | "active" | "pending" | "confirmed" | "cancelled";
+type StatusFilter = "all_active" | "client" | "block" | "all" | "pending" | "confirmed" | "cancelled";
 type SourceSort = "none" | "asc" | "desc";
 
 const STATUS_FILTERS: StatusFilter[] = [
-  "active",
+  "all_active",
+  "client",
+  "block",
   "pending",
   "confirmed",
   "cancelled",
   "all",
 ];
 
-function passesStatus(filter: StatusFilter, status: string): boolean {
+function passesFilter(filter: StatusFilter, row: AppointmentRow): boolean {
+  const isBlock = row.note === "block_time";
   if (filter === "all") return true;
-  if (filter === "active") return status !== "cancelled";
-  return status === filter;
+  if (filter === "all_active") return row.status !== "cancelled";
+  if (filter === "client") return row.status !== "cancelled" && !isBlock;
+  if (filter === "block") return isBlock && row.status !== "cancelled";
+  return row.status === filter;
 }
 
 export function BookingsPage() {
@@ -54,7 +59,7 @@ export function BookingsPage() {
 
   /* фильтры/поиск */
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all_active");
   const [sourceSort, setSourceSort] = useState<SourceSort>("none");
   const [siteAlerts, setSiteAlerts] = useState<
     Array<{ id: string; client: string; when: string; staffId: string }>
@@ -133,7 +138,7 @@ export function BookingsPage() {
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
     const filtered = rows.filter((b) => {
-      if (!passesStatus(statusFilter, b.status)) return false;
+      if (!passesFilter(statusFilter, b)) return false;
       if (!q) return true;
       const em = staffNames.find((x) => x.id === b.staff_id);
       const sv = services.find((x) => x.id === String(b.service_id));
@@ -164,7 +169,7 @@ export function BookingsPage() {
     return sorted;
   }, [rows, search, statusFilter, staffNames, services, sourceSort]);
 
-  const filtersActive = statusFilter !== "active" || search.trim().length > 0;
+  const filtersActive = statusFilter !== "all_active" || search.trim().length > 0;
 
   async function cancelBooking(id: string) {
     const row = rows.find((r) => r.id === id);
@@ -269,8 +274,10 @@ export function BookingsPage() {
   }
 
   function filterLabel(f: StatusFilter): string {
+    if (f === "all_active") return "Все активные";
+    if (f === "client") return "Активные";
+    if (f === "block") return "Закрытые";
     if (f === "all") return t("bookings.filterAll");
-    if (f === "active") return t("bookings.filterActive");
     if (f === "pending") return t("bookings.filterPending");
     if (f === "confirmed") return t("bookings.filterConfirmed");
     return t("bookings.filterCancelled");
@@ -380,13 +387,65 @@ export function BookingsPage() {
               type="button"
               onClick={() => {
                 setSearch("");
-                setStatusFilter("active");
+                setStatusFilter("all_active");
               }}
               className="mt-3 inline-flex items-center gap-1.5 rounded-md border border-line/20 bg-surface px-3 py-1.5 text-xs text-fg transition hover:border-line/25 hover:text-fg"
             >
               {t("bookings.resetFilters")}
             </button>
           )}
+        </div>
+      ) : statusFilter === "block" ? (
+        /* block_time rows — show «Закрыто» instead of service name */
+        <div className="overflow-x-auto rounded-xl border border-line/15">
+          <table className="w-full min-w-[480px] text-left text-sm">
+            <thead className="border-b border-line/15 bg-panel text-xs uppercase tracking-wide text-muted">
+              <tr>
+                <th className="px-4 py-3">{t("bookings.when")}</th>
+                <th className="px-4 py-3">{t("bookings.staff")}</th>
+                <th className="px-4 py-3">Причина / название</th>
+                <th className="px-4 py-3">Длительность</th>
+                {canManage && <th className="px-4 py-3" />}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-line/15">
+              {visible.map((b) => {
+                const em = staffNames.find((x) => x.id === b.staff_id);
+                const start = b.start_time ? parseISO(b.start_time) : null;
+                const end = b.end_time ? parseISO(b.end_time) : null;
+                const durMin = start && end ? Math.round((end.getTime() - start.getTime()) / 60000) : null;
+                return (
+                  <tr key={b.id} className="bg-panel/80">
+                    <td className="px-4 py-3 text-fg">
+                      {start ? format(start, "yyyy-MM-dd HH:mm") : t("common.dash")}
+                    </td>
+                    <td className="px-4 py-3 text-muted">{em?.name ?? t("common.dash")}</td>
+                    <td className="px-4 py-3 text-fg">
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center rounded-full border border-rose-700/50 bg-rose-950/40 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-rose-300">
+                          Закрыто
+                        </span>
+                        {b.client_name && b.client_name !== "— Закрыто —" && (
+                          <span className="text-sm text-muted">{b.client_name}</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-muted">
+                      {durMin != null ? `${durMin} мин` : t("common.dash")}
+                    </td>
+                    {canManage && (
+                      <td className="px-4 py-3">
+                        <button type="button" onClick={() => void cancelBooking(b.id)}
+                          className="text-xs text-red-400 hover:text-red-300">
+                          {t("bookings.cancel")}
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-line/15">
