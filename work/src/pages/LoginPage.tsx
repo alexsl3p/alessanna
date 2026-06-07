@@ -184,11 +184,11 @@ export function LoginPage() {
     }
   }
 
-  function switchToEmail(prefillEmail?: string) {
+  function switchToEmail(prefillEmail?: string, redirect?: string) {
     setLoginMode("email");
     setEmailMode("login");
-    setRedirectAfterLogin("/reception");
-    if (prefillEmail) setEmail(prefillEmail);
+    setRedirectAfterLogin(redirect ?? nextAfterLogin);
+    setEmail(prefillEmail ?? "");
     setError("");
     setForgotSent(false);
   }
@@ -240,30 +240,22 @@ export function LoginPage() {
             </button>
             <button
               type="button"
-              onClick={() => {
-                setRedirectAfterLogin("/reception");
-                setShowTrustedHint(true);
-                setShowWorkLoginForm(true);
-                setTimeout(() => {
-                  const el = document.getElementById("phone");
-                  if (el) (el as HTMLInputElement).focus();
-                }, 50);
-              }}
+              onClick={() => switchToEmail("alessanna.ilusalong@gmail.com", "/reception")}
               className="rounded-lg border border-emerald-700/50 bg-emerald-950/30 px-3 py-2 text-left text-sm text-emerald-100 hover:bg-emerald-900/40"
             >
-              2. Ресепшен / Киоск
+              2. Ресепшен
               <span className="mt-0.5 block text-xs text-emerald-200/60">
-                Войдите, чтобы открыть режим самозаписи
+                Общий аккаунт для сотрудников ресепшена
               </span>
             </button>
             <button
               type="button"
-              onClick={() => switchToEmail("alessanna.ilusalong@gmail.com")}
+              onClick={() => switchToEmail("", "/")}
               className="rounded-lg border border-violet-700/50 bg-violet-950/30 px-3 py-2 text-left text-sm text-violet-100 hover:bg-violet-900/40"
             >
-              3. Ресепшен / Email
+              3. Мастера
               <span className="mt-0.5 block text-xs text-violet-200/60">
-                Общий вход для мастеров ресепшена
+                Личный вход по email для мастеров
               </span>
             </button>
             <a
