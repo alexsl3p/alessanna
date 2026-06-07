@@ -408,9 +408,9 @@ export function AdminStaffPage() {
     setEditName(r.name);
     setEditPhone(r.phone ?? "");
     setEditEmail(r.email ?? "");
-    /* Birthday stored as MM-DD, display as DD.MM */
+    /* Birthday stored as MM-DD, display as DD-MM */
     const bd = r.birthday ?? "";
-    setEditBirthday(bd ? `${bd.slice(3, 5)}.${bd.slice(0, 2)}` : "");
+    setEditBirthday(bd ? `${bd.slice(3, 5)}-${bd.slice(0, 2)}` : "");
     setExpandedById((prev) => ({ ...prev, [r.id]: true }));
   }
 
@@ -1291,7 +1291,7 @@ export function AdminStaffPage() {
                         value={editBirthday}
                         onChange={(e) => setEditBirthday(e.target.value)}
                         className="w-24 rounded border border-line/25 bg-canvas px-1 py-0.5 text-xs"
-                        placeholder="🎂 ДД.ММ"
+                        placeholder="🎂 ДД-ММ"
                         maxLength={5}
                       />
                     </div>
@@ -1299,8 +1299,8 @@ export function AdminStaffPage() {
                     <div className="flex items-center gap-1.5">
                       <span>{r.name}</span>
                       {r.birthday && (
-                        <span className="text-xs text-muted" title={`День рождения: ${r.birthday.slice(3, 5)}.${r.birthday.slice(0, 2)}`}>
-                          🎂 {r.birthday.slice(3, 5)}.{r.birthday.slice(0, 2)}
+                        <span className="text-xs text-muted" title={`День рождения: ${r.birthday.slice(3, 5)}-${r.birthday.slice(0, 2)}`}>
+                          🎂 {r.birthday.slice(3, 5)}-{r.birthday.slice(0, 2)}
                         </span>
                       )}
                     </div>
