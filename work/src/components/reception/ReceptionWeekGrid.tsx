@@ -340,39 +340,37 @@ export function ReceptionWeekGrid({
             <div
               key={day.toISOString()}
               className={[
-                `flex min-w-0 flex-1 flex-col items-center border-l ${borderCls} py-1`,
+                `relative flex min-w-0 flex-1 flex-col items-center border-l ${borderCls} py-1`,
                 onDayHeaderClick ? `cursor-pointer ${hoverCls}` : "",
               ].join(" ")}
               onClick={onDayHeaderClick ? (e) => onDayHeaderClick(day, e.clientX, e.clientY) : undefined}
             >
+              {birthdayStaff.length > 0 && (
+                <button
+                  type="button"
+                  className="absolute right-0.5 top-0.5 text-sm leading-none transition-transform hover:scale-125 active:scale-110"
+                  title="День рождения!"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setBirthdayPopup({ x: e.clientX, y: e.clientY, names: birthdayStaff.map((m) => m.name) });
+                  }}
+                >
+                  🍰
+                </button>
+              )}
               <span className={`text-[11px] font-medium uppercase tracking-wide ${mutedCls}`}>
                 {ruDay}
               </span>
-              <div className="relative flex items-center justify-center gap-1">
-                <span
-                  className={[
-                    "flex h-7 w-7 items-center justify-center rounded-full text-base font-medium md:h-8 md:w-8 md:text-lg",
-                    isToday
-                      ? useGold ? "bg-gold text-canvas" : "bg-[#1a73e8] text-white"
-                      : textCls,
-                  ].join(" ")}
-                >
-                  {format(day, "d")}
-                </span>
-                {birthdayStaff.length > 0 && (
-                  <button
-                    type="button"
-                    className="text-base leading-none transition-transform hover:scale-125 active:scale-110"
-                    title="День рождения!"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setBirthdayPopup({ x: e.clientX, y: e.clientY, names: birthdayStaff.map((m) => m.name) });
-                    }}
-                  >
-                    🎂
-                  </button>
-                )}
-              </div>
+              <span
+                className={[
+                  "flex h-7 w-7 items-center justify-center rounded-full text-base font-medium md:h-8 md:w-8 md:text-lg",
+                  isToday
+                    ? useGold ? "bg-gold text-canvas" : "bg-[#1a73e8] text-white"
+                    : textCls,
+                ].join(" ")}
+              >
+                {format(day, "d")}
+              </span>
               {workingStaff.length > 0 && (
                 <div className="mt-0.5 flex flex-wrap justify-center gap-0.5 px-0.5">
                   {workingStaff.map((m) => {
@@ -676,7 +674,7 @@ export function ReceptionWeekGrid({
             top: Math.min(birthdayPopup.y + 12, (typeof window !== "undefined" ? window.innerHeight : 600) - 200),
           }}
         >
-          <div className="mb-2 text-4xl">🎂🎉🌸</div>
+          <div className="mb-2 text-4xl">🍰🎉🌸</div>
           {birthdayPopup.names.map((name) => (
             <div key={name}>
               <p className="font-semibold text-fg">Сегодня день рождения у {name}!</p>
