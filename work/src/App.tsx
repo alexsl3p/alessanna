@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "./context/AuthContext";
 import { EffectiveRoleProvider, useEffectiveRole } from "./context/EffectiveRoleContext";
@@ -36,6 +36,7 @@ function RequireManage({ children }: { children: React.ReactNode }) {
 function Protected({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation();
   const { staffMember, loading } = useAuth();
+  const location = useLocation();
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-black text-zinc-400">
@@ -43,7 +44,10 @@ function Protected({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
-  if (!staffMember) return <Navigate to="/login" replace />;
+  if (!staffMember) {
+    const next = location.pathname !== "/" ? `?next=${encodeURIComponent(location.pathname)}` : "";
+    return <Navigate to={`/login${next}`} replace />;
+  }
   return <EffectiveRoleProvider>{children}</EffectiveRoleProvider>;
 }
 
