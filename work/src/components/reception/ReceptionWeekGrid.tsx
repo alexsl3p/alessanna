@@ -684,7 +684,7 @@ export function ReceptionWeekGrid({
           {birthdayPopup.names.map((name) => (
             <div key={name}>
               <p className="font-semibold text-fg">Сегодня день рождения у {name}!</p>
-              <p className="mt-1 text-sm text-pink-300">С днем рождения, {name}! 💐🥂✨</p>
+              <p className="mt-1 text-sm text-pink-500">С днем рождения, {name}! 💐🥂✨</p>
             </div>
           ))}
         </div>
