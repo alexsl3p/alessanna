@@ -429,7 +429,7 @@ export function ReceptionWeekGrid({
             const birthdayMembersForDay = staff.filter(
               (m) => m.birthday === dayMMDD2 && visibleStaffIds.has(m.id),
             );
-            const FLOWER_EMOJIS = ["🌸", "🌷", "🌺", "🌼", "💐"];
+            const FLOWER_EMOJIS = ["🌸", "🌺"];
 
             const dayAppts = appointments.filter((a) => {
               if (!visibleStaffIds.has(a.staff_id)) return false;
