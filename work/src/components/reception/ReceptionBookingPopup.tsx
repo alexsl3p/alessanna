@@ -246,7 +246,7 @@ export function ReceptionBookingPopup({
             <div className="flex items-center gap-2">
               <div className="flex flex-col gap-0.5">
                 <label className="text-[10px] text-muted">{t("modal.start")}</label>
-                <input type="text" inputMode="numeric" maxLength={5} placeholder="00:00" value={startStr} onChange={(e) => handleStartChange(formatTimeInput(e.target.value))} className={`${timeCls} text-center`} />
+                <input type="text" inputMode="numeric" maxLength={5} placeholder="00:00" value={startStr} onFocus={(e) => e.target.select()} onChange={(e) => handleStartChange(formatTimeInput(e.target.value))} className={`${timeCls} text-center`} />
               </div>
               <span className="mt-4 text-muted">—</span>
               <div className="flex flex-col gap-0.5">
@@ -256,7 +256,7 @@ export function ReceptionBookingPopup({
                     <button type="button" onClick={() => setEndManual(false)} className={`text-[10px] hover:underline ${accentResetBtn}`} title={t("modal.resetAuto")}>↺</button>
                   )}
                 </label>
-                <input type="text" inputMode="numeric" maxLength={5} placeholder="00:00" value={endStr} onChange={(e) => handleEndChange(formatTimeInput(e.target.value))}
+                <input type="text" inputMode="numeric" maxLength={5} placeholder="00:00" value={endStr} onFocus={(e) => e.target.select()} onChange={(e) => handleEndChange(formatTimeInput(e.target.value))}
                   className={[`${timeCls} text-center`, endManual ? (useGold ? "border-gold bg-gold/10" : "border-[#1a73e8] bg-[#e8f0fe]/20") : ""].join(" ")} />
               </div>
             </div>
