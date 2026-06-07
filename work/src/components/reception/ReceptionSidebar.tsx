@@ -24,6 +24,7 @@ type Props = {
   staff: StaffMember[];
   visibleStaffIds: Set<string>;
   onToggleStaff: (id: string) => void;
+  holidays?: string[]; // "YYYY-MM-DD"
   dark?: boolean;
   hideMiniCalendar?: boolean;
   view?: "day" | "week" | "month";
@@ -50,6 +51,7 @@ export function ReceptionSidebar({
   staff,
   visibleStaffIds,
   onToggleStaff,
+  holidays = [],
   dark,
   hideMiniCalendar,
   view,
@@ -152,13 +154,16 @@ export function ReceptionSidebar({
                 const isToday = isSameDay(day, today);
                 const isSelected = isSameWeek(day, cursor, { weekStartsOn: 1 });
                 const isCurrentMonth = isSameMonth(day, miniCursor);
+                const isHoliday = holidays.includes(format(day, "yyyy-MM-dd"));
                 return (
                   <button
                     key={day.toISOString()}
                     onClick={() => onDateSelect(day)}
                     className={[
                       "mx-auto flex h-7 w-7 items-center justify-center rounded-full text-[11px] transition-colors",
-                      isToday
+                      isHoliday
+                        ? "bg-rose-500 font-bold text-white hover:bg-rose-600"
+                        : isToday
                         ? todayBubble
                         : isSelected && !isToday
                         ? accentSel

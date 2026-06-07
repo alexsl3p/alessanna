@@ -358,6 +358,7 @@ export function ReceptionCalendarPage() {
             staff={staff}
             visibleStaffIds={visibleStaffIds}
             onToggleStaff={handleToggleStaff}
+            holidays={holidays.map((h) => h.holiday_date)}
             view={view}
             onViewChange={setView}
             dark={dark}
