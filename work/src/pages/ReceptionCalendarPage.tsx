@@ -103,6 +103,12 @@ export function ReceptionCalendarPage() {
   useEffect(() => { void load(); }, [load]);
   useCalendarDataRealtime(load);
 
+  // Periodic refresh every 60s as fallback when realtime misses an event
+  useEffect(() => {
+    const id = setInterval(() => { void load(); }, 60_000);
+    return () => clearInterval(id);
+  }, [load]);
+
   const weekStart = useMemo(() => startOfWeek(cursor, { weekStartsOn: 1 }), [cursor]);
   const days = useMemo(() => {
     if (view === "day") return [cursor];
