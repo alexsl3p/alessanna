@@ -41,7 +41,8 @@ function getSteps(os: string, browser: string): Step[] | null {
   if (browser === "samsung") {
     return [
       { icon: "menu", text: "Нажмите кнопку «⋮» (меню) в правом верхнем углу" },
-      { icon: "add-home", text: "Выберите «Добавить страницу на главный экран»" },
+      { icon: "add-home", text: "Нажмите «+ Добавить страницу»" },
+      { icon: "confirm", text: "Выберите «Главный экран»" },
     ];
   }
   if (browser === "firefox" && os === "android") {
