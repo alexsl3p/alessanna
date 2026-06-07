@@ -89,6 +89,7 @@ export function ReceptionBookingPopup({
   const [endManual, setEndManual] = useState(isEdit);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [showServicePicker, setShowServicePicker] = useState(false);
 
   const left = Math.min(anchorX + 8, window.innerWidth - POPUP_W - 8);
   const top = Math.max(8, Math.min(anchorY - 8, window.innerHeight - POPUP_H - 8));
@@ -325,19 +326,18 @@ export function ReceptionBookingPopup({
             <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0 text-muted" fill="currentColor">
               <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
             </svg>
-            <select value={serviceId} onChange={(e) => { setServiceId(e.target.value); setEndManual(false); }} className={inputCls}>
-              <option value="">{t("modal.selectService")}</option>
-              {groupedServices.ungrouped.map((s) => (
-                <option key={String(s.id)} value={String(s.id)}>{s.name_et} ({s.duration_min} {t("common.min")})</option>
-              ))}
-              {groupedServices.sorted.map(([cat, svcs]) => (
-                <optgroup key={cat} label={cat}>
-                  {svcs.map((s) => (
-                    <option key={String(s.id)} value={String(s.id)}>{s.name_et} ({s.duration_min} {t("common.min")})</option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
+            <button
+              type="button"
+              onClick={() => setShowServicePicker(true)}
+              className={`${inputCls} flex items-center justify-between gap-1`}
+            >
+              <span className={`truncate ${svc ? "text-fg" : "text-muted/60"}`}>
+                {svc ? `${svc.name_et} (${svc.duration_min} ${t("common.min")})` : t("modal.selectService")}
+              </span>
+              <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0 text-muted" fill="currentColor">
+                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </button>
           </div>
         )}
 
@@ -384,6 +384,47 @@ export function ReceptionBookingPopup({
           </button>
         </div>
       </form>
+
+      {/* Service picker overlay */}
+      {showServicePicker && (
+        <>
+          <div className="fixed inset-0 z-[60] bg-black/50" onClick={() => setShowServicePicker(false)} />
+          <div className="fixed bottom-0 left-0 right-0 z-[70] flex max-h-[65vh] flex-col overflow-hidden rounded-t-2xl border-t border-line/15 bg-panel shadow-2xl">
+            {/* Sheet header */}
+            <div className="flex shrink-0 items-center justify-between border-b border-line/15 px-4 py-3">
+              <span className="text-sm font-semibold text-fg">{t("modal.selectService")}</span>
+              <button type="button" onClick={() => setShowServicePicker(false)} className="rounded-full p-1 text-muted hover:bg-surface">
+                <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 3l10 10M13 3L3 13" />
+                </svg>
+              </button>
+            </div>
+            {/* Service list */}
+            <div className="overflow-y-auto">
+              {groupedServices.ungrouped.map((s) => (
+                <button key={String(s.id)} type="button"
+                  onClick={() => { setServiceId(String(s.id)); setEndManual(false); setShowServicePicker(false); }}
+                  className={`w-full px-4 py-3 text-left text-sm transition-colors ${String(s.id) === serviceId ? (useGold ? "bg-gold/10 text-gold" : "bg-[#e8f0fe] text-[#1a73e8]") : "text-fg hover:bg-surface"}`}>
+                  {s.name_et} ({s.duration_min} {t("common.min")})
+                </button>
+              ))}
+              {groupedServices.sorted.map(([cat, svcs]) => (
+                <div key={cat}>
+                  <div className="px-4 pb-1 pt-3 text-xs font-bold uppercase tracking-wide text-fg/70">{cat}</div>
+                  {svcs.map((s) => (
+                    <button key={String(s.id)} type="button"
+                      onClick={() => { setServiceId(String(s.id)); setEndManual(false); setShowServicePicker(false); }}
+                      className={`w-full px-4 py-2.5 pl-6 text-left text-sm transition-colors ${String(s.id) === serviceId ? (useGold ? "bg-gold/10 text-gold" : "bg-[#e8f0fe] text-[#1a73e8]") : "text-fg hover:bg-surface"}`}>
+                      {s.name_et} ({s.duration_min} {t("common.min")})
+                    </button>
+                  ))}
+                </div>
+              ))}
+              <div className="h-4" />
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
