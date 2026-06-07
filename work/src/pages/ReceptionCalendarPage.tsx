@@ -70,7 +70,17 @@ export function ReceptionCalendarPage() {
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [dayPopup, setDayPopup] = useState<{ day: Date; x: number; y: number } | null>(null);
   const [showSidebar, setShowSidebar] = useState(false);
+  const [isLandscape, setIsLandscape] = useState(() =>
+    typeof window !== "undefined" && window.matchMedia("(orientation: landscape)").matches
+  );
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(orientation: landscape)");
+    const handler = (e: MediaQueryListEvent) => setIsLandscape(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
   const load = useCallback(async () => {
     const [st, to, ap, svCatalog, ss, wd] = await Promise.all([
@@ -228,7 +238,7 @@ export function ReceptionCalendarPage() {
         {/* Hamburger — mobile only */}
         <button
           onClick={() => setShowSidebar((s) => !s)}
-          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${navText} ${navHover} md:hidden`}
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${navText} ${navHover} ${isLandscape ? "hidden" : "md:hidden"}`}
           aria-label="Меню"
         >
           <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -245,8 +255,8 @@ export function ReceptionCalendarPage() {
           {t("calendar.today")}
         </button>
 
-        {/* View switcher — hidden on mobile (available in sidebar) */}
-        <div className="hidden items-center rounded-lg border border-line/15 p-0.5 md:flex">
+        {/* View switcher — hidden on portrait mobile (available in sidebar); visible in landscape and on md+ */}
+        <div className={`items-center rounded-lg border border-line/15 p-0.5 ${isLandscape ? "flex" : "hidden md:flex"}`}>
           {(["day", "week", "month"] as const).map((v) => (
             <button
               key={v}
@@ -316,12 +326,16 @@ export function ReceptionCalendarPage() {
 
       {/* Main layout */}
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
-        {/* Sidebar: always visible on md+; slide-in drawer on mobile */}
+        {/* Sidebar: always visible on md+ or landscape; slide-in drawer on portrait mobile */}
         <div
-          className={[
-            "absolute inset-y-0 left-0 z-40 flex flex-col transition-transform duration-200 md:relative md:translate-x-0 md:flex",
-            showSidebar ? "translate-x-0" : "-translate-x-full",
-          ].join(" ")}
+          className={
+            isLandscape
+              ? "relative flex flex-col"
+              : [
+                  "absolute inset-y-0 left-0 z-40 flex flex-col transition-transform duration-200 md:relative md:translate-x-0",
+                  showSidebar ? "translate-x-0" : "-translate-x-full",
+                ].join(" ")
+          }
         >
           <ReceptionSidebar
             cursor={cursor}
@@ -337,8 +351,8 @@ export function ReceptionCalendarPage() {
           />
         </div>
 
-        {/* Backdrop — closes drawer when tapping outside on mobile */}
-        {showSidebar && (
+        {/* Backdrop — closes drawer when tapping outside on portrait mobile */}
+        {showSidebar && !isLandscape && (
           <div
             className="absolute inset-0 z-30 bg-black/30 md:hidden"
             onClick={() => setShowSidebar(false)}
