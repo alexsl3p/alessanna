@@ -14,6 +14,13 @@
       } catch(e) {}
     </script>
     <meta name="robots" content="noindex, nofollow" />
+    <script>
+      window._pwaPrompt = null;
+      window.addEventListener('beforeinstallprompt', function(e) {
+        e.preventDefault();
+        window._pwaPrompt = e;
+      });
+    </script>
     <title>AlesSanna · CRM</title>
 
     <!-- PWA -->
