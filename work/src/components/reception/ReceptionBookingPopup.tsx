@@ -100,6 +100,20 @@ export function ReceptionBookingPopup({
   );
   const svc = useMemo(() => eligibleServices.find((s) => String(s.id) === serviceId) ?? null, [eligibleServices, serviceId]);
 
+  const groupedServices = useMemo(() => {
+    const groups = new Map<string, typeof eligibleServices>();
+    const ungrouped: typeof eligibleServices = [];
+    for (const s of eligibleServices) {
+      const cat = s.category?.trim() || "";
+      if (!cat) { ungrouped.push(s); continue; }
+      const arr = groups.get(cat) ?? [];
+      arr.push(s);
+      groups.set(cat, arr);
+    }
+    const sorted = [...groups.entries()].sort(([a], [b]) => a.localeCompare(b, "ru"));
+    return { sorted, ungrouped };
+  }, [eligibleServices]);
+
   useEffect(() => {
     if (!isBlock && serviceId && !eligibleServices.some((s) => String(s.id) === serviceId)) {
       setServiceId("");
@@ -313,8 +327,15 @@ export function ReceptionBookingPopup({
             </svg>
             <select value={serviceId} onChange={(e) => { setServiceId(e.target.value); setEndManual(false); }} className={inputCls}>
               <option value="">{t("modal.selectService")}</option>
-              {eligibleServices.map((s) => (
+              {groupedServices.ungrouped.map((s) => (
                 <option key={String(s.id)} value={String(s.id)}>{s.name_et} ({s.duration_min} {t("common.min")})</option>
+              ))}
+              {groupedServices.sorted.map(([cat, svcs]) => (
+                <optgroup key={cat} label={cat}>
+                  {svcs.map((s) => (
+                    <option key={String(s.id)} value={String(s.id)}>{s.name_et} ({s.duration_min} {t("common.min")})</option>
+                  ))}
+                </optgroup>
               ))}
             </select>
           </div>
