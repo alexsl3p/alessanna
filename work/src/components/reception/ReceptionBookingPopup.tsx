@@ -31,6 +31,13 @@ function timeToStr(date: Date): string {
   return format(date, "HH:mm");
 }
 
+// Auto-inserts colon so typing "1030" yields "10:30" (numeric keyboard friendly)
+function formatTimeInput(raw: string): string {
+  const digits = raw.replace(/\D/g, "").slice(0, 4);
+  if (digits.length <= 2) return digits;
+  return `${digits.slice(0, 2)}:${digits.slice(2)}`;
+}
+
 function applyTimeStr(base: Date, timeStr: string): Date {
   const [hStr, mStr] = timeStr.split(":");
   const h = parseInt(hStr ?? "0", 10);
@@ -239,7 +246,7 @@ export function ReceptionBookingPopup({
             <div className="flex items-center gap-2">
               <div className="flex flex-col gap-0.5">
                 <label className="text-[10px] text-muted">{t("modal.start")}</label>
-                <input type="time" value={startStr} onChange={(e) => handleStartChange(e.target.value)} className={timeCls} />
+                <input type="text" inputMode="numeric" maxLength={5} placeholder="00:00" value={startStr} onChange={(e) => handleStartChange(formatTimeInput(e.target.value))} className={`${timeCls} text-center`} />
               </div>
               <span className="mt-4 text-muted">—</span>
               <div className="flex flex-col gap-0.5">
@@ -249,8 +256,8 @@ export function ReceptionBookingPopup({
                     <button type="button" onClick={() => setEndManual(false)} className={`text-[10px] hover:underline ${accentResetBtn}`} title={t("modal.resetAuto")}>↺</button>
                   )}
                 </label>
-                <input type="time" value={endStr} onChange={(e) => handleEndChange(e.target.value)}
-                  className={[timeCls, endManual ? (useGold ? "border-gold bg-gold/10" : "border-[#1a73e8] bg-[#e8f0fe]/20") : ""].join(" ")} />
+                <input type="text" inputMode="numeric" maxLength={5} placeholder="00:00" value={endStr} onChange={(e) => handleEndChange(formatTimeInput(e.target.value))}
+                  className={[`${timeCls} text-center`, endManual ? (useGold ? "border-gold bg-gold/10" : "border-[#1a73e8] bg-[#e8f0fe]/20") : ""].join(" ")} />
               </div>
             </div>
           </div>
