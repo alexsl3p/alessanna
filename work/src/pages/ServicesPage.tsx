@@ -407,27 +407,22 @@ export function ServicesPage() {
     }
     catModernMapRef.current = modernMap;
 
-    const cLegacy = await supabase.from("categories").select("*").order("created_at", { ascending: true });
-    if (!cLegacy.error && cLegacy.data) {
-      loadedCategories = (cLegacy.data as CategoryRow[]).filter((c) => !isHiddenCategoryName(c.name));
-      /* Sort legacy categories by service_categories sort_order so display matches
-       * what the reorder buttons actually persist. */
-      loadedCategories.sort((a, b) => {
-        const sa = modernMap.get(cleanCategoryName(a.name))?.sort_order ?? 9999;
-        const sb = modernMap.get(cleanCategoryName(b.name))?.sort_order ?? 9999;
-        return sa - sb;
-      });
+    /* Always use service_categories as the canonical list (it has all categories with
+     * proper sort_order). The legacy `categories` table may only have a partial set. */
+    if (!cModernAll.error && cModernAll.data?.length) {
+      loadedCategories = (cModernAll.data as Array<{ id: string; name: string; sort_order?: number | null }>)
+        .filter((r) => !isHiddenCategoryName(r.name))
+        .map((r) => ({
+          id: String(r.id) as unknown as number,
+          name: cleanCategoryName(r.name),
+          sort_order: r.sort_order ?? 9999,
+        }));
       setCategories(loadedCategories);
     } else {
-      const cModern = await supabase.from("service_categories").select("id,name,sort_order").order("sort_order", { ascending: true });
-      if (cModern.data) {
-        loadedCategories = (cModern.data as Array<{ id: string; name: string; sort_order?: number | null }>)
-          .filter((r) => !isHiddenCategoryName(r.name))
-          .map((r) => ({
-            id: String(r.id) as unknown as number,
-            name: cleanCategoryName(r.name),
-            sort_order: r.sort_order ?? 9999,
-          }));
+      /* Fallback to legacy categories table if service_categories is unavailable. */
+      const cLegacy = await supabase.from("categories").select("*").order("created_at", { ascending: true });
+      if (!cLegacy.error && cLegacy.data) {
+        loadedCategories = (cLegacy.data as CategoryRow[]).filter((c) => !isHiddenCategoryName(c.name));
         setCategories(loadedCategories);
       }
     }
