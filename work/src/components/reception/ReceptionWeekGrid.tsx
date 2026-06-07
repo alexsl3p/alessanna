@@ -517,8 +517,8 @@ export function ReceptionWeekGrid({
                   return Array.from({ length: totalSlots }, (_, si) => {
                     const cur = addMinutes(slotStart, si * 30);
                     const slotEnd = addMinutes(cur, 30);
-                    const occupied = appointments.some((a) => {
-                      if (a.staff_id !== member.id) return false;
+                    /* Slot is occupied if ANY visible appointment covers it */
+                    const occupied = dayAppts.some((a) => {
                       const iv = appointmentInterval(a);
                       if (!iv) return false;
                       return intervalsOverlap(cur, slotEnd, iv.start, iv.end);
