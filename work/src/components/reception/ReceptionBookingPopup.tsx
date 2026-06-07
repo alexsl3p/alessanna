@@ -208,7 +208,12 @@ export function ReceptionBookingPopup({
           </button>
           <button type="button" onClick={() => handleModeToggle(true)}
             className={`flex-1 py-2 text-xs font-medium transition-colors ${isBlock ? "bg-rose-500/10 text-rose-400" : accentTabIdle}`}>
-            🔒 Закрыть время
+            <span className="inline-flex items-center gap-1">
+              <svg viewBox="0 0 16 16" className="h-3 w-3 shrink-0" fill="currentColor">
+                <path d="M11 7V5a3 3 0 1 0-6 0v2H4a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1h-1ZM6 5a2 2 0 1 1 4 0v2H6V5Z"/>
+              </svg>
+              Закрыть время
+            </span>
           </button>
         </div>
       )}

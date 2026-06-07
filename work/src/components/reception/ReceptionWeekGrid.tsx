@@ -535,7 +535,14 @@ export function ReceptionWeekGrid({
                       onPointerCancel={handleCardPointerCancel}
                     >
                       <p className="truncate text-[11px] font-semibold leading-tight">
-                        {isBlockTime ? `🔒 ${appt.client_name && appt.client_name !== "— Закрыто —" ? appt.client_name : "Закрыто"}` : appt.client_name}
+                        {isBlockTime ? (
+                          <span className="inline-flex items-center gap-0.5">
+                            <svg viewBox="0 0 16 16" className="h-2.5 w-2.5 shrink-0" fill="currentColor">
+                              <path d="M11 7V5a3 3 0 1 0-6 0v2H4a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1h-1ZM6 5a2 2 0 1 1 4 0v2H6V5Z"/>
+                            </svg>
+                            {appt.client_name && appt.client_name !== "— Закрыто —" ? appt.client_name : "Закрыто"}
+                          </span>
+                        ) : appt.client_name}
                       </p>
                       {heightPx > 28 && (
                         <p className="truncate text-[10px] leading-tight opacity-90">
