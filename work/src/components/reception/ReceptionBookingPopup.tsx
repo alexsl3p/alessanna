@@ -305,10 +305,16 @@ export function ReceptionBookingPopup({
           <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0 text-muted" fill="currentColor">
             <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
           </svg>
-          <select value={staffId} onChange={(e) => { setStaffId(e.target.value); setServiceId(""); setEndManual(false); }} className={inputCls}>
-            <option value="" disabled>— мастер —</option>
-            {staff.filter((s) => s.active).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
+          <div className="relative flex-1 min-w-0">
+            <select value={staffId} onChange={(e) => { setStaffId(e.target.value); setServiceId(""); setEndManual(false); }}
+              className={`w-full h-9 appearance-none rounded-lg border border-line/20 bg-surface px-2 pr-7 text-sm text-fg focus:outline-none focus:ring-1 ${accentFocus}`}>
+              <option value="" disabled>— мастер —</option>
+              {staff.filter((s) => s.active).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+            <svg className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
+          </div>
         </div>
 
         {/* Service or block duration */}
@@ -318,7 +324,7 @@ export function ReceptionBookingPopup({
               <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
             </svg>
             <select value={blockDuration} onChange={(e) => { setBlockDuration(Number(e.target.value)); setEndManual(false); }}
-              className="flex-1 rounded-lg border border-line/20 bg-surface px-2 py-1.5 text-sm text-fg focus:border-rose-400 focus:outline-none focus:ring-1 focus:ring-rose-400/20">
+              className="flex-1 appearance-none rounded-lg border border-line/20 bg-surface px-2 py-1.5 text-sm text-fg focus:border-rose-400 focus:outline-none focus:ring-1 focus:ring-rose-400/20">
               {BLOCK_DURATIONS.map((d) => <option key={d} value={d}>{d} мин</option>)}
             </select>
           </div>

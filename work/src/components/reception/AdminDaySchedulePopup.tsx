@@ -51,16 +51,16 @@ export function AdminDaySchedulePopup({ day, anchorX, anchorY, allStaff, workDat
     <>
       <div className="fixed inset-0 z-40" onClick={onClose} />
       <div
-        className="fixed z-50 w-64 overflow-hidden rounded-xl bg-white shadow-2xl ring-1 ring-black/5"
+        className="fixed z-50 w-64 overflow-hidden rounded-xl bg-panel shadow-2xl ring-1 ring-line/15"
         style={{ left: x, top: y }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-[#dadce0] px-4 py-3">
-          <span className="text-sm font-medium capitalize text-[#3c4043]">{dayLabel}</span>
+        <div className="flex items-center justify-between border-b border-line/15 px-4 py-3">
+          <span className="text-sm font-medium capitalize text-fg">{dayLabel}</span>
           <button
             type="button"
             onClick={onClose}
-            className="flex h-7 w-7 items-center justify-center rounded-full text-[#70757a] hover:bg-[#f1f3f4]"
+            className="flex h-7 w-7 items-center justify-center rounded-full text-muted hover:bg-surface"
           >
             <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
@@ -69,7 +69,7 @@ export function AdminDaySchedulePopup({ day, anchorX, anchorY, allStaff, workDat
         </div>
 
         <div className="px-1 py-2">
-          <p className="px-3 pb-1 text-[11px] font-medium uppercase tracking-wide text-[#70757a]">
+          <p className="px-3 pb-1 text-[11px] font-medium uppercase tracking-wide text-muted">
             {t("reception.worksOn")} {day.toLocaleString(uiLocale, { day: "numeric", month: "long" })}
           </p>
           {allStaff.map((m) => {
@@ -79,7 +79,7 @@ export function AdminDaySchedulePopup({ day, anchorX, anchorY, allStaff, workDat
             return (
               <label
                 key={m.id}
-                className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-[#f1f3f4]"
+                className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-surface"
               >
                 <input
                   type="checkbox"
@@ -94,8 +94,8 @@ export function AdminDaySchedulePopup({ day, anchorX, anchorY, allStaff, workDat
                 >
                   {m.name.split(" ")[0]}
                 </span>
-                <span className="flex-1 text-sm text-[#3c4043]">{m.name}</span>
-                {isLoading && <span className="text-[10px] text-[#70757a]">…</span>}
+                <span className="flex-1 text-sm text-fg">{m.name}</span>
+                {isLoading && <span className="text-[10px] text-muted">…</span>}
               </label>
             );
           })}
