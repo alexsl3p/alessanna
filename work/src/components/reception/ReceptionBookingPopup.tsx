@@ -90,6 +90,7 @@ export function ReceptionBookingPopup({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [showServicePicker, setShowServicePicker] = useState(false);
+  const [showStaffPicker, setShowStaffPicker] = useState(false);
 
   const left = Math.min(anchorX + 8, window.innerWidth - POPUP_W - 8);
   const top = Math.max(8, Math.min(anchorY - 8, window.innerHeight - POPUP_H - 8));
@@ -305,16 +306,18 @@ export function ReceptionBookingPopup({
           <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0 text-muted" fill="currentColor">
             <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
           </svg>
-          <div className="relative flex-1 min-w-0">
-            <select value={staffId} onChange={(e) => { setStaffId(e.target.value); setServiceId(""); setEndManual(false); }}
-              className={`w-full h-9 appearance-none rounded-lg border border-line/20 bg-surface px-2 pr-7 text-sm text-fg focus:outline-none focus:ring-1 ${accentFocus}`}>
-              <option value="" disabled>— мастер —</option>
-              {staff.filter((s) => s.active).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-            <svg className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" viewBox="0 0 20 20" fill="currentColor">
+          <button
+            type="button"
+            onClick={() => setShowStaffPicker(true)}
+            className={`${inputCls} flex items-center justify-between gap-1`}
+          >
+            <span className={`truncate ${staffId ? "text-fg" : "text-muted/60"}`}>
+              {selectedStaff ? selectedStaff.name : "— мастер —"}
+            </span>
+            <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0 text-muted" fill="currentColor">
               <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
             </svg>
-          </div>
+          </button>
         </div>
 
         {/* Service or block duration */}
@@ -426,6 +429,33 @@ export function ReceptionBookingPopup({
                     </button>
                   ))}
                 </div>
+              ))}
+              <div className="h-4" />
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Staff picker overlay */}
+      {showStaffPicker && (
+        <>
+          <div className="fixed inset-0 z-[60] bg-black/50" onClick={() => setShowStaffPicker(false)} />
+          <div className="fixed bottom-0 left-0 right-0 z-[70] flex max-h-[65vh] flex-col overflow-hidden rounded-t-2xl border-t border-line/15 bg-panel shadow-2xl sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:w-[360px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:border">
+            <div className="flex shrink-0 items-center justify-between border-b border-line/15 px-4 py-3">
+              <span className="text-sm font-semibold text-fg">Выберите мастера</span>
+              <button type="button" onClick={() => setShowStaffPicker(false)} className="rounded-full p-1 text-muted hover:bg-surface">
+                <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 3l10 10M13 3L3 13" />
+                </svg>
+              </button>
+            </div>
+            <div className="overflow-y-auto">
+              {staff.filter((s) => s.active).map((s) => (
+                <button key={s.id} type="button"
+                  onClick={() => { setStaffId(s.id); setServiceId(""); setEndManual(false); setShowStaffPicker(false); }}
+                  className={`w-full px-4 py-3 text-left text-sm transition-colors ${s.id === staffId ? (useGold ? "bg-gold/10 text-gold" : "bg-[#e8f0fe] text-[#1a73e8]") : "text-fg hover:bg-surface"}`}>
+                  {s.name}
+                </button>
               ))}
               <div className="h-4" />
             </div>
