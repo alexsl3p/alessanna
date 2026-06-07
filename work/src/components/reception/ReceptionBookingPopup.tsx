@@ -102,6 +102,14 @@ export function ReceptionBookingPopup({
   const svc = useMemo(() => eligibleServices.find((s) => String(s.id) === serviceId) ?? null, [eligibleServices, serviceId]);
 
   const groupedServices = useMemo(() => {
+    // Priority order: haircuts → coloring → styling → everything else alpha
+    const PRIO = ["стрижк", "окрашивани", "мелировани", "сложные техники", "химическ", "укладк", "брови", "маникюр", "педикюр"];
+    const catPrio = (cat: string) => {
+      const lc = cat.toLowerCase();
+      const idx = PRIO.findIndex((kw) => lc.includes(kw));
+      return idx === -1 ? PRIO.length : idx;
+    };
+
     const groups = new Map<string, typeof eligibleServices>();
     const ungrouped: typeof eligibleServices = [];
     for (const s of eligibleServices) {
@@ -111,7 +119,10 @@ export function ReceptionBookingPopup({
       arr.push(s);
       groups.set(cat, arr);
     }
-    const sorted = [...groups.entries()].sort(([a], [b]) => a.localeCompare(b, "ru"));
+    const sorted = [...groups.entries()].sort(([a], [b]) => {
+      const diff = catPrio(a) - catPrio(b);
+      return diff !== 0 ? diff : a.localeCompare(b, "ru");
+    });
     return { sorted, ungrouped };
   }, [eligibleServices]);
 
