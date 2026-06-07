@@ -196,7 +196,7 @@ function publicSiteUrl(): string {
 export function Layout() {
   const { t, i18n } = useTranslation();
   const { staffMember, logout, isAdmin } = useAuth();
-  const { canManage, isAdminEffective, previewRole, setPreviewRole, isWorkerOnlyEffective } = useEffectiveRole();
+  const { canManage, isAdminEffective, previewRole, setPreviewRole, isWorkerOnlyEffective, effectiveRole } = useEffectiveRole();
 
   /* ── sidebar state ─────────────────────────────────────────── */
   const [collapsed, setCollapsed] = useState<boolean>(() => {
@@ -299,7 +299,8 @@ export function Layout() {
   const previewOptions: Role[] = ["admin", "manager", "worker"];
   const staffInitial = (staffMember?.name || "?").trim().slice(0, 1).toUpperCase();
   const normalizedRoles = staffMember?.roles?.length ? normalizeRoles(staffMember.roles) : [];
-  const primaryRoleLabel = normalizedRoles[0] ? t(`role.${normalizedRoles[0]}`) : "";
+  const displayRole = effectiveRole ?? normalizedRoles[0] ?? null;
+  const primaryRoleLabel = displayRole ? t(`role.${displayRole}`) : "";
 
   const visibleGroups: NavGroup[] = NAV_GROUPS.map((g) => ({
     ...g,
@@ -462,7 +463,7 @@ export function Layout() {
                 <p className="truncate text-sm font-semibold text-fg">{staffMember?.name}</p>
                 {primaryRoleLabel && (
                   <p className="mt-0.5 truncate text-[11px] uppercase tracking-wide text-muted">
-                    {normalizedRoles.map((r) => t(`role.${r}`)).join(" · ")}
+                    {displayRole ? t(`role.${displayRole}`) : normalizedRoles.map((r) => t(`role.${r}`)).join(" · ")}
                   </p>
                 )}
               </div>
