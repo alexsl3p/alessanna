@@ -28,6 +28,8 @@ type Props = {
   hideMiniCalendar?: boolean;
   view?: "day" | "week" | "month";
   onViewChange?: (v: "day" | "week" | "month") => void;
+  desktopMode?: boolean;
+  onToggleDesktopMode?: () => void;
 };
 
 const DAY_KEYS = [1, 2, 3, 4, 5, 6, 0] as const;
@@ -52,6 +54,8 @@ export function ReceptionSidebar({
   hideMiniCalendar,
   view,
   onViewChange,
+  desktopMode,
+  onToggleDesktopMode,
 }: Props) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -261,6 +265,27 @@ export function ReceptionSidebar({
             );
           })}
         </div>
+
+        {onToggleDesktopMode && (
+          <button
+            onClick={onToggleDesktopMode}
+            className={[
+              "mb-1 flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm font-medium transition-colors",
+              dark ? "text-muted hover:bg-white/5 hover:text-gold" : `text-muted ${hoverCls}`,
+            ].join(" ")}
+          >
+            {desktopMode ? (
+              <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0" fill="currentColor">
+                <path fillRule="evenodd" d="M7 2a2 2 0 00-2 2v12a2 2 0 002 2h6a2 2 0 002-2V4a2 2 0 00-2-2H7zm3 14a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0" fill="currentColor">
+                <path fillRule="evenodd" d="M3 5a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2h-2.22l.123.489.804.804A1 1 0 0113 18H7a1 1 0 01-.707-1.707l.804-.804L7.22 15H5a2 2 0 01-2-2V5zm11 1H6v7h8V6z" clipRule="evenodd" />
+              </svg>
+            )}
+            {desktopMode ? t("reception.mobileVersion", { defaultValue: "Мобильная версия" }) : t("reception.desktopVersion", { defaultValue: "Версия для ПК" })}
+          </button>
+        )}
 
         <button
           onClick={() => { setCrmPrompt(true); setPwValue(""); setPwError(false); }}

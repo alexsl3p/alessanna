@@ -347,7 +347,7 @@ export function ReceptionCalendarPage() {
                 onSlotClick={handleSlotClick}
                 onApptClick={handleApptClick}
                 onApptResize={handleApptResize}
-                onDayHeaderClick={view === "week" ? handleDayHeaderClick : undefined}
+                onDayHeaderClick={view === "week" && canManage ? handleDayHeaderClick : undefined}
                 dark={dark}
               />
             )}
