@@ -49,7 +49,7 @@ function Protected({ children }: { children: React.ReactNode }) {
     const next = location.pathname !== "/" ? `?next=${encodeURIComponent(location.pathname)}` : "";
     return <Navigate to={`/login${next}`} replace />;
   }
-  if (isWorkerOnlyView(staffMember.roles)) {
+  if (isWorkerOnlyView(staffMember.roles) && location.pathname !== "/reception" && location.pathname !== "/quick-booking") {
     return <Navigate to="/reception" replace />;
   }
   return <EffectiveRoleProvider>{children}</EffectiveRoleProvider>;
