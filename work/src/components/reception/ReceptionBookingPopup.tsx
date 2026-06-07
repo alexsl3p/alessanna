@@ -38,6 +38,12 @@ function formatTimeInput(raw: string): string {
   return `${digits.slice(0, 2)}:${digits.slice(2)}`;
 }
 
+function isValidTime(str: string): boolean {
+  if (!/^\d{2}:\d{2}$/.test(str)) return false;
+  const [h, m] = str.split(":").map(Number);
+  return h >= 0 && h <= 23 && m >= 0 && m <= 59;
+}
+
 function applyTimeStr(base: Date, timeStr: string): Date {
   const [hStr, mStr] = timeStr.split(":");
   const h = parseInt(hStr ?? "0", 10);
@@ -78,6 +84,8 @@ export function ReceptionBookingPopup({
   const [endStr, setEndStr] = useState(() =>
     timeToStr(editAppt ? new Date(editAppt.end_time) : addMinutes(initialStart, 60)),
   );
+  const lastValidStartRef = useRef(startStr);
+  const lastValidEndRef = useRef(endStr);
   const [endManual, setEndManual] = useState(isEdit);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -106,13 +114,26 @@ export function ReceptionBookingPopup({
 
   function handleStartChange(val: string) {
     setStartStr(val);
+    if (isValidTime(val)) lastValidStartRef.current = val;
     if (!endManual) {
       const dur = isBlock ? blockDuration : (svc ? svc.duration_min : 60);
       setEndStr(timeToStr(addMinutes(applyTimeStr(initialStart, val), dur)));
     }
   }
 
-  function handleEndChange(val: string) { setEndStr(val); setEndManual(true); }
+  function handleStartBlur() {
+    if (!isValidTime(startStr)) handleStartChange(lastValidStartRef.current);
+  }
+
+  function handleEndChange(val: string) {
+    setEndStr(val);
+    if (isValidTime(val)) lastValidEndRef.current = val;
+    setEndManual(true);
+  }
+
+  function handleEndBlur() {
+    if (!isValidTime(endStr)) setEndStr(lastValidEndRef.current);
+  }
   function handleModeToggle(block: boolean) { setIsBlock(block); setEndManual(false); setError(""); }
 
   useEffect(() => {
@@ -246,7 +267,7 @@ export function ReceptionBookingPopup({
             <div className="flex items-center gap-2">
               <div className="flex flex-col gap-0.5">
                 <label className="text-[10px] text-muted">{t("modal.start")}</label>
-                <input type="text" inputMode="numeric" maxLength={5} placeholder="00:00" value={startStr} onFocus={(e) => e.target.select()} onChange={(e) => handleStartChange(formatTimeInput(e.target.value))} className={`${timeCls} text-center`} />
+                <input type="text" inputMode="numeric" maxLength={5} placeholder="00:00" value={startStr} onFocus={(e) => e.target.select()} onChange={(e) => handleStartChange(formatTimeInput(e.target.value))} onBlur={handleStartBlur} className={`${timeCls} text-center`} />
               </div>
               <span className="mt-4 text-muted">—</span>
               <div className="flex flex-col gap-0.5">
@@ -256,7 +277,7 @@ export function ReceptionBookingPopup({
                     <button type="button" onClick={() => setEndManual(false)} className={`text-[10px] hover:underline ${accentResetBtn}`} title={t("modal.resetAuto")}>↺</button>
                   )}
                 </label>
-                <input type="text" inputMode="numeric" maxLength={5} placeholder="00:00" value={endStr} onFocus={(e) => e.target.select()} onChange={(e) => handleEndChange(formatTimeInput(e.target.value))}
+                <input type="text" inputMode="numeric" maxLength={5} placeholder="00:00" value={endStr} onFocus={(e) => e.target.select()} onChange={(e) => handleEndChange(formatTimeInput(e.target.value))} onBlur={handleEndBlur}
                   className={[`${timeCls} text-center`, endManual ? (useGold ? "border-gold bg-gold/10" : "border-[#1a73e8] bg-[#e8f0fe]/20") : ""].join(" ")} />
               </div>
             </div>
