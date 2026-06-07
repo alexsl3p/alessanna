@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 function detect() {
   if (typeof navigator === "undefined") return { os: "other", browser: "other" } as const;
@@ -233,17 +234,18 @@ const ICON: Record<string, React.ReactNode> = {
 
 export function InstallPage() {
   const { os, browser } = detect();
-  const [installed, setInstalled] = useState(() => isStandalone());
+  const navigate = useNavigate();
   const [prompted, setPrompted] = useState(false);
   const [installing, setInstalling] = useState(false);
   const canPrompt = !!(window as { _pwaPrompt?: unknown })._pwaPrompt;
 
   useEffect(() => {
+    if (isStandalone()) { navigate("/reception", { replace: true }); return; }
     const mq = window.matchMedia("(display-mode: standalone)");
-    const handler = (e: MediaQueryListEvent) => { if (e.matches) setInstalled(true); };
+    const handler = (e: MediaQueryListEvent) => { if (e.matches) navigate("/reception", { replace: true }); };
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
-  }, []);
+  }, [navigate]);
 
   async function handleInstall() {
     const prompt = (window as { _pwaPrompt?: { prompt: () => void; userChoice: Promise<{ outcome: string }> } })._pwaPrompt;
@@ -251,10 +253,13 @@ export function InstallPage() {
     setInstalling(true);
     prompt.prompt();
     const { outcome } = await prompt.userChoice;
-    if (outcome === "accepted") setInstalled(true);
     (window as { _pwaPrompt?: null })._pwaPrompt = null;
     setInstalling(false);
-    setPrompted(true);
+    if (outcome === "accepted") {
+      // standalone mode change event will fire and redirect to /reception
+    } else {
+      setPrompted(true);
+    }
   }
 
   const steps = getSteps(os, browser);
@@ -264,18 +269,7 @@ export function InstallPage() {
       <div className="w-full max-w-sm">
         <img src="/alessanna-logo.png" alt="AlesSanna" className="mx-auto mb-8 h-16 object-contain" />
 
-        {installed ? (
-          <div className="rounded-2xl border border-emerald-800/50 bg-emerald-950/30 p-6 text-center">
-            <div className="mb-3 flex justify-center text-emerald-400">
-              <svg viewBox="0 0 24 24" className="h-12 w-12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
-              </svg>
-            </div>
-            <p className="text-lg font-semibold text-emerald-300">Приложение установлено!</p>
-            <p className="mt-1 text-sm text-emerald-200/70">Найдите значок AlesSanna на экране и откройте приложение.</p>
-          </div>
-        ) : (
-          <>
+        <>
             <h1 className="mb-1 text-center text-xl font-semibold text-white">Установить приложение</h1>
             <p className="mb-6 text-center text-sm text-zinc-400">
               Добавьте AlesSanna на экран — работает как обычное приложение, без браузера.
@@ -319,7 +313,6 @@ export function InstallPage() {
               Ссылка для установки: <span className="text-zinc-400">{window.location.host}/install</span>
             </p>
           </>
-        )}
       </div>
     </div>
   );
