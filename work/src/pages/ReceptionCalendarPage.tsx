@@ -387,6 +387,7 @@ export function ReceptionCalendarPage() {
                 cursor={cursor}
                 staff={staff}
                 workDates={workDates}
+                holidays={holidays.map((h) => h.holiday_date)}
                 visibleStaffIds={visibleStaffIds}
                 onDayClick={handleDayClick}
                 dark={dark}

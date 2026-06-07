@@ -20,6 +20,7 @@ type Props = {
   cursor: Date;
   staff: StaffMember[];
   workDates: StaffWorkDateRow[];
+  holidays: string[]; // "YYYY-MM-DD"
   visibleStaffIds: Set<string>;
   onDayClick: (day: Date) => void;
   dark?: boolean;
@@ -29,6 +30,7 @@ export function ReceptionMonthView({
   cursor,
   staff,
   workDates,
+  holidays,
   visibleStaffIds,
   onDayClick,
   dark,
@@ -88,6 +90,7 @@ export function ReceptionMonthView({
             const workingStaff = workingByDay.get(key) ?? [];
             const isToday = isSameDay(day, today);
             const isCurrentMonth = isSameMonth(day, cursor);
+            const isHoliday = holidays.includes(key);
 
             return (
               <button
@@ -95,14 +98,16 @@ export function ReceptionMonthView({
                 onClick={() => onDayClick(day)}
                 className={[
                   "flex flex-col border-b border-r border-line/10 p-1 text-left transition-colors",
-                  !isCurrentMonth ? offMonthBg : hoverCls,
+                  isHoliday ? "bg-rose-500/[0.08] hover:bg-rose-500/[0.13]" : !isCurrentMonth ? offMonthBg : hoverCls,
                 ].join(" ")}
                 style={{ minHeight: "4.5rem" }}
               >
                 <span
                   className={[
                     "mb-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-medium",
-                    isToday
+                    isHoliday
+                      ? "bg-rose-500 text-white"
+                      : isToday
                       ? todayBubble
                       : isCurrentMonth
                       ? "text-fg"
@@ -112,7 +117,13 @@ export function ReceptionMonthView({
                   {format(day, "d")}
                 </span>
 
-                {workingStaff.length > 0 && (
+                {isHoliday && (
+                  <span className="mb-0.5 text-[8px] font-semibold uppercase tracking-wide text-rose-400">
+                    закрыто
+                  </span>
+                )}
+
+                {!isHoliday && workingStaff.length > 0 && (
                   <div className="flex flex-wrap gap-0.5">
                     {workingStaff.map((m) => {
                       const c = googleStaffColor(m, staffHueMap);
