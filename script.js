@@ -1401,11 +1401,25 @@
     }
 
     function preserveScrollPosition(work) {
+      /* Якорим визуальную позицию на секцию записи (#broneeri): при выборе
+       * услуги раскрывается секция #meistrid, которая стоит ВЫШЕ календаря,
+       * поэтому контент сдвигается вниз и кажется, что страница «прыгнула
+       * наверх». Вместо восстановления абсолютного scrollY компенсируем
+       * сдвиг так, чтобы верх секции записи остался на том же месте экрана. */
+      var anchor = document.getElementById("broneeri");
+      var beforeTop = anchor ? anchor.getBoundingClientRect().top : null;
       var pos = activeChoiceScrollPosition();
       var sx = pos.sx;
       var sy = pos.sy;
       var restore = function () {
-        window.scrollTo(sx, sy);
+        if (anchor && beforeTop != null) {
+          var delta = anchor.getBoundingClientRect().top - beforeTop;
+          if (Math.abs(delta) > 1) {
+            window.scrollTo(window.scrollX || 0, (window.scrollY || 0) + delta);
+          }
+        } else {
+          window.scrollTo(sx, sy);
+        }
       };
       var result = typeof work === "function" ? work() : undefined;
       restore();
@@ -2640,10 +2654,22 @@
      * к началу страницы. Восстанавливаем несколько раз, т.к. слоты приходят
      * из Supabase асинхронно и грид перерисовывается позже. */
     function calPreserveScroll(work) {
+      /* Тот же якорный приём, что и preserveScrollPosition: держим верх
+       * секции записи на месте, а не абсолютный scrollY (контент выше
+       * календаря может появляться/исчезать при выборе услуги). */
+      var anchor = document.getElementById("broneeri");
+      var beforeTop = anchor ? anchor.getBoundingClientRect().top : null;
       var sx = window.scrollX || window.pageXOffset || 0;
       var sy = window.scrollY || window.pageYOffset || 0;
       var restore = function () {
-        window.scrollTo(sx, sy);
+        if (anchor && beforeTop != null) {
+          var delta = anchor.getBoundingClientRect().top - beforeTop;
+          if (Math.abs(delta) > 1) {
+            window.scrollTo(window.scrollX || 0, (window.scrollY || 0) + delta);
+          }
+        } else {
+          window.scrollTo(sx, sy);
+        }
       };
       var result = typeof work === "function" ? work() : undefined;
       restore();
@@ -3143,14 +3169,26 @@
 
       // 1) Прямой Supabase (anon) — основной путь.
       if (supaAvailReady() && SUPA_UUID_RE.test(sid)) {
+        var savedAnchor = document.getElementById("broneeri");
+        var savedAnchorTop = savedAnchor ? savedAnchor.getBoundingClientRect().top : null;
         var savedSy = window.scrollY || window.pageYOffset || 0;
         supaCalendarMonth(sid, mid, viewY, viewM)
           .then(function (days) {
             if (monthCacheKey === cacheK) {
               monthDays = days || {};
               renderCalendarBody();
-              window.scrollTo(0, savedSy);
-              requestAnimationFrame(function () { window.scrollTo(0, savedSy); });
+              /* Restore scroll anchored to #broneeri top so layout shifts
+               * (e.g. #meistrid revealing) don't change the visible viewport. */
+              var restoreScroll = function () {
+                if (savedAnchor && savedAnchorTop != null) {
+                  var delta = savedAnchor.getBoundingClientRect().top - savedAnchorTop;
+                  if (Math.abs(delta) > 1) window.scrollTo(0, (window.scrollY || 0) + delta);
+                } else {
+                  window.scrollTo(0, savedSy);
+                }
+              };
+              restoreScroll();
+              requestAnimationFrame(restoreScroll);
             }
           })
           .catch(function () {
@@ -3665,6 +3703,16 @@
     });
 
     masterSelect.addEventListener("change", function () {
+      /* Programmatic rebuild (setMasterOptions changed the value): just
+       * refresh availability without wiping the user's date/time pick.
+       * reconcileSelectedDateWithAvailability() will clear it later only
+       * if the date truly has no slots for the new master. */
+      if (suppressNextMasterScroll) {
+        suppressNextMasterScroll = false;
+        invalidateMonthCache();
+        renderCalendar();
+        return;
+      }
       /* Если выбрали мастера из «частичного» списка (он не делает всю
        * цепочку) — расставим его per-service в корзине: на услугах,
        * где умеет, поставим именно его; на остальных — «Не важно».
@@ -3689,10 +3737,6 @@
         clearSelection();
         renderCalendar();
       });
-      if (suppressNextMasterScroll) {
-        suppressNextMasterScroll = false;
-        return;
-      }
     });
 
     serviceSelectEl.addEventListener("change", function () {
