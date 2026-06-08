@@ -2425,6 +2425,8 @@
     var apiBooking = false;
     var publicApiBase = "";
     var serviceIdBySlug = {};
+    var serviceIdByLookupKey = {};
+    var employeeIdByLookupKey = {};
     var monthDays = null;
     var monthCacheKey = "";
     var salonHolidayDates = {};
@@ -2519,6 +2521,15 @@
       return masterSelect.value || ANY_MASTER_ID;
     }
 
+    function selectedCalendarEmployeeId() {
+      var selected = selectedMasterForAvailability();
+      if (!selected || selected === ANY_MASTER_ID) return ANY_MASTER_ID;
+      if (/^\d+$/.test(selected)) return selected;
+      var opt = masterSelect.options[masterSelect.selectedIndex];
+      var label = opt ? String(opt.textContent || "").split("—")[0].trim() : "";
+      return employeeIdByLookupKey[serviceLookupKey(label)] || ANY_MASTER_ID;
+    }
+
     function bookingChainApi() {
       return (typeof globalThis !== "undefined") ? globalThis.__SITE_BOOKING_CHAIN__ : null;
     }
@@ -2541,6 +2552,42 @@
       for (var i = 0; i < items.length; i++) {
         var sid = String((items[i] && items[i].serviceId) || "").trim();
         if (sid) return sid;
+      }
+      return "";
+    }
+
+    function serviceLookupKey(value) {
+      return String(value || "")
+        .trim()
+        .toLocaleLowerCase("ru")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/ё/g, "е")
+        .replace(/[^a-z0-9а-я]+/g, " ")
+        .trim();
+    }
+
+    function rememberApiServiceId(value, id) {
+      var key = serviceLookupKey(value);
+      if (key && id) serviceIdByLookupKey[key] = id;
+    }
+
+    function selectedCalendarServiceId() {
+      var selectedRaw = selectedServiceIdForAvailability();
+      if (/^\d+$/.test(selectedRaw)) return selectedRaw;
+      if (serviceIdBySlug[serviceSelectEl.value]) return serviceIdBySlug[serviceSelectEl.value];
+
+      var catOpt = serviceSelectEl.options[serviceSelectEl.selectedIndex];
+      if (catOpt) {
+        var catName = catOpt.getAttribute("data-category-name") || catOpt.textContent || "";
+        var byCat = serviceIdByLookupKey[serviceLookupKey(catName)];
+        if (byCat) return byCat;
+      }
+
+      var items = selectedBookingItems();
+      for (var i = 0; i < items.length; i++) {
+        var byLabel = serviceIdByLookupKey[serviceLookupKey(items[i] && items[i].label)];
+        if (byLabel) return byLabel;
       }
       return "";
     }
@@ -2743,13 +2790,13 @@
         renderCalendarBody();
         return;
       }
-      var sid = selectedServiceIdForAvailability() || serviceIdBySlug[serviceSelectEl.value];
+      var sid = selectedCalendarServiceId();
       if (!sid) {
         monthDays = null;
         renderCalendarBody();
         return;
       }
-      var mid = selectedMasterForAvailability();
+      var mid = selectedCalendarEmployeeId();
       var cacheK = mid + "|" + sid + "|" + viewY + "|" + viewM;
       if (monthCacheKey === cacheK && monthDays) {
         renderCalendarBody();
@@ -3114,7 +3161,7 @@
 
     /** Rebuild master dropdown from API for the selected service (employee_services filter). */
     function refillMastersForCurrentService() {
-      var svcId = selectedServiceIdForAvailability() || serviceIdBySlug[serviceSelectEl.value];
+      var svcId = selectedCalendarServiceId();
       var url = publicApiUrl("/api/public/employees");
       if (svcId) url += "?serviceId=" + encodeURIComponent(String(svcId));
       return fetch(url)
@@ -3122,6 +3169,14 @@
           return r.json();
         })
         .then(function (emps) {
+          employeeIdByLookupKey = {};
+          if (Array.isArray(emps)) {
+            for (var ei = 0; ei < emps.length; ei++) {
+              if (emps[ei] && emps[ei].id != null) {
+                employeeIdByLookupKey[serviceLookupKey(emps[ei].name)] = String(emps[ei].id);
+              }
+            }
+          }
           setMasterOptions(emps);
         });
     }
@@ -3145,9 +3200,34 @@
         })
         .then(function (services) {
           serviceIdBySlug = {};
+          serviceIdByLookupKey = {};
           for (var si = 0; si < services.length; si++) {
             if (services[si].slug) serviceIdBySlug[services[si].slug] = services[si].id;
+            rememberApiServiceId(services[si].slug, services[si].id);
+            rememberApiServiceId(services[si].name_et, services[si].id);
+            rememberApiServiceId(services[si].name_en, services[si].id);
           }
+          rememberApiServiceId("маникюр", serviceIdBySlug.manicure);
+          rememberApiServiceId("ногти", serviceIdBySlug.manicure);
+          rememberApiServiceId("ногтевой сервис", serviceIdBySlug.manicure);
+          rememberApiServiceId("küüned", serviceIdBySlug.manicure);
+          rememberApiServiceId("kuuned", serviceIdBySlug.manicure);
+          rememberApiServiceId("nails", serviceIdBySlug.manicure);
+          rememberApiServiceId("maniküür", serviceIdBySlug.manicure);
+          rememberApiServiceId("manicure", serviceIdBySlug.manicure);
+          rememberApiServiceId("педикюр", serviceIdBySlug.pedicure);
+          rememberApiServiceId("pediküür", serviceIdBySlug.pedicure);
+          rememberApiServiceId("pedicure", serviceIdBySlug.pedicure);
+          rememberApiServiceId("ресницы и брови", serviceIdBySlug["brows-lashes"]);
+          rememberApiServiceId("брови", serviceIdBySlug["brows-lashes"]);
+          rememberApiServiceId("ресницы", serviceIdBySlug["brows-lashes"]);
+          rememberApiServiceId("kulmud", serviceIdBySlug["brows-lashes"]);
+          rememberApiServiceId("ripsmed", serviceIdBySlug["brows-lashes"]);
+          rememberApiServiceId("ripsmed ja kulmud", serviceIdBySlug["brows-lashes"]);
+          rememberApiServiceId("brows lashes", serviceIdBySlug["brows-lashes"]);
+          rememberApiServiceId("волосы", serviceIdBySlug["hair-cut"]);
+          rememberApiServiceId("juuksed", serviceIdBySlug["hair-cut"]);
+          rememberApiServiceId("hair", serviceIdBySlug["hair-cut"]);
           return refillMastersForCurrentService();
         })
         .then(function () {
@@ -3569,8 +3649,7 @@
 
       function continueLegacySubmit() {
       if (apiBooking) {
-        var slug = serviceSelectEl.value;
-        var svcId = serviceIdBySlug[slug];
+        var svcId = selectedCalendarServiceId();
         if (!svcId) {
           serviceSelectEl.focus();
           return;
@@ -3582,7 +3661,7 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             employeeId:
-              masterSelect.value === ANY_MASTER_ID || !masterSelect.value ? ANY_MASTER_ID : Number(masterSelect.value),
+              selectedCalendarEmployeeId() === ANY_MASTER_ID ? ANY_MASTER_ID : Number(selectedCalendarEmployeeId()),
             serviceId: svcId,
             date: selectedKey,
             time: timeSelect.value,
