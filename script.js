@@ -2208,6 +2208,7 @@
 
     function applyMaster(id, scrollAfter) {
       if (!masterSelect) return;
+      if (scrollAfter && id) scrollAfterNextMasterChange = true;
       masterSelect.value = id || "";
       setMasterDisplayText(id ? masterNameById(id) : UI.masterNone);
       highlightTeam(id || "");
@@ -2510,6 +2511,7 @@
     var salonHolidayDates = {};
     var salonHolidaysLoaded = false;
     var suppressNextMasterScroll = false;
+    var scrollAfterNextMasterChange = false;
 
     var now = new Date();
     var viewY = now.getFullYear();
@@ -3728,6 +3730,13 @@
         suppressNextMasterScroll = false;
         invalidateMonthCache();
         renderCalendar();
+        return;
+      }
+      if (scrollAfterNextMasterChange) {
+        scrollAfterNextMasterChange = false;
+        invalidateMonthCache();
+        renderCalendar();
+        scrollToBookingBlock();
         return;
       }
       /* Если выбрали мастера из «частичного» списка (он не делает всю
