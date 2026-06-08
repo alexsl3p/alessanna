@@ -342,7 +342,6 @@ a:hover {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.4rem;
   background: transparent;
   border: 1px solid var(--stroke-strong);
   color: var(--gold-bright);
@@ -363,10 +362,6 @@ a:hover {
 .nav-toggle:hover {
   border-color: var(--gold-dim);
   box-shadow: 0 0 20px var(--gold-glow);
-}
-
-.nav-toggle__icon {
-  flex-shrink: 0;
 }
 
 /* Не помещать .nav внутрь .site-header: иначе fixed-панель может обрезаться по контексту шапки. */
@@ -755,66 +750,6 @@ body.site-ilusalong #hero.hero {
   .hero-flourish-wrap {
     display: none;
   }
-
-  /* Мобильная шапка: язык слева, гамбургер справа, записаться скрыта */
-  .header-inner {
-    gap: 0;
-  }
-
-  .header-actions {
-    flex: 1;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    align-items: center;
-    margin-left: 0.75rem;
-    gap: 0;
-  }
-
-  /* Записаться — скрыта на мобильном (есть кнопка в герое) */
-  .header-actions .nav-cta {
-    display: none;
-  }
-
-  .header-actions .lang-switch {
-    justify-self: start;
-  }
-
-  .header-actions .nav-toggle {
-    justify-self: end;
-    border: none;
-    padding: 0.5rem;
-    border-radius: 0.3rem;
-  }
-
-  .header-actions .nav-toggle:hover {
-    box-shadow: none;
-    background: rgba(156, 143, 120, 0.08);
-  }
-
-  .nav-toggle__label {
-    display: none;
-  }
-}
-
-.trust-address-link {
-  color: inherit;
-  text-decoration: none;
-}
-
-.trust-address-link:hover {
-  color: var(--gold-bright);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.contact-address-link {
-  color: inherit;
-  text-decoration: none;
-  display: block;
-}
-
-.contact-address-link:hover p {
-  color: var(--gold-bright);
 }
 
 .hero-brand-text {
