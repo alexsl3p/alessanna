@@ -817,13 +817,25 @@
     function updateTeamSectionVisibility() {
       if (!teamRoot) return;
       var hasPickedServices = picked.length > 0;
-      teamRoot.hidden = !hasPickedServices;
-      if (hasPickedServices) {
+      if (!hasPickedServices) {
+        teamRoot.hidden = true;
+        if (masterSelect && masterSelect.value) {
+          applyMaster("");
+        }
+        return;
+      }
+      /* Если пользователь уже находится на секции записи (#broneeri в зоне
+       * видимости), не раскрываем #meistrid — это вставило бы блок выше формы
+       * и прокрутило страницу. Мастер-дропдаун в форме заполняется отдельно
+       * (setMasterOptions), так что выбор мастера работает без #meistrid. */
+      var broneeri = document.getElementById("broneeri");
+      var atBooking = broneeri &&
+        broneeri.getBoundingClientRect().top < window.innerHeight * 0.9;
+      if (!atBooking || !teamRoot.hidden) {
+        teamRoot.hidden = false;
         teamRoot.querySelectorAll(".reveal").forEach(function (el) {
           el.classList.add("is-visible");
         });
-      } else if (masterSelect && masterSelect.value) {
-        applyMaster("");
       }
     }
 
