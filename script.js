@@ -2512,6 +2512,7 @@
     var salonHolidaysLoaded = false;
     var suppressNextMasterScroll = false;
     var scrollAfterNextMasterChange = false;
+    var skipNextCalendarScrollRestore = false;
 
     var now = new Date();
     var viewY = now.getFullYear();
@@ -3196,6 +3197,11 @@
             if (monthCacheKey === cacheK) {
               monthDays = days || {};
               renderCalendarBody();
+              /* Skip restore when we intentionally scrolled to booking section. */
+              if (skipNextCalendarScrollRestore) {
+                skipNextCalendarScrollRestore = false;
+                return;
+              }
               /* Restore scroll anchored to #broneeri top so layout shifts
                * (e.g. #meistrid revealing) don't change the visible viewport. */
               var restoreScroll = function () {
@@ -3734,6 +3740,7 @@
       }
       if (scrollAfterNextMasterChange) {
         scrollAfterNextMasterChange = false;
+        skipNextCalendarScrollRestore = true;
         invalidateMonthCache();
         renderCalendar();
         scrollToBookingBlock();
