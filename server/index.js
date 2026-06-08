@@ -24,6 +24,71 @@ const { startTelegramBot } = require("./telegramBot");
 
 const db = init();
 startTelegramBot(db);
+const { getSupabaseAdmin } = require("./supabaseClient");
+
+/**
+ * Syncs staff working days from Supabase staff_schedule → SQLite employee_schedule.
+ * Matches employees by name (case-insensitive). Supabase day_of_week: 0=Sun,1=Mon…6=Sat.
+ * SQLite weekday: 1=Mon…6=Sat (Sun not stored).
+ */
+async function syncSchedulesFromSupabase() {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return;
+  try {
+    const [staffRes, schedRes] = await Promise.all([
+      supabase.from("staff").select("id,name").eq("is_active", true),
+      supabase.from("staff_schedule").select("staff_id,day_of_week,start_time,end_time"),
+    ]);
+    if (staffRes.error || schedRes.error) return;
+    const staffList = staffRes.data || [];
+    const schedRows = schedRes.data || [];
+
+    // Build map: supabase_uuid → [weekdays 1-6]
+    const byStaff = {};
+    for (const row of schedRows) {
+      const wd = Number(row.day_of_week);
+      if (wd < 1 || wd > 6) continue; // skip Sunday (0)
+      if (!byStaff[row.staff_id]) byStaff[row.staff_id] = {};
+      // Convert HH:MM to minutes
+      const toMin = (t) => {
+        if (!t) return 0;
+        const [h, m] = String(t).split(":").map(Number);
+        return (h || 0) * 60 + (m || 0);
+      };
+      byStaff[row.staff_id][wd] = {
+        open_min: toMin(row.start_time),
+        close_min: toMin(row.end_time),
+      };
+    }
+
+    const del = db.prepare("DELETE FROM employee_schedule WHERE employee_id = ?");
+    const ins = db.prepare(
+      "INSERT INTO employee_schedule (employee_id, weekday, open_min, close_min) VALUES (?, ?, ?, ?)"
+    );
+
+    db.transaction(() => {
+      for (const supaStaff of staffList) {
+        // Match by name (case-insensitive)
+        const emp = db.prepare(
+          "SELECT id FROM employees WHERE LOWER(name) = LOWER(?) AND active = 1"
+        ).get(String(supaStaff.name || "").trim());
+        if (!emp) continue;
+
+        const sched = byStaff[supaStaff.id];
+        del.run(emp.id);
+        if (!sched) continue; // no schedule in CRM → employee has no working days
+
+        for (const [wd, times] of Object.entries(sched)) {
+          ins.run(emp.id, Number(wd), times.open_min, times.close_min);
+        }
+      }
+    })();
+
+    console.log("[schedule-sync] Synced from Supabase OK");
+  } catch (err) {
+    console.error("[schedule-sync] Error:", err.message);
+  }
+}
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 const root = path.join(__dirname, "..");
@@ -862,35 +927,12 @@ app.put("/api/crm/salon-hours", requireAuth, requireRoles("admin", "manager"), (
 });
 
 /* ---- CRM: employee schedule (per-employee working weekdays) ---- */
-// Bulk sync: POST { schedules: [{ employeeName, weekdays: [1,2,3,4,5] }] }
-// weekdays: 1=Mon … 6=Sat (matching salon_hours convention)
-app.post("/api/crm/employee-schedule/sync", requireAuth, requireRoles("admin", "manager"), (req, res) => {
-  const { schedules } = req.body || {};
-  if (!Array.isArray(schedules)) return res.status(400).json({ error: "schedules array required" });
-  const del = db.prepare("DELETE FROM employee_schedule WHERE employee_id = ?");
-  const ins = db.prepare(
-    "INSERT INTO employee_schedule (employee_id, weekday, open_min, close_min) VALUES (?, ?, ?, ?)"
-  );
-  const results = [];
-  const run = db.transaction(() => {
-    for (const entry of schedules) {
-      const name = String(entry.employeeName || "").trim();
-      if (!name) continue;
-      const emp = db.prepare("SELECT id FROM employees WHERE LOWER(name) = LOWER(?) AND active = 1").get(name);
-      if (!emp) { results.push({ name, status: "not_found" }); continue; }
-      del.run(emp.id);
-      const wds = Array.isArray(entry.weekdays) ? entry.weekdays : [];
-      for (const wd of wds) {
-        const w = Number(wd);
-        if (w >= 1 && w <= 6) {
-          ins.run(emp.id, w, Number(entry.open_min ?? 0), Number(entry.close_min ?? 1440));
-        }
-      }
-      results.push({ name, id: emp.id, weekdays: wds, status: "ok" });
-    }
-  });
-  run();
-  res.json({ ok: true, results });
+
+// Trigger a fresh sync from Supabase CRM (admin only)
+app.post("/api/crm/employee-schedule/sync-supabase", requireAuth, requireRoles("admin", "manager"), async (req, res) => {
+  await syncSchedulesFromSupabase();
+  const rows = db.prepare("SELECT * FROM employee_schedule ORDER BY employee_id, weekday").all();
+  res.json({ ok: true, rows });
 });
 
 app.get("/api/crm/employee-schedule", requireAuth, requireRoles("admin", "manager", "employee"), (_, res) => {
@@ -1073,4 +1115,6 @@ app.listen(PORT, () => {
   } else {
     console.log(`Alessanna listening on :${PORT}`);
   }
+  // Sync employee working days from Supabase CRM on startup
+  syncSchedulesFromSupabase();
 });

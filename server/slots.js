@@ -29,17 +29,15 @@ function getSlots(db, { employeeId, dateStr, serviceId }) {
   const wd = salonWeekday(d);
   if (wd == null) return [];
 
-  // Per-employee schedule: if any schedule rows exist for this employee,
-  // the employee only works on weekdays that have an entry.
+  // Per-employee schedule: if no schedule rows exist for this employee → not working
   const schedCount = db.prepare(
     "SELECT COUNT(*) AS c FROM employee_schedule WHERE employee_id = ?"
   ).get(employeeId);
-  if (schedCount && schedCount.c > 0) {
-    const empSched = db.prepare(
-      "SELECT open_min, close_min FROM employee_schedule WHERE employee_id = ? AND weekday = ?"
-    ).get(employeeId, wd);
-    if (!empSched) return []; // employee doesn't work this weekday
-  }
+  if (!schedCount || schedCount.c === 0) return []; // no schedule defined → no slots
+  const empSched = db.prepare(
+    "SELECT open_min, close_min FROM employee_schedule WHERE employee_id = ? AND weekday = ?"
+  ).get(employeeId, wd);
+  if (!empSched) return []; // employee doesn't work this weekday
 
   const hours = db.prepare("SELECT open_min, close_min FROM salon_hours WHERE weekday = ?").get(wd);
   if (!hours) return [];
