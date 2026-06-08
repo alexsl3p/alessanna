@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { addMinutes, format, setHours, setMinutes, startOfDay } from "date-fns";
 import { supabase } from "../../lib/supabase";
@@ -479,11 +480,11 @@ export function ReceptionBookingPopup({
         </div>
       </form>
 
-      {/* Service picker overlay */}
-      {showServicePicker && (
+      {/* Service picker overlay — rendered via portal so it's not clipped by popup's overflow */}
+      {showServicePicker && createPortal(
         <>
-          <div className="fixed inset-0 z-[60] bg-black/50" onClick={() => setShowServicePicker(false)} />
-          <div className="fixed bottom-0 left-0 right-0 z-[70] flex max-h-[65vh] flex-col overflow-hidden rounded-t-2xl border-t border-line/15 bg-panel shadow-2xl sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:w-[420px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:border">
+          <div className="fixed inset-0 z-[200] bg-black/50" onClick={() => setShowServicePicker(false)} />
+          <div className="fixed bottom-0 left-0 right-0 z-[201] flex max-h-[65vh] flex-col overflow-hidden rounded-t-2xl border-t border-line/15 bg-panel shadow-2xl sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:w-[420px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:border">
             {/* Sheet header */}
             <div className="flex shrink-0 items-center justify-between border-b border-line/15 px-4 py-3">
               <span className="text-sm font-semibold text-fg">{t("modal.selectService")}</span>
@@ -517,14 +518,15 @@ export function ReceptionBookingPopup({
               <div className="h-4" />
             </div>
           </div>
-        </>
+        </>,
+        document.body,
       )}
 
-      {/* Staff picker overlay */}
-      {showStaffPicker && (
+      {/* Staff picker overlay — rendered via portal so it's not clipped by popup's overflow */}
+      {showStaffPicker && createPortal(
         <>
-          <div className="fixed inset-0 z-[60] bg-black/50" onClick={() => setShowStaffPicker(false)} />
-          <div className="fixed bottom-0 left-0 right-0 z-[70] flex max-h-[65vh] flex-col overflow-hidden rounded-t-2xl border-t border-line/15 bg-panel shadow-2xl sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:w-[360px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:border">
+          <div className="fixed inset-0 z-[200] bg-black/50" onClick={() => setShowStaffPicker(false)} />
+          <div className="fixed bottom-0 left-0 right-0 z-[201] flex max-h-[65vh] flex-col overflow-hidden rounded-t-2xl border-t border-line/15 bg-panel shadow-2xl sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:w-[360px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:border">
             <div className="flex shrink-0 items-center justify-between border-b border-line/15 px-4 py-3">
               <span className="text-sm font-semibold text-fg">Выберите мастера</span>
               <button type="button" onClick={() => setShowStaffPicker(false)} className="rounded-full p-1 text-muted hover:bg-surface">
@@ -544,7 +546,8 @@ export function ReceptionBookingPopup({
               <div className="h-4" />
             </div>
           </div>
-        </>
+        </>,
+        document.body,
       )}
     </div>
   );
