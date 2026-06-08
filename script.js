@@ -40,23 +40,58 @@
   /* ─── Toast (замена window.alert) ──────────────────────────────────────
    * Минималистичный аналог alert() для подтверждения записи и ошибок.
    * Использование: showToast("Запись подтверждена", "ok") / "err".
-   * Контейнер #toast-root живёт в index.html. Если его нет — fallback в alert,
-   * чтобы клиент гарантированно увидел сообщение даже при сбое CSS.
+   * Контейнер #toast-root создаётся автоматически, если его нет в DOM.
    * Авто-исчезает за DEFAULT_TTL_MS; кликабельная «×» убирает раньше. */
-  function showToast(message, kind) {
-    if (!message) return;
+  function ensureToastRoot() {
     var root = document.getElementById("toast-root");
-    if (!root) {
-      window.alert(message);
+    if (root) return root;
+    root = document.createElement("div");
+    root.id = "toast-root";
+    root.className = "toast-root";
+    root.setAttribute("aria-live", "polite");
+    if (document.body) document.body.appendChild(root);
+    return root;
+  }
+
+  function placeToastRoot(root, kind) {
+    if (!root) return;
+    if (kind === "ok") {
+      root.style.top = "50%";
+      root.style.right = "auto";
+      root.style.bottom = "auto";
+      root.style.left = "50%";
+      root.style.transform = "translate(-50%, -50%)";
+      root.style.maxWidth = "min(34rem, calc(100% - 2rem))";
+      root.style.alignItems = "center";
       return;
     }
+    root.style.removeProperty("top");
+    root.style.removeProperty("right");
+    root.style.removeProperty("bottom");
+    root.style.removeProperty("left");
+    root.style.removeProperty("transform");
+    root.style.removeProperty("max-width");
+    root.style.removeProperty("align-items");
+  }
+
+  function showToast(message, kind) {
+    if (!message) return;
+    var root = ensureToastRoot();
+    if (!root) return;
+    placeToastRoot(root, kind);
     var msgStr = String(message);
     var isLongForm = msgStr.indexOf("\n\n") >= 0;
-    var DEFAULT_TTL_MS = kind === "err" ? 8000 : isLongForm ? 12000 : 5500;
+    var DEFAULT_TTL_MS = kind === "ok" ? 3000 : kind === "err" ? 8000 : isLongForm ? 12000 : 5500;
     var t = document.createElement("div");
     t.className = "toast " + (kind === "err" ? "toast--err" : "toast--ok");
     if (isLongForm) t.classList.add("toast--lg");
     t.setAttribute("role", kind === "err" ? "alert" : "status");
+    if (kind === "ok") {
+      t.style.borderColor = "rgba(214, 180, 126, 0.62)";
+      t.style.background = "linear-gradient(145deg, rgba(42, 36, 29, 0.96), rgba(18, 15, 13, 0.98))";
+      t.style.boxShadow =
+        "0 28px 80px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 0 0 1px rgba(214, 180, 126, 0.18)";
+    }
 
     var icon = document.createElement("span");
     icon.className = "toast__icon";
@@ -3250,11 +3285,17 @@
       return ANY_MASTER_ID;
     }
 
+    function publicSiteBookingNote(noteVal) {
+      var marker = "*** Онлайн запись ***";
+      var raw = String(noteVal || "").trim();
+      return raw ? marker + "\n" + raw : marker;
+    }
+
     function chainBookingPayload(items, startIso, nameVal, phoneVal, noteVal, emailVal) {
       return {
         p_client_name: nameVal || "",
         p_client_phone: phoneVal || "",
-        p_client_note: noteVal || "",
+        p_client_note: publicSiteBookingNote(noteVal),
         p_client_email: emailVal || "",
         p_start_at: startIso,
         p_source: "public_site",
@@ -3483,7 +3524,7 @@
             time: timeSelect.value,
             clientName: nameEl ? nameEl.value.trim() : "",
             clientPhone: phoneEl ? phoneEl.value.trim() : "",
-            notes: detailEl ? detailEl.value.trim() : "",
+            notes: publicSiteBookingNote(detailEl ? detailEl.value.trim() : ""),
           }),
         })
           .then(function (r) {

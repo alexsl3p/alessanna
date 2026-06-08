@@ -105,6 +105,12 @@ function nextOpenBookableYmd(startYmd: string, holidays: Set<string>): string {
   return startYmd;
 }
 
+function publicSiteBookingNote(rawNote: string): string {
+  const marker = "*** Онлайн запись ***";
+  const note = rawNote.trim();
+  return note ? `${marker}\n${note}` : marker;
+}
+
 /** Публичная онлайн-запись (`/book`). Рабочий календарь CRM — `/calendar`. */
 export function PublicBookingPage() {
   const { t, i18n } = useTranslation();
@@ -894,7 +900,7 @@ export function PublicBookingPage() {
         p_client_name: normalizedClientName || "Клиент",
         p_client_phone: clientPhone.trim() || "",
         p_client_email: clientEmail.trim() || "",
-        p_client_note: noteTrim || null,
+        p_client_note: publicSiteBookingNote(noteTrim),
         p_start_at: pickedStart.toISOString(),
         p_items: [{ service_id: svc.id, staff_id: finalStaffId }],
         p_source: "public_site",
