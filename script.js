@@ -2635,6 +2635,26 @@
       });
     }
 
+    /* Удерживаем позицию прокрутки вокруг (а)синхронной перерисовки календаря:
+     * смена услуги/мастера и фоновое обновление каталога не должны «прыгать»
+     * к началу страницы. Восстанавливаем несколько раз, т.к. слоты приходят
+     * из Supabase асинхронно и грид перерисовывается позже. */
+    function calPreserveScroll(work) {
+      var sx = window.scrollX || window.pageXOffset || 0;
+      var sy = window.scrollY || window.pageYOffset || 0;
+      var restore = function () {
+        window.scrollTo(sx, sy);
+      };
+      var result = typeof work === "function" ? work() : undefined;
+      restore();
+      requestAnimationFrame(restore);
+      setTimeout(restore, 80);
+      setTimeout(restore, 240);
+      setTimeout(restore, 600);
+      setTimeout(restore, 1000);
+      return result;
+    }
+
     /**
      * Возвращает { tier, slots } для ячейки календаря.
      * tier: locked | off | none | soft | busy | featured — соответствует классам .is-* в CSS.
@@ -2651,7 +2671,7 @@
       if (dt.getDay() === 0) {
         return { tier: "off", slots: [] };
       }
-      if (apiBooking && monthDays) {
+      if ((apiBooking || supaAvailReady()) && monthDays) {
         var keyApi = dateKey(y, m, d);
         var entry = monthDays[keyApi];
         var slApi = entry && entry.slots ? entry.slots : [];
@@ -2661,9 +2681,6 @@
         var n = slApi.length;
         var tierApi = n >= 4 ? "soft" : n >= 2 ? "busy" : "featured";
         return { tier: tierApi, slots: slApi.slice() };
-      }
-      if (apiBooking) {
-        return { tier: "none", slots: [] };
       }
       return { tier: "none", slots: [] };
     }
@@ -2794,8 +2811,319 @@
       monthDays = null;
     }
 
+    /* =====================================================================
+     * Доступность прямо из Supabase (браузер, anon-ключ) — единый источник
+     * истины с CRM (/book). Рабочие дни = staff_schedule, занятость =
+     * appointments + appointment_services + staff_time_off. Не зависит от
+     * Node-API (work.alessannailu.com), поэтому работает и на статике, и
+     * локально, и в проде одинаково.
+     * ===================================================================== */
+    var SUPA_TZ = "Europe/Tallinn";
+    var SUPA_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    var supaDayStartCache = {};
+
+    function supaAvailReady() {
+      var c = getSalonSupabaseCfg();
+      return !!(c.url && c.key);
+    }
+
+    function supaZonedParts(date) {
+      var dtf = new Intl.DateTimeFormat("en-US", {
+        timeZone: SUPA_TZ,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hourCycle: "h23",
+      });
+      var out = {};
+      dtf.formatToParts(date).forEach(function (p) {
+        if (p.type !== "literal") out[p.type] = p.value;
+      });
+      return {
+        y: Number(out.year),
+        m: Number(out.month),
+        d: Number(out.day),
+        hour: Number(out.hour),
+        minute: Number(out.minute),
+      };
+    }
+
+    function supaYmd(p) {
+      // p.m: 1–12, p.d: 1–31 (из Intl) → "YYYY-MM-DD"
+      return p.y + "-" + pad2(p.m) + "-" + pad2(p.d);
+    }
+
+    /** UTC-момент 00:00 местного (Таллин) дня ymd — бинарный поиск (как в CRM). */
+    function supaDayStartUtc(ymd) {
+      if (supaDayStartCache[ymd]) return new Date(supaDayStartCache[ymd].getTime());
+      var parts = String(ymd).split("-").map(Number);
+      var y = parts[0], mo = parts[1], d = parts[2];
+      var t0 = Date.UTC(y, mo - 1, d - 1, 0, 0, 0);
+      var maxOff = 48 * 60;
+      var cmpLocal = function (tMs) {
+        var p = supaZonedParts(new Date(tMs));
+        var cur = supaYmd(p);
+        if (cur !== ymd) return cur < ymd ? -1 : 1;
+        return p.hour * 60 + p.minute;
+      };
+      var lo = 0, hi = maxOff;
+      while (lo < hi) {
+        var mid = (lo + hi) >>> 1;
+        if (cmpLocal(t0 + mid * 60000) < 0) lo = mid + 1;
+        else hi = mid;
+      }
+      var out = new Date(t0 + lo * 60000);
+      supaDayStartCache[ymd] = out;
+      return new Date(out.getTime());
+    }
+
+    function supaWeekdaySun0(ymd) {
+      var w = new Intl.DateTimeFormat("en-US", { timeZone: SUPA_TZ, weekday: "long" }).format(
+        supaDayStartUtc(ymd)
+      );
+      return { Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4, Friday: 5, Saturday: 6 }[w];
+    }
+
+    function supaNowInfo() {
+      var p = supaZonedParts(new Date());
+      return { dateKey: supaYmd(p), minutes: p.hour * 60 + p.minute };
+    }
+
+    function supaTimeToMin(t) {
+      var mm = /^(\d{1,2}):(\d{2})/.exec(String(t || ""));
+      if (!mm) return 0;
+      return Number(mm[1]) * 60 + Number(mm[2]);
+    }
+
+    function supaFmtMin(min) {
+      return pad2(Math.floor(min / 60)) + ":" + pad2(min % 60);
+    }
+
+    function supaRest(pathAndQuery) {
+      var cfg = getSalonSupabaseCfg();
+      return fetch(cfg.url + "/rest/v1/" + pathAndQuery, {
+        headers: { apikey: cfg.key, Authorization: "Bearer " + cfg.key },
+      }).then(function (r) {
+        if (!r.ok) throw new Error("supabase " + r.status);
+        return r.json();
+      });
+    }
+
+    function supaUniqueSorted(arr) {
+      var seen = {};
+      var out = [];
+      arr.forEach(function (v) {
+        if (!seen[v]) {
+          seen[v] = true;
+          out.push(v);
+        }
+      });
+      out.sort();
+      return out;
+    }
+
+    /** Загружает контекст доступности на диапазон [fromYmd..toYmd] для услуги + мастера. */
+    function supaLoadContext(serviceId, employeeId, fromYmd, toYmd) {
+      var svcQ =
+        "service_listings?id=eq." +
+        serviceId +
+        "&select=duration,buffer_after_min,is_active&limit=1";
+      return supaRest(svcQ).then(function (svcRows) {
+        var svc = svcRows && svcRows[0];
+        if (!svc || svc.is_active === false || Number(svc.duration || 0) <= 0) {
+          return { duration: 0, buffer: 0, staffIds: [], schedules: [], busy: [] };
+        }
+        var duration = Number(svc.duration || 0);
+        var buffer = Number(svc.buffer_after_min || 0);
+
+        return supaRest(
+          "staff_services?service_id=eq." + serviceId + "&select=staff_id,show_on_site"
+        ).then(function (links) {
+          var eligible = {};
+          (links || []).forEach(function (row) {
+            if (row && row.show_on_site !== false && row.staff_id) eligible[String(row.staff_id)] = true;
+          });
+          var eligibleIds = Object.keys(eligible);
+          if (employeeId && employeeId !== ANY_MASTER_ID) {
+            // конкретный мастер: должен быть привязан к услуге
+            eligibleIds = eligible[String(employeeId)] ? [String(employeeId)] : [];
+          }
+          if (!eligibleIds.length) {
+            return { duration: duration, buffer: buffer, staffIds: [], schedules: [], busy: [] };
+          }
+
+          // Фильтр видимости из таблицы staff (не зависим от готовности глобала).
+          return supaRest(
+            "staff?id=in.(" +
+              eligibleIds.join(",") +
+              ")&select=id,roles,is_active,show_on_marketing_site"
+          ).then(function (staffRows) {
+            var isHidden = function (r) {
+              if (!r || r.is_active === false || r.show_on_marketing_site === false) return true;
+              var roles = Array.isArray(r.roles) ? r.roles.join(",") : String(r.roles || "");
+              return /(admin|owner|manager)/i.test(roles);
+            };
+            var visible = {};
+            (staffRows || []).forEach(function (r) {
+              if (!isHidden(r)) visible[String(r.id)] = true;
+            });
+            var staffIds = eligibleIds.filter(function (id) {
+              return visible[id];
+            });
+            if (!staffIds.length) {
+              return { duration: duration, buffer: buffer, staffIds: [], schedules: [], busy: [] };
+            }
+            return supaLoadContextWindow(serviceId, staffIds, duration, buffer, fromYmd, toYmd);
+          });
+        });
+      });
+    }
+
+    function supaLoadContextWindow(serviceId, staffIds, duration, buffer, fromYmd, toYmd) {
+          var inList = "(" + staffIds.join(",") + ")";
+          var fromIso = supaDayStartUtc(fromYmd).toISOString();
+          var toIso = new Date(supaDayStartUtc(toYmd).getTime() + 24 * 60 * 60 * 1000).toISOString();
+          var timeWin =
+            "&start_time=lt." +
+            encodeURIComponent(toIso) +
+            "&end_time=gt." +
+            encodeURIComponent(fromIso);
+
+          return Promise.all([
+            supaRest(
+              "staff_schedule?staff_id=in." +
+                inList +
+                "&select=staff_id,day_of_week,start_time,end_time"
+            ),
+            supaRest(
+              "appointments?staff_id=in." +
+                inList +
+                "&status=neq.cancelled&select=staff_id,start_time,end_time" +
+                timeWin
+            ).catch(function () {
+              return [];
+            }),
+            supaRest(
+              "appointment_services?staff_id=in." +
+                inList +
+                "&select=staff_id,start_time,end_time" +
+                timeWin
+            ).catch(function () {
+              return [];
+            }),
+            supaRest(
+              "staff_time_off?staff_id=in." +
+                inList +
+                "&select=staff_id,start_time,end_time" +
+                timeWin
+            ).catch(function () {
+              return [];
+            }),
+          ]).then(function (res) {
+            var busy = []
+              .concat(res[1] || [], res[2] || [], res[3] || [])
+              .map(function (b) {
+                return {
+                  staff_id: String(b.staff_id || ""),
+                  s: Date.parse(b.start_time),
+                  e: Date.parse(b.end_time),
+                };
+              })
+              .filter(function (b) {
+                return b.staff_id && isFinite(b.s) && isFinite(b.e);
+              });
+            return {
+              duration: duration,
+              buffer: buffer,
+              staffIds: staffIds,
+              schedules: res[0] || [],
+              busy: busy,
+            };
+          });
+    }
+
+    function supaSlotsForStaffDay(ctx, staffId, ymd) {
+      if (salonHolidayDates[ymd]) return [];
+      if (ctx.duration <= 0) return [];
+      var wd = supaWeekdaySun0(ymd);
+      var scheds = ctx.schedules.filter(function (r) {
+        return String(r.staff_id) === staffId && Number(r.day_of_week) === wd;
+      });
+      if (!scheds.length) return [];
+      var now = supaNowInfo();
+      if (ymd < now.dateKey) return [];
+      var dayStart = supaDayStartUtc(ymd).getTime();
+      var dayEnd = dayStart + 24 * 60 * 60 * 1000;
+      var busy = ctx.busy.filter(function (b) {
+        return b.staff_id === staffId && b.s < dayEnd && b.e > dayStart;
+      });
+      var out = [];
+      scheds.forEach(function (row) {
+        var sM = supaTimeToMin(row.start_time);
+        var eM = supaTimeToMin(row.end_time);
+        for (var min = sM; min + ctx.duration <= eM; min += 30) {
+          if (ymd === now.dateKey && min <= now.minutes) continue;
+          var sMs = dayStart + min * 60000;
+          var eMs = sMs + (ctx.duration + ctx.buffer) * 60000;
+          var clash = busy.some(function (b) {
+            return sMs < b.e && eMs > b.s;
+          });
+          if (!clash) out.push(supaFmtMin(min));
+        }
+      });
+      return out;
+    }
+
+    function supaCalendarMonth(serviceId, employeeId, y, m) {
+      var dim = new Date(y, m + 1, 0).getDate();
+      var first = dateKey(y, m, 1); // "YYYY-MM-01" (m здесь 0-based)
+      var last = dateKey(y, m, dim);
+      return supaLoadContext(serviceId, employeeId, first, last).then(function (ctx) {
+        var days = {};
+        for (var d = 1; d <= dim; d++) {
+          var key = dateKey(y, m, d);
+          var slots = [];
+          for (var i = 0; i < ctx.staffIds.length; i++) {
+            slots = slots.concat(supaSlotsForStaffDay(ctx, ctx.staffIds[i], key));
+          }
+          days[key] = { slots: supaUniqueSorted(slots) };
+        }
+        return days;
+      });
+    }
+
+    function fetchNodeMonth(mid, sid, cacheK) {
+      fetch(
+        publicApiUrl("/api/public/calendar-month?employeeId=") +
+          encodeURIComponent(mid) +
+          "&serviceId=" +
+          encodeURIComponent(sid) +
+          "&y=" +
+          viewY +
+          "&m=" +
+          viewM
+      )
+        .then(function (r) {
+          return r.json();
+        })
+        .then(function (data) {
+          if (monthCacheKey === cacheK) {
+            monthDays = data.days || {};
+            renderCalendarBody();
+          }
+        })
+        .catch(function () {
+          if (monthCacheKey === cacheK) {
+            monthDays = {};
+            renderCalendarBody();
+          }
+        });
+    }
+
     function ensureMonthThenRender() {
-      if (!apiBooking || !hasSelectedBookingService()) {
+      if (!hasSelectedBookingService()) {
         monthDays = null;
         renderCalendarBody();
         return;
@@ -2813,31 +3141,39 @@
         return;
       }
       monthCacheKey = cacheK;
-      fetch(
-        publicApiUrl("/api/public/calendar-month?employeeId=") +
-          encodeURIComponent(mid) +
-          "&serviceId=" +
-          encodeURIComponent(sid) +
-          "&y=" +
-          viewY +
-          "&m=" +
-          viewM
-      )
-        .then(function (r) {
-          return r.json();
-        })
-        .then(function (data) {
-          monthDays = data.days || {};
-          renderCalendarBody();
-        })
-        .catch(function () {
-          monthDays = {};
-          renderCalendarBody();
-        });
+
+      // 1) Прямой Supabase (anon) — основной путь.
+      if (supaAvailReady() && SUPA_UUID_RE.test(sid)) {
+        supaCalendarMonth(sid, mid, viewY, viewM)
+          .then(function (days) {
+            if (monthCacheKey === cacheK) {
+              monthDays = days || {};
+              renderCalendarBody();
+            }
+          })
+          .catch(function () {
+            // 2) Фолбэк на Node-API, если он есть.
+            if (apiBooking) fetchNodeMonth(mid, sid, cacheK);
+            else if (monthCacheKey === cacheK) {
+              monthDays = {};
+              renderCalendarBody();
+            }
+          });
+        return;
+      }
+
+      // 2) Node-API (legacy / integer serviceId).
+      if (apiBooking) {
+        fetchNodeMonth(mid, sid, cacheK);
+        return;
+      }
+
+      monthDays = null;
+      renderCalendarBody();
     }
 
     function renderCalendar() {
-      if (apiBooking) {
+      if (apiBooking || supaAvailReady()) {
         ensureMonthThenRender();
       } else {
         renderCalendarBody();
@@ -3286,8 +3622,10 @@
 
     window.addEventListener("salon-picks-changed", function () {
       var finish = function () {
-        invalidateMonthCache();
-        renderCalendar();
+        calPreserveScroll(function () {
+          invalidateMonthCache();
+          renderCalendar();
+        });
       };
       if (!apiBooking) {
         finish();
@@ -3344,21 +3682,23 @@
           chainApi.applyMasterToCovered(selVal);
         }
       }
-      invalidateMonthCache();
-      clearSelection();
-      renderCalendar();
+      calPreserveScroll(function () {
+        invalidateMonthCache();
+        clearSelection();
+        renderCalendar();
+      });
       if (suppressNextMasterScroll) {
         suppressNextMasterScroll = false;
         return;
       }
     });
 
-    serviceSelectEl.addEventListener("change", function (e) {
-      var serviceItemField = bookingForm.querySelector("[data-form-service-item]");
-      var serviceItemLabel = serviceItemField ? serviceItemField.closest("label") : null;
-      invalidateMonthCache();
-      clearSelection();
-      renderCalendar();
+    serviceSelectEl.addEventListener("change", function () {
+      calPreserveScroll(function () {
+        invalidateMonthCache();
+        clearSelection();
+        renderCalendar();
+      });
     });
 
     function getSalonSupabaseCfg() {
