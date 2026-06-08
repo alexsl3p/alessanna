@@ -2120,7 +2120,12 @@
       serviceItemSelect.addEventListener("pointerdown", rememberChoiceScrollPosition, { passive: true });
       serviceItemSelect.addEventListener("focusin", rememberChoiceScrollPosition);
       serviceItemSelect.addEventListener("keydown", rememberChoiceScrollPosition);
-      serviceItemSelect.addEventListener("change", function () {
+      serviceItemSelect.addEventListener("change", function (e) {
+        /* Programmatic dispatch (site-services.mjs restoring selection on
+         * periodic refresh): skip addPickFromServiceOption to avoid re-adding
+         * the service to the cart and triggering salon-picks-changed →
+         * clearSelection chain. */
+        if (e && !e.isTrusted) return;
         preserveScrollPosition(function () {
           var v = String(serviceItemSelect.value || "");
           if (!v) return;
@@ -3739,7 +3744,15 @@
       });
     });
 
-    serviceSelectEl.addEventListener("change", function () {
+    serviceSelectEl.addEventListener("change", function (e) {
+      /* Programmatic dispatch (e.g. realtime re-render from site-services.mjs
+       * restoring the previous category value every 60s or on DB change):
+       * don't wipe the user's picked date/time — just refresh availability. */
+      if (e && !e.isTrusted) {
+        invalidateMonthCache();
+        renderCalendar();
+        return;
+      }
       calPreserveScroll(function () {
         invalidateMonthCache();
         clearSelection();
