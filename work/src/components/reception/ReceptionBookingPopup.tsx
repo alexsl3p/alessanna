@@ -215,7 +215,7 @@ export function ReceptionBookingPopup({
       ? null
       : pickedClientId ?? (await resolveClientIdForVisit(normalizedClientName, clientPhone, clientEmail));
     const payload = isBlock
-      ? { client_name: clientName.trim() || "— Закрыто —", client_phone: null as null, note: blockType, staff_id: staffId, service_id: null as null, start_time: start.toISOString(), end_time: end.toISOString(), status: "confirmed" as const }
+      ? { client_name: clientName.trim() || "— Закрыто —", client_phone: null as null, note: blockType, source: "reception" as const, created_by_staff_id: staffMember?.id ?? null, staff_id: staffId, service_id: null as null, start_time: start.toISOString(), end_time: end.toISOString(), status: "confirmed" as const }
       : { client_id: resolvedClientId, client_name: normalizedClientName, client_phone: clientPhone.trim() || null, client_email: clientEmail.trim() || null, note: staffNote.trim() || null, source: "reception", created_by_staff_id: staffMember?.id ?? null, staff_id: staffId, service_id: svc!.id, start_time: start.toISOString(), end_time: end.toISOString(), status: "confirmed" as const };
     const { error: writeErr } = isEdit
       ? await supabase.from("appointments").update(payload).eq("id", editAppt!.id)
