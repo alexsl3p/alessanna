@@ -3212,27 +3212,11 @@
 
       // 1) Прямой Supabase (anon) — основной путь.
       if (supaAvailReady() && SUPA_UUID_RE.test(sid)) {
-        var savedAnchor = document.getElementById("broneeri");
-        var savedAnchorTop = savedAnchor ? savedAnchor.getBoundingClientRect().top : null;
-        var savedSy = window.scrollY || window.pageYOffset || 0;
         supaCalendarMonth(sid, mid, viewY, viewM)
           .then(function (days) {
             if (monthCacheKey === cacheK) {
               monthDays = days || {};
               renderCalendarBody();
-              /* Restore scroll anchored to #broneeri top so layout shifts
-               * (e.g. #meistrid revealing) don't change the visible viewport. */
-              var restoreScroll = function () {
-                if (scrollRestoreBlocked()) return;
-                if (savedAnchor && savedAnchorTop != null) {
-                  var delta = savedAnchor.getBoundingClientRect().top - savedAnchorTop;
-                  if (Math.abs(delta) > 1) window.scrollTo(0, (window.scrollY || 0) + delta);
-                } else {
-                  window.scrollTo(0, savedSy);
-                }
-              };
-              restoreScroll();
-              requestAnimationFrame(restoreScroll);
             }
           })
           .catch(function () {
