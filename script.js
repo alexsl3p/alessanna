@@ -286,6 +286,24 @@
     return true;
   }
 
+  /* ─── Глобальная блокировка scroll-restore ────────────────────────────
+   * На лендинге три независимых механизма «держат» позицию при выборе
+   * услуги/мастера (preserveScrollPosition, calPreserveScroll, асинхронный
+   * restore в ensureMonthThenRender), каждый со своей цепочкой setTimeout.
+   * Когда пользователь НАМЕРЕННО кликает мастера в #meistrid, мы хотим
+   * плавно проскроллить вниз к календарю — но эти три механизма наперебой
+   * возвращают позицию (≈1с), и получается дёрганье «туда-сюда».
+   * blockScrollRestore(ms) выключает ВСЕ restore на время скролла; каждый
+   * restore-замыкание в начале вызывает scrollRestoreBlocked(). Флаг живёт
+   * во внешнем IIFE, поэтому виден обоим вложенным IIFE (picks и календарь). */
+  var scrollRestoreBlockUntil = 0;
+  function blockScrollRestore(ms) {
+    scrollRestoreBlockUntil = Date.now() + (ms || 1300);
+  }
+  function scrollRestoreBlocked() {
+    return Date.now() < scrollRestoreBlockUntil;
+  }
+
   document.querySelectorAll(
     'a[href="#broneeri"], a[href="#teenused"], a[href="#meistrid"], a[href="#meist"], a[href="#kinkekaardid"], a[href="#tagasiside"], a[href="#kontakt"]'
   ).forEach(function (link) {
@@ -1424,6 +1442,7 @@
       var sx = pos.sx;
       var sy = pos.sy;
       var restore = function () {
+        if (scrollRestoreBlocked()) return;
         if (anchor && beforeTop != null) {
           var delta = anchor.getBoundingClientRect().top - beforeTop;
           if (Math.abs(delta) > 1) {
@@ -2208,11 +2227,16 @@
 
     function applyMaster(id, scrollAfter) {
       if (!masterSelect) return;
-      if (scrollAfter && id) scrollAfterNextMasterChange = true;
+      /* Намеренный переход к календарю (клик по мастеру в #meistrid):
+       * блокируем ВСЕ restore-механизмы на время плавного скролла, иначе
+       * preserveScrollPosition / calPreserveScroll / ensureMonthThenRender
+       * наперебой возвращают позицию и получается «туда-сюда». */
+      if (scrollAfter && id) blockScrollRestore(1400);
       masterSelect.value = id || "";
       setMasterDisplayText(id ? masterNameById(id) : UI.masterNone);
       highlightTeam(id || "");
       masterSelect.dispatchEvent(new Event("change", { bubbles: true }));
+      if (scrollAfter && id) scrollToBookingBlock();
     }
 
     /**
@@ -2511,8 +2535,6 @@
     var salonHolidayDates = {};
     var salonHolidaysLoaded = false;
     var suppressNextMasterScroll = false;
-    var scrollAfterNextMasterChange = false;
-    var skipNextCalendarScrollRestore = false;
 
     var now = new Date();
     var viewY = now.getFullYear();
@@ -2682,6 +2704,7 @@
       var sx = window.scrollX || window.pageXOffset || 0;
       var sy = window.scrollY || window.pageYOffset || 0;
       var restore = function () {
+        if (scrollRestoreBlocked()) return;
         if (anchor && beforeTop != null) {
           var delta = anchor.getBoundingClientRect().top - beforeTop;
           if (Math.abs(delta) > 1) {
@@ -3197,14 +3220,10 @@
             if (monthCacheKey === cacheK) {
               monthDays = days || {};
               renderCalendarBody();
-              /* Skip restore when we intentionally scrolled to booking section. */
-              if (skipNextCalendarScrollRestore) {
-                skipNextCalendarScrollRestore = false;
-                return;
-              }
               /* Restore scroll anchored to #broneeri top so layout shifts
                * (e.g. #meistrid revealing) don't change the visible viewport. */
               var restoreScroll = function () {
+                if (scrollRestoreBlocked()) return;
                 if (savedAnchor && savedAnchorTop != null) {
                   var delta = savedAnchor.getBoundingClientRect().top - savedAnchorTop;
                   if (Math.abs(delta) > 1) window.scrollTo(0, (window.scrollY || 0) + delta);
@@ -3736,14 +3755,6 @@
         suppressNextMasterScroll = false;
         invalidateMonthCache();
         renderCalendar();
-        return;
-      }
-      if (scrollAfterNextMasterChange) {
-        scrollAfterNextMasterChange = false;
-        skipNextCalendarScrollRestore = true;
-        invalidateMonthCache();
-        renderCalendar();
-        scrollToBookingBlock();
         return;
       }
       /* Если выбрали мастера из «частичного» списка (он не делает всю
