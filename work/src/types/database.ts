@@ -242,6 +242,7 @@ export type Database = {
       staff_schedule: { Row: StaffScheduleRow; Insert: Partial<StaffScheduleRow>; Update: Partial<StaffScheduleRow> };
       staff_time_off: { Row: StaffTimeOffRow; Insert: Partial<StaffTimeOffRow>; Update: Partial<StaffTimeOffRow> };
       appointments: { Row: AppointmentRow; Insert: Partial<AppointmentRow>; Update: Partial<AppointmentRow> };
+      salon_holidays: { Row: SalonHolidayRow; Insert: Partial<SalonHolidayRow>; Update: Partial<SalonHolidayRow> };
       clients: { Row: ClientRow; Insert: Partial<ClientRow>; Update: Partial<ClientRow> };
       categories: { Row: CategoryRow; Insert: Partial<CategoryRow>; Update: Partial<CategoryRow> };
     };

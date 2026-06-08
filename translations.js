@@ -90,6 +90,7 @@
       return {
         staff_busy: t("site.ui.errStaffBusy", "Busy"),
         no_free_master: t("site.ui.errNoFreeMaster", "No free stylist"),
+        salon_closed: t("site.ui.errSalonClosed", "Salon is closed on this day"),
         staff_not_service: t("site.ui.errStaffNotService", "Stylist mismatch"),
         staff_unavailable: t("site.ui.errStaffUnavailable", "Unavailable"),
         service_inactive: t("site.ui.errServiceInactive", "Inactive"),

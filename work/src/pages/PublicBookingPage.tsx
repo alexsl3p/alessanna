@@ -46,7 +46,7 @@ import {
   splitStaffIntoHairAndNails,
 } from "../lib/publicMasterPanel";
 import { buildStaffColorAssignments, resolveStaffPublicCalendarLook } from "../lib/staffCalendarColors";
-import type { AppointmentRow, StaffMember, StaffScheduleRow, StaffServiceRow } from "../types/database";
+import type { AppointmentRow, SalonHolidayRow, StaffMember, StaffScheduleRow, StaffServiceRow } from "../types/database";
 import {
   DEFAULT_RECEPTION_MASTERS_PANEL,
   DEFAULT_RECEPTION_ROWS,
@@ -96,6 +96,15 @@ function sortMasterDayRows(a: MasterDayRow, b: MasterDayRow): number {
   return 0;
 }
 
+function nextOpenBookableYmd(startYmd: string, holidays: Set<string>): string {
+  let cur = startYmd;
+  for (let i = 0; i < 180; i++) {
+    if (!holidays.has(cur)) return cur;
+    cur = gregorianAddDays(cur, 1);
+  }
+  return startYmd;
+}
+
 /** Публичная онлайн-запись (`/book`). Рабочий календарь CRM — `/calendar`. */
 export function PublicBookingPage() {
   const { t, i18n } = useTranslation();
@@ -107,6 +116,7 @@ export function PublicBookingPage() {
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [links, setLinks] = useState<StaffServiceRow[]>([]);
   const [schedules, setSchedules] = useState<StaffScheduleRow[]>([]);
+  const [holidays, setHolidays] = useState<SalonHolidayRow[]>([]);
   const [appointments, setAppointments] = useState<AppointmentRow[]>([]);
   const [upcomingAppointments, setUpcomingAppointments] = useState<AppointmentRow[]>([]);
   const [calendarRangeAppointments, setCalendarRangeAppointments] = useState<AppointmentRow[]>([]);
@@ -171,10 +181,11 @@ export function PublicBookingPage() {
       return;
     }
     setBookingPanelDisabledByAdmin(false);
-    const [st, lk, sc, remoteLayout, implicitSetting] = await Promise.all([
+    const [st, lk, sc, hol, remoteLayout, implicitSetting] = await Promise.all([
       supabase.from("staff").select("*").eq("is_active", true).order("name"),
       supabase.from("staff_services").select("*"),
       supabase.from("staff_schedule").select("*"),
+      supabase.from("salon_holidays").select("*"),
       fetchReceptionLayoutFromServer(),
       supabase.from("salon_settings").select("value").eq("key", CALENDAR_WEEK_EXCEPT_SUNDAY_STAFF_SETTING_KEY).maybeSingle(),
     ]);
@@ -261,6 +272,7 @@ export function PublicBookingPage() {
     }
     if (lk.data) setLinks(lk.data as StaffServiceRow[]);
     if (sc.data) setSchedules(sc.data as StaffScheduleRow[]);
+    if (hol.data) setHolidays(hol.data as SalonHolidayRow[]);
     setImplicitWeekExceptSundayStaffIds(
       parseStaffIdJsonList(
         implicitSetting.data?.value != null ? String(implicitSetting.data.value) : undefined,
@@ -288,6 +300,11 @@ export function PublicBookingPage() {
   const selectedDay = salonDayStart;
 
   const firstBookableYmd = useMemo(() => salonFirstBookableYmd(new Date(nowTick)), [nowTick]);
+  const holidaySet = useMemo(() => new Set(holidays.map((h) => h.holiday_date)), [holidays]);
+  const firstOpenBookableYmd = useMemo(
+    () => nextOpenBookableYmd(firstBookableYmd, holidaySet),
+    [firstBookableYmd, holidaySet],
+  );
   const monthStart = useMemo(() => startOfMonth(viewMonth), [viewMonth]);
   const monthLabel = useMemo(() => format(monthStart, "LLLL yyyy"), [monthStart]);
   const calendarDays = useMemo(() => {
@@ -471,14 +488,13 @@ export function PublicBookingPage() {
   }, []);
 
   useEffect(() => {
-    const min = salonFirstBookableYmd(new Date(nowTick));
-    if (compareSalonYmd(bookYmd, min) < 0) {
-      setDayStr(min);
-      const [y, m] = min.split("-").map(Number);
+    if (compareSalonYmd(bookYmd, firstOpenBookableYmd) < 0 || holidaySet.has(bookYmd)) {
+      setDayStr(firstOpenBookableYmd);
+      const [y, m] = firstOpenBookableYmd.split("-").map(Number);
       setViewMonth(new Date(y, m - 1, 1));
       setPickedStart(null);
     }
-  }, [nowTick, bookYmd]);
+  }, [bookYmd, firstOpenBookableYmd, holidaySet]);
 
   const svc = services.find((s) => s.id === serviceId);
   const durationMin = svc ? svc.duration_min : 60;
@@ -486,6 +502,7 @@ export function PublicBookingPage() {
   const slotsByStaff = useMemo(() => {
     if (!svc) return new Map<string, Slot[]>();
     const out = new Map<string, Slot[]>();
+    if (holidaySet.has(bookYmd)) return out;
     for (const member of eligibleStaff) {
       const memberSchedule = schedules
         .filter((s) => s.staff_id === member.id)
@@ -509,7 +526,7 @@ export function PublicBookingPage() {
       out.set(member.id, slots);
     }
     return out;
-  }, [appointments, bookYmd, durationMin, eligibleStaff, schedules, salonDayStart, svc, timeOff, nowTick]);
+  }, [appointments, bookYmd, durationMin, eligibleStaff, holidaySet, schedules, salonDayStart, svc, timeOff, nowTick]);
 
   const slotCoverage = useMemo(() => {
     const coverage = new Map<string, number>();
@@ -591,6 +608,10 @@ export function PublicBookingPage() {
     const tallinnTodayYmd = salonCalendarYmd(new Date(nowTick));
     for (const d of daysInRange) {
       const key = salonYmdFromAnyDate(d);
+      if (holidaySet.has(key)) {
+        out.set(key, { free: 0, working: 0 });
+        continue;
+      }
       const weekday = salonWeekdaySun0(key);
       const dayStart = salonDayStartUtc(key);
       let working = 0;
@@ -635,6 +656,7 @@ export function PublicBookingPage() {
     calendarRangeAppointments,
     calendarRangeTimeOff,
     schedules,
+    holidaySet,
     svc,
     nowTick,
   ]);
@@ -741,11 +763,12 @@ export function PublicBookingPage() {
   const onSelectCalendarDay = useCallback((d: Date) => {
     const ymd = salonYmdFromAnyDate(d);
     if (!isSalonBookableYmd(ymd)) return;
+    if (holidaySet.has(ymd)) return;
     setDayStr(ymd);
     const [y, m] = ymd.split("-").map(Number);
     setViewMonth(new Date(y, m - 1, 1));
     setPickedStart(null);
-  }, []);
+  }, [holidaySet]);
 
   const mastersByColumn = useMemo(() => {
     const weekday = salonWeekdaySun0(bookYmd);
@@ -838,6 +861,10 @@ export function PublicBookingPage() {
       setMsg(t("publicBook.dayNotBookable"));
       return;
     }
+    if (holidaySet.has(bookYmd)) {
+      setMsg(t("publicBook.salonClosedDay", { defaultValue: "Salon is closed on this day." }));
+      return;
+    }
     setBooking(true);
     setMsg(null);
     let finalStaffId = staffId && staffId !== ANY_MASTER_ID ? staffId : null;
@@ -913,6 +940,7 @@ export function PublicBookingPage() {
       const todayTallinn = salonCalendarYmd(new Date(nowTick));
       const isTodayCell = cellYmd === todayTallinn;
       const inMonth = isSameMonth(d, anchorMonth);
+      const isHoliday = holidaySet.has(cellYmd);
       const cov = dayAvailabilityBadge.get(cellYmd);
       const isWorkingDay = !!(cov && cov.working > 0);
       const ratio = cov && cov.working > 0 ? cov.free / cov.working : 0;
@@ -928,7 +956,7 @@ export function PublicBookingPage() {
         ? "min-h-[2.25rem] px-0.5 py-0.5 text-[10px] sm:min-h-10 sm:text-[11px]"
         : "px-2 py-2 text-xs md:min-h-[54px] md:text-sm";
 
-      const disabled = compareSalonYmd(cellYmd, firstBookableYmd) < 0;
+      const disabled = compareSalonYmd(cellYmd, firstBookableYmd) < 0 || isHoliday;
 
       let stateClass: string;
       if (disabled) {
@@ -955,8 +983,10 @@ export function PublicBookingPage() {
           aria-disabled={disabled}
           aria-current={isTodayCell ? "date" : undefined}
           title={
-            disabled
-              ? t("publicBook.pastDayNotSelectable")
+            isHoliday
+              ? t("publicBook.salonClosedDay", { defaultValue: "Salon is closed on this day." })
+              : disabled
+                ? t("publicBook.pastDayNotSelectable")
               : isTodayCell
                 ? t("publicBook.todayMarker")
                 : undefined
@@ -1035,7 +1065,8 @@ export function PublicBookingPage() {
         setViewMonth={setViewMonth}
         selectedDay={selectedDay}
         selectedDayYmd={bookYmd}
-        minSelectableYmd={firstBookableYmd}
+        minSelectableYmd={firstOpenBookableYmd}
+        holidayYmds={holidays.map((h) => h.holiday_date)}
         onSelectCalendarDay={onSelectCalendarDay}
         monthStart={monthStart}
         calendarDays={calendarDays}

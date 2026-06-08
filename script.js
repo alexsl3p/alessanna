@@ -2394,6 +2394,8 @@
     var serviceIdBySlug = {};
     var monthDays = null;
     var monthCacheKey = "";
+    var salonHolidayDates = {};
+    var salonHolidaysLoaded = false;
     var suppressNextMasterScroll = false;
 
     var now = new Date();
@@ -2414,6 +2416,50 @@
     /** Ключ даты YYYY-MM-DD для сравнения и хранения выбора */
     function dateKey(y, m, d) {
       return y + "-" + pad2(m + 1) + "-" + pad2(d);
+    }
+
+    function isSalonHolidayKey(key) {
+      return !!salonHolidayDates[String(key || "")];
+    }
+
+    function rememberSalonHolidays(rows) {
+      var next = {};
+      if (Array.isArray(rows)) {
+        rows.forEach(function (row) {
+          var key = String((row && row.holiday_date) || "").slice(0, 10);
+          if (/^\d{4}-\d{2}-\d{2}$/.test(key)) next[key] = true;
+        });
+      }
+      salonHolidayDates = next;
+      salonHolidaysLoaded = true;
+    }
+
+    function clearSelectionIfHoliday() {
+      if (selectedKey && isSalonHolidayKey(selectedKey)) clearSelection();
+    }
+
+    function loadSalonHolidays() {
+      var cfg = getSalonSupabaseCfg();
+      if (!cfg.url || !cfg.key) {
+        salonHolidaysLoaded = true;
+        return Promise.resolve();
+      }
+      return fetch(cfg.url + "/rest/v1/salon_holidays?select=holiday_date", {
+        headers: {
+          apikey: cfg.key,
+          Authorization: "Bearer " + cfg.key,
+        },
+      })
+        .then(function (r) {
+          if (!r.ok) throw new Error("holidays unavailable");
+          return r.json();
+        })
+        .then(function (rows) {
+          rememberSalonHolidays(rows);
+        })
+        .catch(function () {
+          rememberSalonHolidays([]);
+        });
     }
 
     /** Простой строковый hash для псевдослучайности по (мастер + дата) */
@@ -2446,6 +2492,9 @@
      */
     function dayAvailability(masterId, y, m, d) {
       if (!masterId) masterId = ANY_MASTER_ID;
+      if (isSalonHolidayKey(dateKey(y, m, d))) {
+        return { tier: "off", slots: [] };
+      }
       var dt = new Date(y, m, d);
       if (dt.getDay() === 0) {
         return { tier: "off", slots: [] };
@@ -3031,6 +3080,12 @@
 
     startBookingWidget();
 
+    loadSalonHolidays().then(function () {
+      clearSelectionIfHoliday();
+      invalidateMonthCache();
+      renderCalendar();
+    });
+
     window.addEventListener("site-team-ready", function () {
       var pub = publicStaffAsMasterOptions();
       if (!pub) return;
@@ -3377,6 +3432,12 @@
       e.preventDefault();
       if (!selectedKey) {
         dateInput.focus();
+        return;
+      }
+      if (salonHolidaysLoaded && isSalonHolidayKey(selectedKey)) {
+        showToast(MSGS.dayOff || MSGS.noTime, "err");
+        clearSelection();
+        renderCalendar();
         return;
       }
       if (!timeSelect.value) {

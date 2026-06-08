@@ -98,6 +98,7 @@ export function PublicCalendarWeekAgenda({
   i18n,
   selectedDayYmd,
   minSelectableYmd,
+  holidayYmds,
   onSelectDay,
   staffColorAssignments,
   schedules,
@@ -111,6 +112,7 @@ export function PublicCalendarWeekAgenda({
   i18n: i18n;
   selectedDayYmd: string;
   minSelectableYmd: string;
+  holidayYmds: string[];
   onSelectDay: (d: Date) => void;
   staffColorAssignments: ReadonlyMap<string, StaffCalendarColor>;
   schedules: StaffScheduleRow[];
@@ -119,6 +121,7 @@ export function PublicCalendarWeekAgenda({
 }) {
   const svcName = (id: string) => services.find((s) => String(s.id) === String(id))?.name || "—";
   const implicitSet = new Set(implicitWeekExceptSundayStaffIds);
+  const holidaySet = new Set(holidayYmds);
 
   return (
     <div className="-mx-1 overflow-x-auto pb-1 sm:mx-0">
@@ -127,7 +130,7 @@ export function PublicCalendarWeekAgenda({
           const list = apptsForDay(appointments, d);
           const ymd = salonYmdFromAnyDate(d);
           const sel = ymd === selectedDayYmd;
-          const disabled = compareSalonYmd(ymd, minSelectableYmd) < 0;
+          const disabled = compareSalonYmd(ymd, minSelectableYmd) < 0 || holidaySet.has(ymd);
           const workingToday = panelStaffWorkingOnDate(timelineStaff, schedules, d, implicitSet);
           return (
             <div

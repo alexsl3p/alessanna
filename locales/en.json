@@ -413,6 +413,7 @@
       "reviewAlertEmail": "Check the email format or leave the field empty.",
       "errStaffBusy": "Stylist is busy at that time. Choose another time or stylist.",
       "errNoFreeMaster": "No free stylist at that time. Choose another time.",
+      "errSalonClosed": "The salon is closed on this day. Choose another date.",
       "errStaffNotService": "This stylist does not perform this service.",
       "errStaffUnavailable": "Stylist is unavailable. Choose another.",
       "errServiceInactive": "Service is not bookable right now.",

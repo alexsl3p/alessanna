@@ -79,6 +79,8 @@ type CalendarProps = {
   selectedDayYmd: string;
   /** Не раньше этого дня можно выбрать дату (завтра по Таллину). */
   minSelectableYmd: string;
+  /** yyyy-MM-dd dates closed in CRM schedule. */
+  holidayYmds: string[];
   onSelectCalendarDay: (d: Date) => void;
   monthStart: Date;
   calendarDays: Date[];
@@ -114,6 +116,7 @@ export function PublicBookingCalendarSection({
   selectedDay,
   selectedDayYmd,
   minSelectableYmd,
+  holidayYmds,
   onSelectCalendarDay,
   monthStart,
   calendarDays,
@@ -250,6 +253,7 @@ export function PublicBookingCalendarSection({
           i18n={i18n}
           selectedDayYmd={selectedDayYmd}
           minSelectableYmd={minSelectableYmd}
+          holidayYmds={holidayYmds}
           onSelectDay={onSelectCalendarDay}
           staffColorAssignments={staffColorAssignments}
           schedules={schedules}

@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import {
   compareSalonYmd,
+  gregorianAddDays,
   normalizePublicBookingDayStr,
   salonDayStartUtc,
   salonFirstBookableYmd,
@@ -17,7 +18,7 @@ import {
   normalizeStaffMember,
   staffEligibleForService,
 } from "../lib/roles";
-import type { AppointmentRow, StaffMember, StaffScheduleRow, StaffServiceRow } from "../types/database";
+import type { AppointmentRow, SalonHolidayRow, StaffMember, StaffScheduleRow, StaffServiceRow } from "../types/database";
 import { fetchPublicBookingPanelEnabled } from "../lib/salonSettingsParse";
 import { PublicBookingPanelDisabled } from "../components/PublicBookingPanelDisabled";
 
@@ -29,6 +30,15 @@ type PublicService = {
   active: boolean;
 };
 
+function nextOpenBookableYmd(startYmd: string, holidays: Set<string>): string {
+  let cur = startYmd;
+  for (let i = 0; i < 180; i++) {
+    if (!holidays.has(cur)) return cur;
+    cur = gregorianAddDays(cur, 1);
+  }
+  return startYmd;
+}
+
 /**
  * Минимальная онлайн-запись: услуга → мастер → дата → слот → контакты → запись в CRM-календарь.
  * Без reception-панели и тяжёлого календаря.
@@ -39,6 +49,7 @@ export function SimplePublicBookingPage() {
   const [staffDirectory, setStaffDirectory] = useState<StaffMember[]>([]);
   const [links, setLinks] = useState<StaffServiceRow[]>([]);
   const [schedules, setSchedules] = useState<StaffScheduleRow[]>([]);
+  const [holidays, setHolidays] = useState<SalonHolidayRow[]>([]);
   const [appointments, setAppointments] = useState<AppointmentRow[]>([]);
   const [timeOff, setTimeOff] = useState<
     Array<{ staff_id: string; start_time: string; end_time: string }>
@@ -72,10 +83,11 @@ export function SimplePublicBookingPage() {
       return;
     }
     setBookingPanelDisabledByAdmin(false);
-    const [st, lk, sc] = await Promise.all([
+    const [st, lk, sc, hol] = await Promise.all([
       supabase.from("staff").select("*").eq("is_active", true).order("name"),
       supabase.from("staff_services").select("*"),
       supabase.from("staff_schedule").select("*"),
+      supabase.from("salon_holidays").select("*"),
     ]);
     let sv = await supabase
       .from("service_listings")
@@ -103,6 +115,7 @@ export function SimplePublicBookingPage() {
     }
     if (lk.data) setLinks(lk.data as StaffServiceRow[]);
     if (sc.data) setSchedules(sc.data as StaffScheduleRow[]);
+    if (hol.data) setHolidays(hol.data as SalonHolidayRow[]);
     setLoading(false);
   }, []);
 
@@ -122,14 +135,18 @@ export function SimplePublicBookingPage() {
   }, []);
 
   const firstBookableYmd = useMemo(() => salonFirstBookableYmd(new Date(nowTick)), [nowTick]);
+  const holidaySet = useMemo(() => new Set(holidays.map((h) => h.holiday_date)), [holidays]);
+  const firstOpenBookableYmd = useMemo(
+    () => nextOpenBookableYmd(firstBookableYmd, holidaySet),
+    [firstBookableYmd, holidaySet],
+  );
 
   useEffect(() => {
-    const min = salonFirstBookableYmd(new Date(nowTick));
-    if (compareSalonYmd(bookYmd, min) < 0) {
-      setDayStr(min);
+    if (compareSalonYmd(bookYmd, firstOpenBookableYmd) < 0 || holidaySet.has(bookYmd)) {
+      setDayStr(firstOpenBookableYmd);
       setPickedStart(null);
     }
-  }, [nowTick, bookYmd]);
+  }, [bookYmd, firstOpenBookableYmd, holidaySet]);
 
   const eligibleStaff = useMemo(() => {
     if (serviceId == null) return [];
@@ -185,6 +202,7 @@ export function SimplePublicBookingPage() {
 
   const slots: Slot[] = useMemo(() => {
     if (!svc || !staffId) return [];
+    if (holidaySet.has(bookYmd)) return [];
     const member = eligibleStaff.find((m) => m.id === staffId);
     if (!member) return [];
     const memberSchedule = schedules
@@ -206,13 +224,18 @@ export function SimplePublicBookingPage() {
       staffId: member.id,
     });
     return raw.filter((s) => s.start.getTime() >= nowTick).sort((a, b) => a.start.getTime() - b.start.getTime());
-  }, [appointments, bookYmd, durationMin, eligibleStaff, schedules, salonDayStart, svc, staffId, timeOff, nowTick]);
+  }, [appointments, bookYmd, durationMin, eligibleStaff, holidaySet, schedules, salonDayStart, svc, staffId, timeOff, nowTick]);
 
   async function confirmBook() {
     const name = clientName.trim();
     if (!svc || !staffId || !pickedStart || !name) {
       setMsgIsSuccess(false);
       setMsg(t("publicBook.fillAll", { defaultValue: "Заполните все поля" }));
+      return;
+    }
+    if (holidaySet.has(bookYmd)) {
+      setMsgIsSuccess(false);
+      setMsg(t("publicBook.salonClosedDay", { defaultValue: "Salon is closed on this day." }));
       return;
     }
     if (pickedStart.getTime() < Date.now()) {
@@ -367,12 +390,19 @@ export function SimplePublicBookingPage() {
             <span className="text-zinc-400">{t("simpleBook.date", { defaultValue: "Дата" })}</span>
             <input
               type="date"
-              min={firstBookableYmd}
+              min={firstOpenBookableYmd}
               value={bookYmd}
               onChange={(e) => {
                 const v = e.target.value;
                 if (v) {
-                  setDayStr(normalizePublicBookingDayStr(v));
+                  const next = normalizePublicBookingDayStr(v);
+                  if (holidaySet.has(next)) {
+                    setMsgIsSuccess(false);
+                    setMsg(t("publicBook.salonClosedDay", { defaultValue: "Salon is closed on this day." }));
+                    setDayStr(firstOpenBookableYmd);
+                  } else {
+                    setDayStr(next);
+                  }
                   setPickedStart(null);
                 }
               }}
