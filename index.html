@@ -60,7 +60,14 @@
           <a href="/en/" data-lang="en">EN</a>
         </span>
         <a href="#broneeri" class="nav-cta" data-i18n="site.ctaBook">Записаться</a>
-        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" id="nav-toggle" data-i18n="site.menu">Меню</button>
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" id="nav-toggle" aria-label="Меню">
+          <svg class="nav-toggle__icon" width="22" height="16" viewBox="0 0 22 16" fill="none" aria-hidden="true" focusable="false">
+            <rect width="22" height="2" rx="1" fill="currentColor"/>
+            <rect y="7" width="22" height="2" rx="1" fill="currentColor"/>
+            <rect y="14" width="22" height="2" rx="1" fill="currentColor"/>
+          </svg>
+          <span class="nav-toggle__label" data-i18n="site.menu" aria-hidden="true">Меню</span>
+        </button>
       </div>
     </div>
   </header>
@@ -102,7 +109,7 @@
 
     <div class="trust-strip">
       <div class="container trust-inner">
-        <span data-i18n="site.trustAddress">Härma Keskus · Tallinna mnt 70 · Pärnu</span>
+        <a class="trust-address-link" href="https://maps.google.com/?q=Tallinna+mnt+70,+P%C3%A4rnu,+Estonia" target="_blank" rel="noopener" data-i18n="site.trustAddress">Härma Keskus · Tallinna mnt 70 · Pärnu</a>
         <span data-i18n="site.trustHours">Пн–Пт 10–18 · Сб 10–16</span>
         <span><a href="#meist" data-i18n="site.trustSalon">AlesSanna Ilusalong</a></span>
         <span><a href="tel:+3725298225">529 8225</a></span>
@@ -399,7 +406,9 @@
           <div class="contact-info">
             <address class="contact-block">
               <span class="contact-label" data-i18n="site.contactAddressLabel">Адрес</span>
-              <p>Härma Keskus<br />Tallinna mnt 70<br />Pärnu, Estonia, 80034</p>
+              <a class="contact-address-link" href="https://maps.google.com/?q=Tallinna+mnt+70,+P%C3%A4rnu,+Estonia" target="_blank" rel="noopener">
+                <p>Härma Keskus<br />Tallinna mnt 70<br />Pärnu, Estonia, 80034</p>
+              </a>
               <p class="contact-hint" data-i18n="site.contactAddressHint">Салон находится в Härma Keskus по адресу Tallinna mnt 70.</p>
             </address>
             <p class="contact-block">
@@ -446,7 +455,7 @@
         <li><a href="/cookies.html" data-i18n="site.footerCookies">Cookie</a></li>
       </ul>
       <img class="footer-logo" src="/assets/alessanna-logo-transparent.png" alt="AlesSanna Ilusalong" width="1200" height="430" />
-      <p class="footer-meta" data-i18n="site.trustAddress">Härma Keskus · Tallinna mnt 70 · Pärnu</p>
+      <a class="footer-meta trust-address-link" href="https://maps.google.com/?q=Tallinna+mnt+70,+P%C3%A4rnu,+Estonia" target="_blank" rel="noopener" data-i18n="site.trustAddress">Härma Keskus · Tallinna mnt 70 · Pärnu</a>
       <p class="footer-copy">© <span id="year"></span> AlesSanna Ilusalong</p>
     </div>
 
