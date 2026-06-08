@@ -1595,7 +1595,6 @@
       if (changed) {
         renderList();
         updateBookingChainPreview();
-        if (staffIdOrAny && scrollAfter) scrollToBookingBlock();
       }
     }
 
@@ -1905,7 +1904,6 @@
       }
       syncFormCategory();
       renderList();
-      if (picked.length) scrollToMastersBlock();
     }
 
     function wireMenuPickRows() {
@@ -2138,7 +2136,6 @@
       setMasterDisplayText(id ? masterNameById(id) : UI.masterNone);
       highlightTeam(id || "");
       masterSelect.dispatchEvent(new Event("change", { bubbles: true }));
-      if (id && scrollAfter) scrollToBookingBlock();
     }
 
     /**
@@ -2209,15 +2206,6 @@
             };
             if (changed) setTimeout(tryApply, 0);
             else tryApply();
-            setTimeout(function () {
-              var bookSec = document.getElementById("broneeri");
-              if (!bookSec) return;
-              var hdr = document.querySelector("#header");
-              var hdrH = hdr ? hdr.getBoundingClientRect().height : 0;
-              var top = bookSec.getBoundingClientRect().top + window.scrollY - hdrH - 24;
-              var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-              window.scrollTo({ top: Math.max(0, top), behavior: reduced ? "auto" : "smooth" });
-            }, 80);
           });
           li.addEventListener("keydown", function (e) {
             if (e.key === "Enter" || e.key === " ") {
@@ -2704,6 +2692,27 @@
       setNotes();
     }
 
+    function reconcileSelectedDateWithAvailability() {
+      if (!selectedKey) return;
+      var parts = selectedKey.split("-").map(Number);
+      if (parts.length !== 3 || !parts[0] || !parts[1] || !parts[2]) {
+        clearSelection();
+        return;
+      }
+      var info = dayAvailability(selectedMasterForAvailability(), parts[0], parts[1] - 1, parts[2]);
+      if (!info.slots.length) {
+        clearSelection();
+        return;
+      }
+      var prevTime = timeSelect.value;
+      selectedSlots = info.slots.slice();
+      dateInput.value = formatLongDate(parts[0], parts[1] - 1, parts[2]);
+      fillTimeOptions();
+      if (prevTime && selectedSlots.indexOf(prevTime) !== -1) {
+        timeSelect.value = prevTime;
+      }
+    }
+
     /** Клик по доступному дню: сохраняем слоты и перерисовываем сетку (.is-selected) */
     function selectDay(y, m, d, slots) {
       selectedKey = dateKey(y, m, d);
@@ -2870,6 +2879,7 @@
         })(day);
       }
 
+      reconcileSelectedDateWithAvailability();
       setNotes();
     }
 
@@ -3168,7 +3178,6 @@
           })
           .then(function () {
             invalidateMonthCache();
-            clearSelection();
             renderCalendar();
           });
         return;
@@ -3177,7 +3186,6 @@
       if (!pub) return;
       setMasterOptions(filterMastersByFormCategory(pub));
       invalidateMonthCache();
-      clearSelection();
       renderCalendar();
     });
 
@@ -3225,7 +3233,6 @@
     window.addEventListener("salon-picks-changed", function () {
       var finish = function () {
         invalidateMonthCache();
-        clearSelection();
         renderCalendar();
       };
       if (!apiBooking) {
@@ -3290,9 +3297,6 @@
         suppressNextMasterScroll = false;
         return;
       }
-      if (masterSelect.value) {
-        smoothScrollTo(bookingSection.querySelector(".booking-shell") || bookingSection, "start");
-      }
     });
 
     serviceSelectEl.addEventListener("change", function (e) {
@@ -3301,9 +3305,6 @@
       invalidateMonthCache();
       clearSelection();
       renderCalendar();
-      if (e && e.isTrusted && serviceItemLabel && !serviceItemLabel.hidden) {
-        smoothScrollTo(serviceItemLabel, "center");
-      }
     });
 
     function getSalonSupabaseCfg() {
