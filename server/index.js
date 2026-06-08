@@ -861,6 +861,68 @@ app.put("/api/crm/salon-hours", requireAuth, requireRoles("admin", "manager"), (
   res.json({ ok: true });
 });
 
+/* ---- CRM: employee schedule (per-employee working weekdays) ---- */
+// Bulk sync: POST { schedules: [{ employeeName, weekdays: [1,2,3,4,5] }] }
+// weekdays: 1=Mon … 6=Sat (matching salon_hours convention)
+app.post("/api/crm/employee-schedule/sync", requireAuth, requireRoles("admin", "manager"), (req, res) => {
+  const { schedules } = req.body || {};
+  if (!Array.isArray(schedules)) return res.status(400).json({ error: "schedules array required" });
+  const del = db.prepare("DELETE FROM employee_schedule WHERE employee_id = ?");
+  const ins = db.prepare(
+    "INSERT INTO employee_schedule (employee_id, weekday, open_min, close_min) VALUES (?, ?, ?, ?)"
+  );
+  const results = [];
+  const run = db.transaction(() => {
+    for (const entry of schedules) {
+      const name = String(entry.employeeName || "").trim();
+      if (!name) continue;
+      const emp = db.prepare("SELECT id FROM employees WHERE LOWER(name) = LOWER(?) AND active = 1").get(name);
+      if (!emp) { results.push({ name, status: "not_found" }); continue; }
+      del.run(emp.id);
+      const wds = Array.isArray(entry.weekdays) ? entry.weekdays : [];
+      for (const wd of wds) {
+        const w = Number(wd);
+        if (w >= 1 && w <= 6) {
+          ins.run(emp.id, w, Number(entry.open_min ?? 0), Number(entry.close_min ?? 1440));
+        }
+      }
+      results.push({ name, id: emp.id, weekdays: wds, status: "ok" });
+    }
+  });
+  run();
+  res.json({ ok: true, results });
+});
+
+app.get("/api/crm/employee-schedule", requireAuth, requireRoles("admin", "manager", "employee"), (_, res) => {
+  const rows = db.prepare("SELECT * FROM employee_schedule ORDER BY employee_id, weekday").all();
+  res.json(rows);
+});
+
+app.put("/api/crm/employee-schedule/:employeeId", requireAuth, requireRoles("admin", "manager"), (req, res) => {
+  const employeeId = Number(req.params.employeeId);
+  if (!employeeId) return res.status(400).json({ error: "Invalid employeeId" });
+  const emp = db.prepare("SELECT id FROM employees WHERE id = ?").get(employeeId);
+  if (!emp) return res.status(404).json({ error: "Employee not found" });
+  const list = req.body; // array of { weekday, open_min, close_min } or null to clear
+  const del = db.prepare("DELETE FROM employee_schedule WHERE employee_id = ?");
+  const ins = db.prepare(
+    "INSERT INTO employee_schedule (employee_id, weekday, open_min, close_min) VALUES (?, ?, ?, ?)"
+  );
+  const run = db.transaction(() => {
+    del.run(employeeId);
+    if (Array.isArray(list)) {
+      for (const row of list) {
+        const wd = Number(row.weekday);
+        if (wd >= 1 && wd <= 6) {
+          ins.run(employeeId, wd, Number(row.open_min ?? 0), Number(row.close_min ?? 1440));
+        }
+      }
+    }
+  });
+  run();
+  res.json({ ok: true });
+});
+
 /* ------------------------- CRM: stats ------------------------- */
 app.get("/api/crm/stats", requireAuth, requireRoles("admin", "manager"), (_, res) => {
   const today = new Date().toISOString().slice(0, 10);

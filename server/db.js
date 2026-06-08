@@ -93,6 +93,14 @@ function migrate(db) {
       service_id INTEGER NOT NULL REFERENCES services(id) ON DELETE CASCADE,
       PRIMARY KEY (employee_id, service_id)
     );
+
+    CREATE TABLE IF NOT EXISTS employee_schedule (
+      employee_id INTEGER NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+      weekday INTEGER NOT NULL CHECK (weekday BETWEEN 1 AND 6),
+      open_min INTEGER NOT NULL DEFAULT 0,
+      close_min INTEGER NOT NULL DEFAULT 1440,
+      PRIMARY KEY (employee_id, weekday)
+    );
   `);
 
   const empCols = db.prepare("PRAGMA table_info(employees)").all();
