@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { addMinutes, format, setHours, setMinutes, startOfDay } from "date-fns";
 import { supabase } from "../../lib/supabase";
@@ -69,6 +69,7 @@ export function ReceptionBookingPopup({
   const { theme } = useTheme();
   const useGold = theme !== "white";
   const popupRef = useRef<HTMLDivElement>(null);
+  const [popupHeight, setPopupHeight] = useState(POPUP_H);
   const isEdit = editAppt != null;
 
   const isExistingBlock = isEdit && !editAppt!.service_id;
@@ -100,8 +101,11 @@ export function ReceptionBookingPopup({
   const [showServicePicker, setShowServicePicker] = useState(false);
   const [showStaffPicker, setShowStaffPicker] = useState(false);
 
-  const left = Math.min(anchorX + 8, window.innerWidth - POPUP_W - 8);
-  const top = Math.max(8, Math.min(anchorY - 8, window.innerHeight - POPUP_H - 8));
+  const popupWidth = Math.min(POPUP_W, window.innerWidth - 16);
+  const maxPopupHeight = Math.max(240, window.innerHeight - 16);
+  const clampedPopupHeight = Math.min(popupHeight, maxPopupHeight);
+  const left = Math.max(8, Math.min(anchorX + 8, window.innerWidth - popupWidth - 8));
+  const top = Math.max(8, Math.min(anchorY - 8, window.innerHeight - clampedPopupHeight - 8));
 
   const selectedStaff = useMemo(() => staff.find((s) => s.id === staffId) ?? null, [staff, staffId]);
   const isManagerOrAdmin = useMemo(
@@ -134,6 +138,22 @@ export function ReceptionBookingPopup({
       setServiceId("");
     }
   }, [staffId, eligibleServices, serviceId, isBlock]);
+
+  useLayoutEffect(() => {
+    const node = popupRef.current;
+    if (!node) return;
+    const updateSize = () => {
+      setPopupHeight(Math.ceil(node.getBoundingClientRect().height));
+    };
+    updateSize();
+    const observer = new ResizeObserver(updateSize);
+    observer.observe(node);
+    window.addEventListener("resize", updateSize);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateSize);
+    };
+  }, []);
 
   useEffect(() => {
     if (endManual) return;
@@ -233,8 +253,8 @@ export function ReceptionBookingPopup({
   return (
     <div
       ref={popupRef}
-      style={{ left, top, width: POPUP_W }}
-      className="fixed z-50 overflow-hidden rounded-2xl border border-line/15 bg-panel shadow-[0_12px_40px_rgba(0,0,0,0.4)]"
+      style={{ left, top, width: popupWidth, maxHeight: maxPopupHeight }}
+      className="fixed z-50 overflow-y-auto rounded-2xl border border-line/15 bg-panel shadow-[0_12px_40px_rgba(0,0,0,0.4)]"
       role="dialog"
       aria-modal="true"
     >
