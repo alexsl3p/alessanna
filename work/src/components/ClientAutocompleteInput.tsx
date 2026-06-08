@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   clientDisplayName,
   fetchClientAutocompleteEnabled,
@@ -28,6 +29,8 @@ export function ClientAutocompleteInput({
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const pickedRef = useRef(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [dropPos, setDropPos] = useState<{ top: number; left: number; width: number } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -58,7 +61,15 @@ export function ClientAutocompleteInput({
       searchClients(q).then((next) => {
         if (cancelled) return;
         setItems(next);
-        setOpen(next.length > 0);
+        if (next.length > 0) {
+          if (wrapRef.current) {
+            const r = wrapRef.current.getBoundingClientRect();
+            setDropPos({ top: r.bottom + 4, left: r.left, width: r.width });
+          }
+          setOpen(true);
+        } else {
+          setOpen(false);
+        }
         setLoading(false);
       });
     }, 180);
@@ -75,20 +86,30 @@ export function ClientAutocompleteInput({
     setItems([]);
   }
 
+  function updateDropPos() {
+    if (!wrapRef.current) return;
+    const r = wrapRef.current.getBoundingClientRect();
+    setDropPos({ top: r.bottom + 4, left: r.left, width: r.width });
+  }
+
   return (
-    <div className="relative">
+    <div className="relative" ref={wrapRef}>
       <input
         autoFocus={autoFocus}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onFocus={() => {
-          if (items.length > 0) setOpen(true);
+          if (items.length > 0) { updateDropPos(); setOpen(true); }
         }}
+        onKeyDown={updateDropPos}
         placeholder={placeholder}
         className={className}
       />
-      {open && (
-        <div className="absolute left-0 right-0 top-full z-[80] mt-1 max-h-56 overflow-y-auto rounded-lg border border-line/20 bg-panel shadow-2xl">
+      {open && dropPos && createPortal(
+        <div
+          className="fixed z-[300] max-h-56 overflow-y-auto rounded-lg border border-line/20 bg-panel shadow-2xl"
+          style={{ top: dropPos.top, left: dropPos.left, width: dropPos.width }}
+        >
           {items.map((client) => (
             <button
               key={client.id}
@@ -104,7 +125,8 @@ export function ClientAutocompleteInput({
             </button>
           ))}
           {loading && <p className="px-3 py-2 text-xs text-muted">...</p>}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
