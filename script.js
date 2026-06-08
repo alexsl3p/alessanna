@@ -323,9 +323,6 @@
     var targetId = btn.getAttribute("aria-controls");
     if (!targetId) return;
     var teenused = document.getElementById("teenused");
-    var isServicesMode = !!(teenused && teenused.classList.contains("services-list-open"));
-    var isPriceMode = !!(teenused && teenused.classList.contains("price-list-open"));
-
     var mount = btn.closest("#teenused-supabase-mount");
     var scope = mount || teenused;
     if (!scope) return;
@@ -343,12 +340,6 @@
     });
 
     applyTeamFilterForActiveTab();
-    if (isServicesMode || isPriceMode) {
-      requestAnimationFrame(function () {
-        var panel = document.getElementById(targetId);
-        if (panel) panel.scrollIntoView({ behavior: "smooth", block: "start" });
-      });
-    }
   });
 
   /**
@@ -1389,6 +1380,21 @@
       });
     }
 
+    function preserveScrollPosition(work) {
+      var sx = window.scrollX || window.pageXOffset || 0;
+      var sy = window.scrollY || window.pageYOffset || 0;
+      var restore = function () {
+        window.scrollTo(sx, sy);
+      };
+      var result = typeof work === "function" ? work() : undefined;
+      restore();
+      requestAnimationFrame(restore);
+      setTimeout(restore, 80);
+      setTimeout(restore, 240);
+      setTimeout(restore, 1000);
+      return result;
+    }
+
     function syncHiddenField() {
       if (!detailField) return;
       /* В hidden-поле кладём все позиции цепочки, чтобы submit-handler мог взять готовый
@@ -1582,6 +1588,7 @@
     }
 
     function applyPickMaster(pickKeyStr, staffIdOrAny, scrollAfter) {
+      return preserveScrollPosition(function () {
       var changed = false;
       for (var i = 0; i < picked.length; i++) {
         if (picked[i].key === pickKeyStr) {
@@ -1596,6 +1603,7 @@
         renderList();
         updateBookingChainPreview();
       }
+      });
     }
 
     /* Определяет «лучшего» мастера для услуги, учитывая глобальный выбор формы.
@@ -1875,6 +1883,7 @@
     }
 
     function togglePick(li) {
+      return preserveScrollPosition(function () {
       var panel = li.closest(".tab-panel");
       if (!panel || !panel.id) return;
       var category = serviceCategoryFromPanel(panel);
@@ -1904,6 +1913,7 @@
       }
       syncFormCategory();
       renderList();
+      });
     }
 
     function wireMenuPickRows() {
@@ -2005,6 +2015,7 @@
     }
 
     function addPickFromServiceOption(opt) {
+      return preserveScrollPosition(function () {
       if (!opt || !opt.value) return;
       var catSel = serviceSelect;
       var catOpt = catSel ? catSel.options[catSel.selectedIndex] : null;
@@ -2050,16 +2061,19 @@
       picked = [pick];
       syncFormCategory();
       renderList();
+      });
     }
 
     if (serviceSelect) {
       serviceSelect.addEventListener("change", function (e) {
+        preserveScrollPosition(function () {
         var catId = String(serviceSelect.value || "");
         if (e && e.isTrusted && !syncingFormFromCart && picked.length) {
           picked = [];
           renderList();
         }
         relayoutServiceItemSelect(catId);
+        });
       });
     }
     if (serviceItemSelect) {
