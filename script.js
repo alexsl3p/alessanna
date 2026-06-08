@@ -1949,6 +1949,8 @@
 
     function relayoutServiceItemSelect(catId) {
       if (!serviceItemSelect) return;
+      var serviceItemLabel = serviceItemSelect.closest("label");
+      if (serviceItemLabel) serviceItemLabel.hidden = !catId;
       var opts = serviceItemSelect.querySelectorAll("option");
       var matched = 0;
       var firstMatchValue = "";
@@ -2051,6 +2053,10 @@
     if (serviceSelect) {
       serviceSelect.addEventListener("change", function () {
         var catId = String(serviceSelect.value || "");
+        if (!syncingFormFromCart && picked.length) {
+          picked = [];
+          renderList();
+        }
         relayoutServiceItemSelect(catId);
       });
     }
@@ -2273,6 +2279,7 @@
             serviceId: p.serviceId,
             duration: Number(p.duration) || 0,
             buffer: Number(p.buffer) || 0,
+            masters: Array.isArray(p.masters) ? p.masters.slice() : [],
             selectedMaster: p.selectedMaster || "",
           };
         });
@@ -2514,6 +2521,58 @@
       return masterSelect.value || ANY_MASTER_ID;
     }
 
+    function bookingChainApi() {
+      return (typeof globalThis !== "undefined") ? globalThis.__SITE_BOOKING_CHAIN__ : null;
+    }
+
+    function selectedBookingItems() {
+      var chainApi = bookingChainApi();
+      if (!chainApi || typeof chainApi.getItems !== "function") return [];
+      var items = chainApi.getItems();
+      return Array.isArray(items) ? items : [];
+    }
+
+    function hasSelectedBookingService() {
+      return selectedBookingItems().some(function (item) {
+        return !!String((item && item.serviceId) || "").trim();
+      });
+    }
+
+    function selectedServiceIdForAvailability() {
+      var items = selectedBookingItems();
+      for (var i = 0; i < items.length; i++) {
+        var sid = String((items[i] && items[i].serviceId) || "").trim();
+        if (sid) return sid;
+      }
+      return "";
+    }
+
+    function unionMasterIdsForAvailability() {
+      var chainApi = bookingChainApi();
+      if (chainApi && typeof chainApi.getUnionMasters === "function") {
+        var union = chainApi.getUnionMasters();
+        if (Array.isArray(union) && union.length) {
+          return union.map(function (id) { return String(id); }).filter(Boolean);
+        }
+      }
+      var ids = {};
+      selectedBookingItems().forEach(function (item) {
+        var masters = item && Array.isArray(item.masters) ? item.masters : [];
+        masters.forEach(function (id) {
+          var mid = String(id || "").trim();
+          if (mid) ids[mid] = true;
+        });
+      });
+      return Object.keys(ids);
+    }
+
+    function masterIdsForAvailability() {
+      if (!hasSelectedBookingService()) return [];
+      var selected = selectedMasterForAvailability();
+      if (selected && selected !== ANY_MASTER_ID) return [selected];
+      return unionMasterIdsForAvailability();
+    }
+
     function smoothScrollTo(el, block) {
       if (!el) return;
       requestAnimationFrame(function () {
@@ -2526,6 +2585,9 @@
      * tier: locked | off | none | soft | busy | featured — соответствует классам .is-* в CSS.
      */
     function dayAvailability(masterId, y, m, d) {
+      if (!hasSelectedBookingService()) {
+        return { tier: "locked", slots: [] };
+      }
       if (!masterId) masterId = ANY_MASTER_ID;
       if (isSalonHolidayKey(dateKey(y, m, d))) {
         return { tier: "off", slots: [] };
@@ -2550,9 +2612,9 @@
       }
       if (masterId === ANY_MASTER_ID) {
         var combined = [];
-        var demoMasters = publicStaffAsMasterOptions() || [];
-        for (var dm = 0; dm < demoMasters.length; dm++) {
-          var demoInfo = dayAvailability(demoMasters[dm].id, y, m, d);
+        var demoMasterIds = masterIdsForAvailability();
+        for (var dm = 0; dm < demoMasterIds.length; dm++) {
+          var demoInfo = dayAvailability(demoMasterIds[dm], y, m, d);
           combined = combined.concat(demoInfo.slots);
         }
         combined.sort();
@@ -2613,6 +2675,11 @@
 
     /** Две строки под календарём: подсказки в зависимости от мастера / даты */
     function setNotes() {
+      if (!hasSelectedBookingService()) {
+        if (notePrimary) notePrimary.textContent = pubT("site.ui.pickService", "Choose a service");
+        if (noteSecondary) noteSecondary.textContent = "";
+        return;
+      }
       if (!selectedKey) {
         if (notePrimary) notePrimary.textContent = MSGS.pickDay;
         if (noteSecondary) noteSecondary.textContent = "";
@@ -2682,12 +2749,12 @@
     }
 
     function ensureMonthThenRender() {
-      if (!apiBooking || !serviceSelectEl.value) {
+      if (!apiBooking || !hasSelectedBookingService()) {
         monthDays = null;
         renderCalendarBody();
         return;
       }
-      var sid = serviceIdBySlug[serviceSelectEl.value];
+      var sid = selectedServiceIdForAvailability() || serviceIdBySlug[serviceSelectEl.value];
       if (!sid) {
         monthDays = null;
         renderCalendarBody();
@@ -3057,8 +3124,7 @@
 
     /** Rebuild master dropdown from API for the selected service (employee_services filter). */
     function refillMastersForCurrentService() {
-      var slug = serviceSelectEl.value;
-      var svcId = serviceIdBySlug[slug];
+      var svcId = selectedServiceIdForAvailability() || serviceIdBySlug[serviceSelectEl.value];
       var url = "/api/public/employees";
       if (svcId) url += "?serviceId=" + encodeURIComponent(String(svcId));
       return fetch(url)
@@ -3171,6 +3237,23 @@
       updateMasterHint(pickedCount, realMasters, partial);
     });
 
+    window.addEventListener("salon-picks-changed", function () {
+      var finish = function () {
+        invalidateMonthCache();
+        clearSelection();
+        renderCalendar();
+      };
+      if (!apiBooking) {
+        finish();
+        return;
+      }
+      refillMastersForCurrentService()
+        .catch(function () {
+          setMasterOptions([]);
+        })
+        .then(finish);
+    });
+
     prevBtn.addEventListener("click", function () {
       if (prevBtn.disabled) return;
       viewM--;
@@ -3228,21 +3311,13 @@
     });
 
     serviceSelectEl.addEventListener("change", function (e) {
-      var masterField = masterSelect.closest("label") || masterSelect;
-      var shouldScrollToMasterField = !!(e && e.isTrusted);
-      if (apiBooking) {
-        refillMastersForCurrentService().then(function () {
-          invalidateMonthCache();
-          clearSelection();
-          renderCalendar();
-          if (shouldScrollToMasterField) smoothScrollTo(masterField, "center");
-        });
-      } else {
-        refillDemoMastersForCurrentService();
-        invalidateMonthCache();
-        clearSelection();
-        renderCalendar();
-        if (shouldScrollToMasterField) smoothScrollTo(masterField, "center");
+      var serviceItemField = bookingForm.querySelector("[data-form-service-item]");
+      var serviceItemLabel = serviceItemField ? serviceItemField.closest("label") : null;
+      invalidateMonthCache();
+      clearSelection();
+      renderCalendar();
+      if (e && e.isTrusted && serviceItemLabel && !serviceItemLabel.hidden) {
+        smoothScrollTo(serviceItemLabel, "center");
       }
     });
 

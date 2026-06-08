@@ -2604,11 +2604,15 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
 .booking-shell {
   display: grid;
   grid-template-columns: minmax(280px, 1fr) minmax(300px, 1.05fr);
+  grid-template-areas:
+    "steps steps"
+    "calendar form";
   gap: clamp(1.5rem, 3vw, 2.5rem);
   align-items: start;
 }
 
 .booking-calendar {
+  grid-area: calendar;
   padding: 1.35rem 1.25rem 1.15rem;
   border-radius: 1.35rem;
   background: linear-gradient(165deg, rgba(22, 20, 18, 0.96), rgba(10, 9, 8, 0.98));
@@ -2852,14 +2856,13 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
 }
 
 .booking-side {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
+  display: contents;
 }
 
 .booking-steps-card {
-  padding: 1.1rem 1.15rem 1.15rem;
-  border-radius: 1rem;
+  grid-area: steps;
+  padding: 1.35rem 1.45rem 1.4rem;
+  border-radius: 1.35rem;
   background: linear-gradient(145deg, rgba(55, 45, 30, 0.95), rgba(24, 20, 14, 0.98));
   border: 1px solid rgba(197, 160, 89, 0.28);
   box-shadow: var(--shadow-card), inset 0 1px 0 rgba(255, 255, 255, 0.04);
@@ -2917,8 +2920,53 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
 }
 
 .booking-form {
+  grid-area: form;
   display: grid;
   gap: 1rem;
+}
+
+.booking-form label:has([name="service"]) {
+  order: 1;
+}
+
+.booking-form label:has([data-form-service-item]) {
+  order: 2;
+}
+
+.booking-form label:has([data-form-service-item]:disabled) {
+  display: none;
+}
+
+.booking-form label:has([data-master-select]) {
+  order: 3;
+}
+
+.booking-form label:has([data-booking-date]) {
+  order: 4;
+}
+
+.booking-form label:has([data-booking-time]) {
+  order: 5;
+}
+
+.booking-form label:has([name="name"]) {
+  order: 6;
+}
+
+.booking-form label:has([name="phone"]) {
+  order: 7;
+}
+
+.booking-form label:has([name="email"]) {
+  order: 8;
+}
+
+.booking-chain {
+  order: 9;
+}
+
+.booking-submit {
+  order: 10;
 }
 
 .booking-form label {
@@ -3114,6 +3162,10 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
 @media (max-width: 900px) {
   .booking-shell {
     grid-template-columns: 1fr;
+    grid-template-areas:
+      "steps"
+      "calendar"
+      "form";
   }
 
   .booking-steps-list {
