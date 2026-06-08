@@ -71,6 +71,7 @@ export function ReceptionApptInfoPopup({
   const editBtnCls = useGold
     ? "bg-gold/10 border-gold/30 hover:bg-gold/20 text-gold"
     : "bg-[#e8f0fe] border-[#4285f4]/30 hover:bg-[#d2e3fc] text-[#1a73e8]";
+  const labelCls = useGold ? "text-gold/75" : "text-[#a47a3f]";
   const cancelBtnCls = "border-rose-400/25 bg-rose-400/10 text-rose-300 hover:bg-rose-400/15";
   const left = Math.min(anchorX + 8, window.innerWidth - POPUP_W - 8);
   const top = Math.max(8, Math.min(anchorY - 8, window.innerHeight - POPUP_H - 8));
@@ -102,7 +103,7 @@ export function ReceptionApptInfoPopup({
             </svg>
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted">Клиент</p>
+            <p className={`text-[10px] font-semibold uppercase tracking-widest ${labelCls}`}>Клиент</p>
             <p className="mt-0.5 text-base font-semibold leading-tight text-fg">
               {isBlock
                 ? (isPersonal ? "Личные дела" : "— Закрыто —")
@@ -119,7 +120,7 @@ export function ReceptionApptInfoPopup({
                   <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
                 </svg>
                 <div className="min-w-0">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted">Телефон</p>
+                  <p className={`text-[10px] font-semibold uppercase tracking-widest ${labelCls}`}>Телефон</p>
                   <p className="mt-0.5 text-sm text-fg">{appt.client_phone}</p>
                 </div>
               </div>
@@ -131,7 +132,7 @@ export function ReceptionApptInfoPopup({
                   <path d="M2.76 7.92V14a2 2 0 002 2h10.48a2 2 0 002-2V7.92l-6.73 4.04a1 1 0 01-1.02 0L2.76 7.92z" />
                 </svg>
                 <div className="min-w-0">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted">Email</p>
+                  <p className={`text-[10px] font-semibold uppercase tracking-widest ${labelCls}`}>Email</p>
                   <p className="mt-0.5 truncate text-sm text-fg">{appt.client_email}</p>
                 </div>
               </div>
@@ -147,7 +148,7 @@ export function ReceptionApptInfoPopup({
               </svg>
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted">Услуга</p>
+              <p className={`text-[10px] font-semibold uppercase tracking-widest ${labelCls}`}>Услуга</p>
               <p className="mt-0.5 text-sm leading-snug text-fg">
                 {svc ? `${svc.name_et} (${svc.duration_min} мин)` : "—"}
               </p>
@@ -162,7 +163,7 @@ export function ReceptionApptInfoPopup({
             </svg>
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted">Мастер</p>
+            <p className={`text-[10px] font-semibold uppercase tracking-widest ${labelCls}`}>Мастер</p>
             <p className="mt-0.5 text-sm text-fg">{member?.name ?? "—"}</p>
           </div>
         </div>
@@ -174,7 +175,7 @@ export function ReceptionApptInfoPopup({
             </svg>
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted">Время</p>
+            <p className={`text-[10px] font-semibold uppercase tracking-widest ${labelCls}`}>Время</p>
             <p className="mt-0.5 text-sm text-fg">
               {format(start, "HH:mm")} - {format(end, "HH:mm")}
             </p>
@@ -189,7 +190,7 @@ export function ReceptionApptInfoPopup({
               </svg>
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted">Комментарий</p>
+              <p className={`text-[10px] font-semibold uppercase tracking-widest ${labelCls}`}>Комментарий</p>
               <p className="mt-0.5 text-sm leading-relaxed text-fg">{noteText}</p>
             </div>
           </div>
