@@ -3364,17 +3364,16 @@
       return ANY_MASTER_ID;
     }
 
-    function publicSiteBookingNote(noteVal) {
+    function publicSiteBookingNote() {
       var marker = "*** Онлайн запись ***";
-      var raw = String(noteVal || "").trim();
-      return raw ? marker + "\n" + raw : marker;
+      return marker;
     }
 
     function chainBookingPayload(items, startIso, nameVal, phoneVal, noteVal, emailVal) {
       return {
         p_client_name: nameVal || "",
         p_client_phone: phoneVal || "",
-        p_client_note: publicSiteBookingNote(noteVal),
+        p_client_note: publicSiteBookingNote(),
         p_client_email: emailVal || "",
         p_start_at: startIso,
         p_source: "public_site",
@@ -3596,7 +3595,6 @@
         }
         var nameEl = bookingForm.querySelector('[name="name"]');
         var phoneEl = bookingForm.querySelector('[name="phone"]');
-        var detailEl = bookingForm.querySelector("[data-field-services-detail]");
         fetch("/api/public/bookings", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -3608,7 +3606,7 @@
             time: timeSelect.value,
             clientName: nameEl ? nameEl.value.trim() : "",
             clientPhone: phoneEl ? phoneEl.value.trim() : "",
-            notes: publicSiteBookingNote(detailEl ? detailEl.value.trim() : ""),
+            notes: publicSiteBookingNote(),
           }),
         })
           .then(function (r) {

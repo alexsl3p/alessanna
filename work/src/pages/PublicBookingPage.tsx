@@ -105,10 +105,8 @@ function nextOpenBookableYmd(startYmd: string, holidays: Set<string>): string {
   return startYmd;
 }
 
-function publicSiteBookingNote(rawNote: string): string {
-  const marker = "*** Онлайн запись ***";
-  const note = rawNote.trim();
-  return note ? `${marker}\n${note}` : marker;
+function publicSiteBookingNote(): string {
+  return "*** Онлайн запись ***";
 }
 
 /** Публичная онлайн-запись (`/book`). Рабочий календарь CRM — `/calendar`. */
@@ -894,13 +892,12 @@ export function PublicBookingPage() {
       void loadDayData();
       return;
     }
-    const noteTrim = clientNote.trim();
     try {
       const { data, error: rpcError } = await supabase.rpc("public_book_chain", {
         p_client_name: normalizedClientName || "Клиент",
         p_client_phone: clientPhone.trim() || "",
         p_client_email: clientEmail.trim() || "",
-        p_client_note: publicSiteBookingNote(noteTrim),
+        p_client_note: publicSiteBookingNote(),
         p_start_at: pickedStart.toISOString(),
         p_items: [{ service_id: svc.id, staff_id: finalStaffId }],
         p_source: "public_site",

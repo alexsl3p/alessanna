@@ -39,10 +39,8 @@ function nextOpenBookableYmd(startYmd: string, holidays: Set<string>): string {
   return startYmd;
 }
 
-function publicSiteBookingNote(rawNote: string): string {
-  const marker = "*** Онлайн запись ***";
-  const note = rawNote.trim();
-  return note ? `${marker}\n${note}` : marker;
+function publicSiteBookingNote(): string {
+  return "*** Онлайн запись ***";
 }
 
 /**
@@ -249,7 +247,6 @@ export function SimplePublicBookingPage() {
       setMsg("Выберите актуальное время.");
       return;
     }
-    const noteTrim = clientNote.trim();
     setBooking(true);
     setMsg(null);
     setMsgIsSuccess(false);
@@ -258,7 +255,7 @@ export function SimplePublicBookingPage() {
         p_client_name: name,
         p_client_phone: clientPhone.trim() || "",
         p_client_email: clientEmail.trim() || "",
-        p_client_note: publicSiteBookingNote(noteTrim),
+        p_client_note: publicSiteBookingNote(),
         p_start_at: pickedStart.toISOString(),
         p_items: [{ service_id: svc.id, staff_id: staffId }],
         p_source: "public_site",
