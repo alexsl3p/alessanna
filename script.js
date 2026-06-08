@@ -1654,7 +1654,6 @@
     }
 
     function applyPickMaster(pickKeyStr, staffIdOrAny, scrollAfter) {
-      return preserveScrollPosition(function () {
       var changed = false;
       for (var i = 0; i < picked.length; i++) {
         if (picked[i].key === pickKeyStr) {
@@ -1669,7 +1668,11 @@
         renderList();
         updateBookingChainPreview();
       }
-      });
+      /* Выбор мастера (не снятие) → прокручиваем к форме записи. */
+      if (scrollAfter && staffIdOrAny && changed) {
+        blockScrollRestore(1400);
+        scrollToBookingBlock();
+      }
     }
 
     /* Определяет «лучшего» мастера для услуги, учитывая глобальный выбор формы.
@@ -1949,7 +1952,6 @@
     }
 
     function togglePick(li) {
-      return preserveScrollPosition(function () {
       var panel = li.closest(".tab-panel");
       if (!panel || !panel.id) return;
       var category = serviceCategoryFromPanel(panel);
@@ -1971,6 +1973,7 @@
           break;
         }
       }
+      var adding = idx < 0;
       if (idx >= 0) {
         picked.splice(idx, 1);
       } else {
@@ -1979,7 +1982,14 @@
       }
       syncFormCategory();
       renderList();
-      });
+      /* Добавление услуги: прокручиваем к блоку мастеров. Блокируем все
+       * restore-механизмы на время навигации, чтобы не было туда-сюда. */
+      if (adding && picked.length > 0) {
+        blockScrollRestore(1400);
+        requestAnimationFrame(function () {
+          scrollToSectionTitle("meistrid");
+        });
+      }
     }
 
     function wireMenuPickRows() {
