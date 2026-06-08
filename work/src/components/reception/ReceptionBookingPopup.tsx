@@ -225,6 +225,7 @@ export function ReceptionBookingPopup({
   const accentSaveBg = useGold ? "bg-gold hover:bg-gold/80 text-canvas" : "bg-[#1a73e8] hover:bg-[#1765cc] text-white";
   const accentCancelText = useGold ? "text-gold hover:bg-gold/10" : "text-[#1a73e8] hover:bg-surface";
   const accentResetBtn = useGold ? "text-gold" : "text-[#1a73e8]";
+  const requiredMarkCls = useGold ? "text-gold" : "text-[#1a73e8]";
 
   const inputCls = `flex-1 min-w-0 h-9 rounded-lg border border-line/20 bg-surface px-2 text-sm text-fg focus:outline-none focus:ring-1 ${accentFocus}`;
   const timeCls = `w-24 rounded-lg border border-line/20 bg-surface px-2 py-1 text-sm text-fg focus:outline-none focus:ring-1 ${accentFocus}`;
@@ -301,15 +302,18 @@ export function ReceptionBookingPopup({
 
         {/* Client name */}
         {!isBlock ? (
-          <ClientAutocompleteInput autoFocus value={clientName} onChange={(value) => { setClientName(value); setPickedClientId(null); }}
-            onPick={(client: ClientSuggestion) => {
-              setPickedClientId(client.id);
-              setClientName(clientDisplayName(client) || client.name);
-              setClientPhone(client.phone ?? "");
-              setClientEmail(client.email ?? "");
-            }}
-            placeholder={t("modal.addClient")}
-            className={`w-full border-0 border-b border-line/20 bg-transparent pb-1 text-base font-medium text-fg placeholder:text-muted/50 focus:outline-none ${accentUnderline}`} />
+          <div className="relative">
+            <ClientAutocompleteInput autoFocus value={clientName} onChange={(value) => { setClientName(value); setPickedClientId(null); }}
+              onPick={(client: ClientSuggestion) => {
+                setPickedClientId(client.id);
+                setClientName(clientDisplayName(client) || client.name);
+                setClientPhone(client.phone ?? "");
+                setClientEmail(client.email ?? "");
+              }}
+              placeholder={`${t("modal.addClient")} *`}
+              className={`w-full border-0 border-b border-line/20 bg-transparent pb-1 pr-7 text-base font-medium text-fg placeholder:text-muted/50 focus:outline-none ${accentUnderline}`} />
+            <span className={`pointer-events-none absolute right-1 top-0 text-base font-semibold leading-5 ${requiredMarkCls}`}>*</span>
+          </div>
         ) : (
           <input value={clientName} onChange={(e) => setClientName(e.target.value)}
             placeholder="Причина (необязательно)"
@@ -356,6 +360,7 @@ export function ReceptionBookingPopup({
             <span className={`truncate ${staffId ? "text-fg" : "text-muted/60"}`}>
               {selectedStaff ? selectedStaff.name : "— мастер —"}
             </span>
+            <span className={`ml-auto shrink-0 text-sm font-semibold ${requiredMarkCls}`}>*</span>
             <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0 text-muted" fill="currentColor">
               <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
             </svg>
@@ -386,6 +391,7 @@ export function ReceptionBookingPopup({
               <span className={`truncate ${svc ? "text-fg" : "text-muted/60"}`}>
                 {svc ? `${svc.name_et} (${svc.duration_min} ${t("common.min")})` : t("modal.selectService")}
               </span>
+              <span className={`ml-auto shrink-0 text-sm font-semibold ${requiredMarkCls}`}>*</span>
               <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0 text-muted" fill="currentColor">
                 <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
               </svg>
