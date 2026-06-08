@@ -89,6 +89,24 @@ async function syncSchedulesFromSupabase() {
     console.error("[schedule-sync] Error:", err.message);
   }
 }
+
+let scheduleSyncInFlight = null;
+let scheduleSyncedAt = 0;
+async function refreshSchedulesFromSupabaseIfStale() {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return;
+  const now = Date.now();
+  if (scheduleSyncInFlight) return scheduleSyncInFlight;
+  if (now - scheduleSyncedAt < 60000) return;
+  scheduleSyncInFlight = syncSchedulesFromSupabase()
+    .then(() => {
+      scheduleSyncedAt = Date.now();
+    })
+    .finally(() => {
+      scheduleSyncInFlight = null;
+    });
+  return scheduleSyncInFlight;
+}
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 const root = path.join(__dirname, "..");
@@ -101,7 +119,7 @@ app.use(express.json({ limit: "400kb" }));
 app.use((req, res, next) => {
   if (req.path === "/api/health" || req.path.startsWith("/api/public/")) {
     res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type");
     if (req.method === "OPTIONS") return res.sendStatus(204);
   }
@@ -249,7 +267,8 @@ app.get("/api/public/services", (_, res) => {
   res.json(rows);
 });
 
-app.get("/api/public/slots", (req, res) => {
+app.get("/api/public/slots", async (req, res) => {
+  await refreshSchedulesFromSupabaseIfStale();
   const anyEmployee = req.query.employeeId === "any";
   const employeeId = Number(req.query.employeeId);
   const date = req.query.date;
@@ -260,12 +279,14 @@ app.get("/api/public/slots", (req, res) => {
   if (anyEmployee) return res.json({ slots: slotsForAnyEmployee(serviceId, date) });
   const emp = db.prepare("SELECT id FROM employees WHERE id = ? AND active = 1").get(employeeId);
   if (!emp) return res.status(404).json({ error: "Employee not found" });
+  if (!employeeAllowedForService(employeeId, serviceId)) return res.json({ slots: [] });
   const slots = getSlots(db, { employeeId, dateStr: date, serviceId });
   res.json({ slots });
 });
 
 /** Один запрос на месяц — без десятков отдельных вызовов с клиента */
-app.get("/api/public/calendar-month", (req, res) => {
+app.get("/api/public/calendar-month", async (req, res) => {
+  await refreshSchedulesFromSupabaseIfStale();
   const anyEmployee = req.query.employeeId === "any";
   const employeeId = Number(req.query.employeeId);
   const serviceId = Number(req.query.serviceId);
@@ -277,6 +298,7 @@ app.get("/api/public/calendar-month", (req, res) => {
   if (!anyEmployee) {
     const emp = db.prepare("SELECT id FROM employees WHERE id = ? AND active = 1").get(employeeId);
     if (!emp) return res.status(404).json({ error: "Employee not found" });
+    if (!employeeAllowedForService(employeeId, serviceId)) return res.json({ days: {} });
   }
 
   const dim = new Date(y, m + 1, 0).getDate();
@@ -289,7 +311,8 @@ app.get("/api/public/calendar-month", (req, res) => {
   res.json({ days });
 });
 
-app.post("/api/public/bookings", (req, res) => {
+app.post("/api/public/bookings", async (req, res) => {
+  await refreshSchedulesFromSupabaseIfStale();
   const b = req.body || {};
   let employeeId = Number(b.employeeId);
   const anyEmployee = b.employeeId === "any";
@@ -1115,6 +1138,6 @@ app.listen(PORT, () => {
   } else {
     console.log(`Alessanna listening on :${PORT}`);
   }
-  // Sync employee working days from Supabase CRM on startup
-  syncSchedulesFromSupabase();
+  // Sync employee working days from Supabase CRM on startup.
+  refreshSchedulesFromSupabaseIfStale();
 });

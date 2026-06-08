@@ -21,9 +21,33 @@ function overlaps(s1, e1, s2, e2) {
   return s1 < e2 && e1 > s2;
 }
 
+function salonNow() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Tallinn",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  })
+    .formatToParts(new Date())
+    .reduce((acc, part) => {
+      acc[part.type] = part.value;
+      return acc;
+    }, {});
+  return {
+    dateKey: `${parts.year}-${parts.month}-${parts.day}`,
+    minutes: Number(parts.hour) * 60 + Number(parts.minute),
+  };
+}
+
 function getSlots(db, { employeeId, dateStr, serviceId }) {
   const service = db.prepare("SELECT duration_min, buffer_after_min FROM services WHERE id = ? AND active = 1").get(serviceId);
   if (!service) return [];
+
+  const now = salonNow();
+  if (dateStr < now.dateKey) return [];
 
   const d = new Date(dateStr + "T12:00:00");
   const wd = salonWeekday(d);
@@ -45,6 +69,9 @@ function getSlots(db, { employeeId, dateStr, serviceId }) {
   const duration = service.duration_min;
   const buffer = service.buffer_after_min;
   const step = 30;
+  const openMin = Math.max(Number(hours.open_min), Number(empSched.open_min));
+  const closeMin = Math.min(Number(hours.close_min), Number(empSched.close_min));
+  if (!Number.isFinite(openMin) || !Number.isFinite(closeMin) || openMin >= closeMin) return [];
 
   const existing = db
     .prepare(
@@ -54,7 +81,8 @@ function getSlots(db, { employeeId, dateStr, serviceId }) {
     .all(employeeId, dateStr);
 
   const slots = [];
-  for (let t = hours.open_min; t + duration <= hours.close_min; t += step) {
+  for (let t = openMin; t + duration <= closeMin; t += step) {
+    if (dateStr === now.dateKey && t <= now.minutes) continue;
     const startAt = toIso(dateStr, t);
     const endMin = t + duration + buffer;
     const endAt = toIso(dateStr, endMin);
@@ -81,4 +109,4 @@ function bookingEndAt(dateStr, timeHHMM, durationMin, bufferMin) {
   return { startAt: toIso(dateStr, startMin), endAt: toIso(dateStr, endMin) };
 }
 
-module.exports = { getSlots, bookingEndAt, salonWeekday, toIso, overlaps };
+module.exports = { getSlots, bookingEndAt, salonWeekday, toIso, overlaps, salonNow };

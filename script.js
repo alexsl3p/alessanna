@@ -2434,9 +2434,8 @@
 
     var ANY_MASTER_ID = "any";
 
-    var SLOT_POOL = ["10:00", "11:30", "13:00", "14:30", "16:00", "17:30"];
-
     var apiBooking = false;
+    var publicApiBase = "";
     var serviceIdBySlug = {};
     var monthDays = null;
     var monthCacheKey = "";
@@ -2462,6 +2461,22 @@
     /** Ключ даты YYYY-MM-DD для сравнения и хранения выбора */
     function dateKey(y, m, d) {
       return y + "-" + pad2(m + 1) + "-" + pad2(d);
+    }
+
+    function pickPublicApiBase() {
+      var configured = String(globalThis.SALON_PUBLIC_API_BASE || "").trim().replace(/\/+$/, "");
+      if (configured) return configured;
+      var host = (typeof location !== "undefined" && location.hostname) || "";
+      var hasLocalApi =
+        globalThis.SALON_HAS_LOCAL_API === true ||
+        host === "localhost" ||
+        host === "127.0.0.1" ||
+        host === "0.0.0.0";
+      return hasLocalApi ? "" : "https://work.alessannailu.com";
+    }
+
+    function publicApiUrl(path) {
+      return publicApiBase + path;
     }
 
     function isSalonHolidayKey(key) {
@@ -2506,15 +2521,6 @@
         .catch(function () {
           rememberSalonHolidays([]);
         });
-    }
-
-    /** Простой строковый hash для псевдослучайности по (мастер + дата) */
-    function hashSeed(str) {
-      var h = 0;
-      for (var i = 0; i < str.length; i++) {
-        h = ((h << 5) - h + str.charCodeAt(i)) | 0;
-      }
-      return Math.abs(h);
     }
 
     function anyMasterLabel() {
@@ -2614,37 +2620,7 @@
       if (apiBooking) {
         return { tier: "none", slots: [] };
       }
-      if (masterId === ANY_MASTER_ID) {
-        var combined = [];
-        var demoMasterIds = masterIdsForAvailability();
-        for (var dm = 0; dm < demoMasterIds.length; dm++) {
-          var demoInfo = dayAvailability(demoMasterIds[dm], y, m, d);
-          combined = combined.concat(demoInfo.slots);
-        }
-        combined.sort();
-        var unique = [];
-        for (var us = 0; us < combined.length; us++) {
-          if (unique.indexOf(combined[us]) === -1) unique.push(combined[us]);
-        }
-        if (!unique.length) return { tier: "none", slots: [] };
-        return { tier: unique.length >= 4 ? "soft" : unique.length >= 2 ? "busy" : "featured", slots: unique };
-      }
-      var serviceSlug = serviceSelectEl.value || "service";
-      var seed = hashSeed(masterId + "|" + serviceSlug + "|" + dateKey(y, m, d));
-      var r = seed % 10;
-      if (r < 2) {
-        return { tier: "none", slots: [] };
-      }
-      var tier = r < 5 ? "soft" : r < 8 ? "busy" : "featured";
-      var count = tier === "soft" ? 4 : tier === "busy" ? 2 : 5;
-      var slots = [];
-      var pool = SLOT_POOL.slice();
-      for (var i = 0; i < count && pool.length; i++) {
-        var idx = (seed + i * 7) % pool.length;
-        slots.push(pool.splice(idx, 1)[0]);
-      }
-      slots.sort();
-      return { tier: tier, slots: slots };
+      return { tier: "none", slots: [] };
     }
 
     function formatLongDate(y, m, d) {
@@ -2772,7 +2748,7 @@
       }
       monthCacheKey = cacheK;
       fetch(
-        "/api/public/calendar-month?employeeId=" +
+        publicApiUrl("/api/public/calendar-month?employeeId=") +
           encodeURIComponent(mid) +
           "&serviceId=" +
           encodeURIComponent(sid) +
@@ -3129,7 +3105,7 @@
     /** Rebuild master dropdown from API for the selected service (employee_services filter). */
     function refillMastersForCurrentService() {
       var svcId = selectedServiceIdForAvailability() || serviceIdBySlug[serviceSelectEl.value];
-      var url = "/api/public/employees";
+      var url = publicApiUrl("/api/public/employees");
       if (svcId) url += "?serviceId=" + encodeURIComponent(String(svcId));
       return fetch(url)
         .then(function (r) {
@@ -3141,26 +3117,19 @@
     }
 
     function startBookingWidget() {
+      publicApiBase = pickPublicApiBase();
       // На статическом хостинге (alessannailu.com на GitHub Pages) /api/health
       // никогда не существует, поэтому раньше каждая загрузка страницы давала
       // лишний 404 в DevTools Network. Пробуем сервер только если есть явный
       // флаг или мы на dev-машине.
-      var host = (typeof location !== "undefined" && location.hostname) || "";
-      var hasLocalApi =
-        globalThis.SALON_HAS_LOCAL_API === true ||
-        host === "localhost" ||
-        host === "127.0.0.1" ||
-        host === "0.0.0.0";
-      var pingApi = hasLocalApi
-        ? fetch("/api/health").then(function (r) {
-            return r.ok;
-          })
-        : Promise.resolve(false);
+      var pingApi = fetch(publicApiUrl("/api/health")).then(function (r) {
+        return r.ok;
+      });
 
       pingApi
         .then(function (ok) {
           if (!ok) throw new Error("no-api");
-          return fetch("/api/public/services").then(function (r) {
+          return fetch(publicApiUrl("/api/public/services")).then(function (r) {
             return r.json();
           });
         })
@@ -3192,6 +3161,18 @@
     });
 
     window.addEventListener("site-team-ready", function () {
+      if (apiBooking) {
+        refillMastersForCurrentService()
+          .catch(function () {
+            setMasterOptions([]);
+          })
+          .then(function () {
+            invalidateMonthCache();
+            clearSelection();
+            renderCalendar();
+          });
+        return;
+      }
       var pub = publicStaffAsMasterOptions();
       if (!pub) return;
       setMasterOptions(filterMastersByFormCategory(pub));
@@ -3595,7 +3576,7 @@
         }
         var nameEl = bookingForm.querySelector('[name="name"]');
         var phoneEl = bookingForm.querySelector('[name="phone"]');
-        fetch("/api/public/bookings", {
+        fetch(publicApiUrl("/api/public/bookings"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
