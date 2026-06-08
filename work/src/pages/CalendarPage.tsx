@@ -43,6 +43,7 @@ import {
 import { fetchReceptionLayoutFromServer } from "../lib/receptionLayoutRemote";
 import { BookingModal } from "../components/BookingModal";
 import { ReceptionWeekGrid } from "../components/reception/ReceptionWeekGrid";
+import { ReceptionApptInfoPopup } from "../components/reception/ReceptionApptInfoPopup";
 import { AdminDaySchedulePopup } from "../components/reception/AdminDaySchedulePopup";
 import { buildStaffHueMap } from "../lib/staffHue";
 import { staffCrmAppointmentBlockStyle } from "../lib/staffCalendarColors";
@@ -66,6 +67,7 @@ export function CalendarPage() {
   const [calendarServiceId, setCalendarServiceId] = useState<string | number | null>(null);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState<{ start: Date; staffId: string; editAppt?: AppointmentRow | null } | null>(null);
+  const [infoPopup, setInfoPopup] = useState<{ appt: AppointmentRow; anchorX: number; anchorY: number } | null>(null);
   const [dayPopup, setDayPopup] = useState<{ day: Date; x: number; y: number } | null>(null);
   const [receptionMastersConfig, setReceptionMastersConfig] = useState<ReceptionMastersPanelConfig>(() => ({
     ...DEFAULT_RECEPTION_MASTERS_PANEL,
@@ -285,6 +287,11 @@ export function CalendarPage() {
     setModal({ start, staffId: sid });
   }
 
+  function openEditFromInfo(appt: AppointmentRow) {
+    setInfoPopup(null);
+    setModal({ start: parseISO(appt.start_time), staffId: appt.staff_id, editAppt: appt });
+  }
+
   return (
     <div className="flex flex-col gap-3 text-fg">
       {/* Top navigation */}
@@ -382,9 +389,9 @@ export function CalendarPage() {
                   : [...effectiveVisibleIds][0] ?? activeStaffForCalendar[0]?.id;
                 if (sid) setModal({ start, staffId: sid });
               }}
-              onApptClick={(appt) => {
+              onApptClick={(appt, x, y) => {
                 if (!canUseCalendar) return;
-                setModal({ start: parseISO(appt.start_time), staffId: appt.staff_id, editAppt: appt });
+                setInfoPopup({ appt, anchorX: x, anchorY: y });
               }}
               onApptResize={canUseCalendar ? handleApptResize : undefined}
               onDayHeaderClick={canManage ? (day, x, y) => setDayPopup({ day, x, y }) : undefined}
@@ -490,6 +497,20 @@ export function CalendarPage() {
           mastersHallSplit={mastersSplitResolved}
           mastersHallFullPanel={mastersPanelStaffForHall}
           editAppointment={modal.editAppt ?? null}
+        />
+      )}
+
+      {infoPopup && (
+        <ReceptionApptInfoPopup
+          appt={infoPopup.appt}
+          anchorX={infoPopup.anchorX}
+          anchorY={infoPopup.anchorY}
+          staff={staff}
+          services={services}
+          canManage={canManage}
+          onClose={() => setInfoPopup(null)}
+          onEdit={() => openEditFromInfo(infoPopup.appt)}
+          onSaved={() => { setInfoPopup(null); void load(); }}
         />
       )}
 

@@ -142,6 +142,8 @@ export function ReceptionWeekGrid({
 
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressFired = useRef(false);
+  const lastOpenRef = useRef<{ id: string; at: number } | null>(null);
+  const suppressClickUntilRef = useRef(0);
   const pointerDownY = useRef(0);
   const [resizeModeId, setResizeModeId] = useState<string | null>(null);
   const [preview, setPreview] = useState<{ id: string; start: Date; end: Date } | null>(null);
@@ -160,6 +162,14 @@ export function ReceptionWeekGrid({
 
   function clearLongPress() {
     if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; }
+  }
+
+  function openAppointment(appt: AppointmentRow, x: number, y: number) {
+    const nowMs = Date.now();
+    const last = lastOpenRef.current;
+    if (last?.id === appt.id && nowMs - last.at < 300) return;
+    lastOpenRef.current = { id: appt.id, at: nowMs };
+    onApptClick(appt, x, y);
   }
 
   // ---- Mouse: card click opens popup (handle zones stop propagation, so this
@@ -188,7 +198,7 @@ export function ReceptionWeekGrid({
 
     if (e.pointerType === "mouse") {
       if (Math.abs(e.clientY - pointerDownY.current) <= 4) {
-        onApptClick(appt, e.clientX, e.clientY);
+        openAppointment(appt, e.clientX, e.clientY);
       }
       return;
     }
@@ -198,7 +208,7 @@ export function ReceptionWeekGrid({
     if (resizeModeId === appt.id) return;
     // If finger moved > 8 px it was a scroll attempt — don't open popup
     if (Math.abs(e.clientY - pointerDownY.current) > 8) return;
-    onApptClick(appt, e.clientX, e.clientY);
+    openAppointment(appt, e.clientX, e.clientY);
   }
 
   function handleCardPointerCancel() {
@@ -235,9 +245,10 @@ export function ReceptionWeekGrid({
       d.curEnd.getTime() !== d.origEnd.getTime();
     if (!changed) {
       // No drag — treat as a regular click to open the appointment
-      onApptClick(d.appt, e.clientX, e.clientY);
+      openAppointment(d.appt, e.clientX, e.clientY);
       return;
     }
+    suppressClickUntilRef.current = Date.now() + 300;
     if (onApptResize) onApptResize(d.appt, d.curStart, d.curEnd);
   }
 
@@ -288,6 +299,7 @@ export function ReceptionWeekGrid({
     const changed =
       d.curStart.getTime() !== d.origStart.getTime() ||
       d.curEnd.getTime() !== d.origEnd.getTime();
+    if (changed) suppressClickUntilRef.current = Date.now() + 300;
     if (changed && onApptResize) onApptResize(d.appt, d.curStart, d.curEnd);
   }
 
@@ -618,6 +630,12 @@ export function ReceptionWeekGrid({
                         handleCardPointerUp(e, appt);
                       }}
                       onPointerCancel={handleCardPointerCancel}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (Date.now() < suppressClickUntilRef.current) return;
+                        if (resizeModeId === appt.id || longPressFired.current) return;
+                        openAppointment(appt, e.clientX, e.clientY);
+                      }}
                     >
                       <p className="truncate text-[11px] font-semibold leading-tight">
                         {isPersonal ? (
@@ -663,6 +681,12 @@ export function ReceptionWeekGrid({
                             handleHandlePointerUp(e);
                           }
                         }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (Date.now() < suppressClickUntilRef.current) return;
+                          if (inResizeMode || longPressFired.current) return;
+                          openAppointment(appt, e.clientX, e.clientY);
+                        }}
                       >
                         {inResizeMode && <div className="mt-0.5 h-1.5 w-8 rounded-full bg-white shadow" />}
                       </div>
@@ -686,6 +710,12 @@ export function ReceptionWeekGrid({
                           } else if (inResizeMode) {
                             handleHandlePointerUp(e);
                           }
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (Date.now() < suppressClickUntilRef.current) return;
+                          if (inResizeMode || longPressFired.current) return;
+                          openAppointment(appt, e.clientX, e.clientY);
                         }}
                       >
                         {inResizeMode && <div className="mb-0.5 h-1.5 w-8 rounded-full bg-white shadow" />}

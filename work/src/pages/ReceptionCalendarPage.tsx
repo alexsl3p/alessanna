@@ -430,6 +430,8 @@ export function ReceptionCalendarPage() {
       {infoPopup && (
         <ReceptionApptInfoPopup
           appt={infoPopup.appt}
+          anchorX={infoPopup.anchorX}
+          anchorY={infoPopup.anchorY}
           staff={staff}
           services={services}
           canManage={canManage}
