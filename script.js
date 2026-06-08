@@ -2933,7 +2933,7 @@
       return supaRest(svcQ).then(function (svcRows) {
         var svc = svcRows && svcRows[0];
         if (!svc || svc.is_active === false || Number(svc.duration || 0) <= 0) {
-          return { duration: 0, buffer: 0, staffIds: [], schedules: [], busy: [] };
+          return { duration: 0, buffer: 0, staffIds: [], workDates: [], busy: [] };
         }
         var duration = Number(svc.duration || 0);
         var buffer = Number(svc.buffer_after_min || 0);
@@ -2951,7 +2951,7 @@
             eligibleIds = eligible[String(employeeId)] ? [String(employeeId)] : [];
           }
           if (!eligibleIds.length) {
-            return { duration: duration, buffer: buffer, staffIds: [], schedules: [], busy: [] };
+            return { duration: duration, buffer: buffer, staffIds: [], workDates: [], busy: [] };
           }
 
           // Фильтр видимости из таблицы staff (не зависим от готовности глобала).
@@ -2973,7 +2973,7 @@
               return visible[id];
             });
             if (!staffIds.length) {
-              return { duration: duration, buffer: buffer, staffIds: [], schedules: [], busy: [] };
+              return { duration: duration, buffer: buffer, staffIds: [], workDates: [], busy: [] };
             }
             return supaLoadContextWindow(serviceId, staffIds, duration, buffer, fromYmd, toYmd);
           });
@@ -2993,9 +2993,11 @@
 
           return Promise.all([
             supaRest(
-              "staff_schedule?staff_id=in." +
+              "staff_work_dates?staff_id=in." +
                 inList +
-                "&select=staff_id,day_of_week,start_time,end_time"
+                "&work_date=gte." + fromYmd +
+                "&work_date=lte." + toYmd +
+                "&select=staff_id,work_date"
             ),
             supaRest(
               "appointments?staff_id=in." +
@@ -3038,7 +3040,7 @@
               duration: duration,
               buffer: buffer,
               staffIds: staffIds,
-              schedules: res[0] || [],
+              workDates: res[0] || [],
               busy: busy,
             };
           });
@@ -3047,11 +3049,10 @@
     function supaSlotsForStaffDay(ctx, staffId, ymd) {
       if (salonHolidayDates[ymd]) return [];
       if (ctx.duration <= 0) return [];
-      var wd = supaWeekdaySun0(ymd);
-      var scheds = ctx.schedules.filter(function (r) {
-        return String(r.staff_id) === staffId && Number(r.day_of_week) === wd;
+      var works = (ctx.workDates || []).some(function (wd) {
+        return String(wd.staff_id) === staffId && wd.work_date === ymd;
       });
-      if (!scheds.length) return [];
+      if (!works) return [];
       var now = supaNowInfo();
       if (ymd < now.dateKey) return [];
       var dayStart = supaDayStartUtc(ymd).getTime();
@@ -3060,19 +3061,17 @@
         return b.staff_id === staffId && b.s < dayEnd && b.e > dayStart;
       });
       var out = [];
-      scheds.forEach(function (row) {
-        var sM = supaTimeToMin(row.start_time);
-        var eM = supaTimeToMin(row.end_time);
-        for (var min = sM; min + ctx.duration <= eM; min += 30) {
-          if (ymd === now.dateKey && min <= now.minutes) continue;
-          var sMs = dayStart + min * 60000;
-          var eMs = sMs + (ctx.duration + ctx.buffer) * 60000;
-          var clash = busy.some(function (b) {
-            return sMs < b.e && eMs > b.s;
-          });
-          if (!clash) out.push(supaFmtMin(min));
-        }
-      });
+      var openMin = 600;  // 10:00
+      var closeMin = 1080; // 18:00
+      for (var min = openMin; min + ctx.duration <= closeMin; min += 30) {
+        if (ymd === now.dateKey && min <= now.minutes) continue;
+        var sMs = dayStart + min * 60000;
+        var eMs = sMs + (ctx.duration + ctx.buffer) * 60000;
+        var clash = busy.some(function (b) {
+          return sMs < b.e && eMs > b.s;
+        });
+        if (!clash) out.push(supaFmtMin(min));
+      }
       return out;
     }
 
@@ -3144,11 +3143,14 @@
 
       // 1) Прямой Supabase (anon) — основной путь.
       if (supaAvailReady() && SUPA_UUID_RE.test(sid)) {
+        var savedSy = window.scrollY || window.pageYOffset || 0;
         supaCalendarMonth(sid, mid, viewY, viewM)
           .then(function (days) {
             if (monthCacheKey === cacheK) {
               monthDays = days || {};
               renderCalendarBody();
+              window.scrollTo(0, savedSy);
+              requestAnimationFrame(function () { window.scrollTo(0, savedSy); });
             }
           })
           .catch(function () {

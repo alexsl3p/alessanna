@@ -29,7 +29,7 @@ import {
   salonYmdFromAnyDate,
   SALON_TIME_ZONE,
 } from "../lib/bookingSalonTz";
-import { generateAvailableSlots, type Slot } from "../lib/slots";
+import { generateAvailableSlots, type Slot, type WeeklyScheduleLike } from "../lib/slots";
 import { quickBookMergedFreeMinutes } from "../lib/quickBookingSchedule";
 import {
   applyPublicStaffVisibility,
@@ -46,7 +46,7 @@ import {
   splitStaffIntoHairAndNails,
 } from "../lib/publicMasterPanel";
 import { buildStaffColorAssignments, resolveStaffPublicCalendarLook } from "../lib/staffCalendarColors";
-import type { AppointmentRow, SalonHolidayRow, StaffMember, StaffScheduleRow, StaffServiceRow } from "../types/database";
+import type { AppointmentRow, SalonHolidayRow, StaffMember, StaffScheduleRow, StaffServiceRow, StaffWorkDateRow } from "../types/database";
 import {
   DEFAULT_RECEPTION_MASTERS_PANEL,
   DEFAULT_RECEPTION_ROWS,
@@ -120,6 +120,7 @@ export function PublicBookingPage() {
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [links, setLinks] = useState<StaffServiceRow[]>([]);
   const [schedules, setSchedules] = useState<StaffScheduleRow[]>([]);
+  const [workDates, setWorkDates] = useState<StaffWorkDateRow[]>([]);
   const [holidays, setHolidays] = useState<SalonHolidayRow[]>([]);
   const [appointments, setAppointments] = useState<AppointmentRow[]>([]);
   const [upcomingAppointments, setUpcomingAppointments] = useState<AppointmentRow[]>([]);
@@ -185,13 +186,16 @@ export function PublicBookingPage() {
       return;
     }
     setBookingPanelDisabledByAdmin(false);
-    const [st, lk, sc, hol, remoteLayout, implicitSetting] = await Promise.all([
+    const todayIso = format(new Date(), "yyyy-MM-dd");
+    const futureIso = format(new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), "yyyy-MM-dd");
+    const [st, lk, sc, hol, remoteLayout, implicitSetting, wd] = await Promise.all([
       supabase.from("staff").select("*").eq("is_active", true).order("name"),
       supabase.from("staff_services").select("*"),
       supabase.from("staff_schedule").select("*"),
       supabase.from("salon_holidays").select("*"),
       fetchReceptionLayoutFromServer(),
       supabase.from("salon_settings").select("value").eq("key", CALENDAR_WEEK_EXCEPT_SUNDAY_STAFF_SETTING_KEY).maybeSingle(),
+      supabase.from("staff_work_dates").select("staff_id,work_date,id").gte("work_date", todayIso).lte("work_date", futureIso),
     ]);
     /* Fallback по `select(...)`: каждая ветка возвращает свой shape, поэтому
      * для TS ниже всегда `as typeof sv`. На рантайме всё равно нормализуем. */
@@ -276,6 +280,7 @@ export function PublicBookingPage() {
     }
     if (lk.data) setLinks(lk.data as StaffServiceRow[]);
     if (sc.data) setSchedules(sc.data as StaffScheduleRow[]);
+    if (wd.data) setWorkDates(wd.data as StaffWorkDateRow[]);
     if (hol.data) setHolidays(hol.data as SalonHolidayRow[]);
     setImplicitWeekExceptSundayStaffIds(
       parseStaffIdJsonList(
@@ -508,22 +513,22 @@ export function PublicBookingPage() {
     if (!svc) return new Map<string, Slot[]>();
     const out = new Map<string, Slot[]>();
     if (holidaySet.has(bookYmd)) return out;
+    const wd = salonWeekdaySun0(bookYmd);
     for (const member of eligibleStaff) {
-      const memberSchedule = schedules
-        .filter((s) => s.staff_id === member.id)
-        .map((s) => ({
-          day_of_week: s.day_of_week,
-          start_time: s.start_time,
-          end_time: s.end_time,
-        }));
+      const worksToday = workDates.some((d) => d.staff_id === member.id && d.work_date === bookYmd);
+      if (!worksToday) {
+        out.set(member.id, []);
+        continue;
+      }
+      const syntheticSchedule: WeeklyScheduleLike[] = [{ day_of_week: wd, start_time: "10:00", end_time: "18:00" }];
       const rawSlots = generateAvailableSlots({
-        schedule: memberSchedule,
+        schedule: syntheticSchedule,
         appointments,
         timeOff,
         duration: durationMin,
         day: salonDayStart,
         salonDayStartUtc: salonDayStart,
-        salonWeekdaySun0: salonWeekdaySun0(bookYmd),
+        salonWeekdaySun0: wd,
         stepMinutes: 30,
         staffId: member.id,
       });
@@ -531,7 +536,7 @@ export function PublicBookingPage() {
       out.set(member.id, slots);
     }
     return out;
-  }, [appointments, bookYmd, durationMin, eligibleStaff, holidaySet, schedules, salonDayStart, svc, timeOff, nowTick]);
+  }, [appointments, bookYmd, durationMin, eligibleStaff, holidaySet, workDates, salonDayStart, svc, timeOff, nowTick]);
 
   const slotCoverage = useMemo(() => {
     const coverage = new Map<string, number>();
@@ -623,17 +628,12 @@ export function PublicBookingPage() {
       let free = 0;
 
       for (const m of eligibleStaff) {
-        const memberSchedule = schedules
-          .filter((s) => s.staff_id === m.id && s.day_of_week === weekday)
-          .map((s) => ({
-            day_of_week: s.day_of_week,
-            start_time: s.start_time,
-            end_time: s.end_time,
-          }));
-        if (!memberSchedule.length) continue;
+        const worksThisDay = workDates.some((d) => d.staff_id === m.id && d.work_date === key);
+        if (!worksThisDay) continue;
         working++;
+        const syntheticSchedule: WeeklyScheduleLike[] = [{ day_of_week: weekday, start_time: "10:00", end_time: "18:00" }];
         const rawSlotsForDay = generateAvailableSlots({
-          schedule: memberSchedule,
+          schedule: syntheticSchedule,
           appointments: calendarRangeAppointments,
           timeOff: calendarRangeTimeOff,
           duration: durationMin,
@@ -660,7 +660,7 @@ export function PublicBookingPage() {
     eligibleStaff,
     calendarRangeAppointments,
     calendarRangeTimeOff,
-    schedules,
+    workDates,
     holidaySet,
     svc,
     nowTick,
@@ -776,17 +776,9 @@ export function PublicBookingPage() {
   }, [holidaySet]);
 
   const mastersByColumn = useMemo(() => {
-    const weekday = salonWeekdaySun0(bookYmd);
     const mapRow = (m: StaffMember): MasterDayRow => {
-      const daySchedule = schedules
-        .filter((s) => s.staff_id === m.id && s.day_of_week === weekday)
-        .sort((a, b) => String(a.start_time).localeCompare(String(b.start_time)));
-      const workTime =
-        daySchedule.length > 0
-          ? `${String(daySchedule[0].start_time || "").slice(0, 5)}–${String(
-              daySchedule[daySchedule.length - 1].end_time || ""
-            ).slice(0, 5)}`
-          : "выходной";
+      const worksToday = workDates.some((d) => d.staff_id === m.id && d.work_date === bookYmd);
+      const workTime = worksToday ? "10:00–18:00" : "выходной";
       const staffSlots = slotsByStaff.get(m.id) ?? [];
       const freeSlots = staffSlots.length;
       const freeMinutesUnion = quickBookMergedFreeMinutes(staffSlots, nowTick);
@@ -795,7 +787,7 @@ export function PublicBookingPage() {
       const busyItems = appointments.filter((a) => a.staff_id === m.id).length;
       const timeOffItems = timeOff.filter((t) => t.staff_id === m.id).length;
       let status: "free" | "busy" | "off" = "busy";
-      if (!daySchedule.length) status = "off";
+      if (!worksToday) status = "off";
       else if (freeSlots > 0) status = "free";
       return {
         id: m.id,
@@ -821,7 +813,7 @@ export function PublicBookingPage() {
     bookYmd,
     mastersSplitResolved,
     receptionMastersConfig.assignment,
-    schedules,
+    workDates,
     slotsByStaff,
     timeOff,
     nowTick,
@@ -962,9 +954,8 @@ export function PublicBookingPage() {
 
       let masterWorksThisDay = true;
       if (staffId && staffId !== ANY_MASTER_ID) {
-        const weekday = salonWeekdaySun0(cellYmd);
-        masterWorksThisDay = schedules.some(
-          (s) => s.staff_id === staffId && s.day_of_week === weekday,
+        masterWorksThisDay = workDates.some(
+          (d) => d.staff_id === staffId && d.work_date === cellYmd,
         );
       }
       const disabled = compareSalonYmd(cellYmd, firstBookableYmd) < 0 || isHoliday || !masterWorksThisDay;
