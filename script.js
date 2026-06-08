@@ -1380,9 +1380,30 @@
       });
     }
 
+    var choiceScrollSnapshot = null;
+
+    function rememberChoiceScrollPosition() {
+      choiceScrollSnapshot = {
+        sx: window.scrollX || window.pageXOffset || 0,
+        sy: window.scrollY || window.pageYOffset || 0,
+        at: Date.now(),
+      };
+    }
+
+    function activeChoiceScrollPosition() {
+      if (choiceScrollSnapshot && Date.now() - choiceScrollSnapshot.at < 3000) {
+        return choiceScrollSnapshot;
+      }
+      return {
+        sx: window.scrollX || window.pageXOffset || 0,
+        sy: window.scrollY || window.pageYOffset || 0,
+      };
+    }
+
     function preserveScrollPosition(work) {
-      var sx = window.scrollX || window.pageXOffset || 0;
-      var sy = window.scrollY || window.pageYOffset || 0;
+      var pos = activeChoiceScrollPosition();
+      var sx = pos.sx;
+      var sy = pos.sy;
       var restore = function () {
         window.scrollTo(sx, sy);
       };
@@ -1931,6 +1952,8 @@
         li.tabIndex = 0;
         li.setAttribute("data-pick-key", pickKey(panel, nameSpan.textContent.trim()));
         li.setAttribute("data-pick-wired", "1");
+        li.addEventListener("pointerdown", rememberChoiceScrollPosition, { passive: true });
+        li.addEventListener("focusin", rememberChoiceScrollPosition);
         li.addEventListener("click", function () {
           togglePick(li);
         });
@@ -2065,23 +2088,31 @@
     }
 
     if (serviceSelect) {
+      serviceSelect.addEventListener("pointerdown", rememberChoiceScrollPosition, { passive: true });
+      serviceSelect.addEventListener("focusin", rememberChoiceScrollPosition);
+      serviceSelect.addEventListener("keydown", rememberChoiceScrollPosition);
       serviceSelect.addEventListener("change", function (e) {
         preserveScrollPosition(function () {
-        var catId = String(serviceSelect.value || "");
-        if (e && e.isTrusted && !syncingFormFromCart && picked.length) {
-          picked = [];
-          renderList();
-        }
-        relayoutServiceItemSelect(catId);
+          var catId = String(serviceSelect.value || "");
+          if (e && e.isTrusted && !syncingFormFromCart && picked.length) {
+            picked = [];
+            renderList();
+          }
+          relayoutServiceItemSelect(catId);
         });
       });
     }
     if (serviceItemSelect) {
+      serviceItemSelect.addEventListener("pointerdown", rememberChoiceScrollPosition, { passive: true });
+      serviceItemSelect.addEventListener("focusin", rememberChoiceScrollPosition);
+      serviceItemSelect.addEventListener("keydown", rememberChoiceScrollPosition);
       serviceItemSelect.addEventListener("change", function () {
-        var v = String(serviceItemSelect.value || "");
-        if (!v) return;
-        var opt = serviceItemSelect.options[serviceItemSelect.selectedIndex];
-        addPickFromServiceOption(opt);
+        preserveScrollPosition(function () {
+          var v = String(serviceItemSelect.value || "");
+          if (!v) return;
+          var opt = serviceItemSelect.options[serviceItemSelect.selectedIndex];
+          addPickFromServiceOption(opt);
+        });
       });
     }
 
@@ -2193,6 +2224,8 @@
           li.setAttribute("role", "button");
           li.tabIndex = 0;
           li.setAttribute("aria-pressed", "false");
+          li.addEventListener("pointerdown", rememberChoiceScrollPosition, { passive: true });
+          li.addEventListener("focusin", rememberChoiceScrollPosition);
           li.addEventListener("click", function () {
             if (li.classList.contains("is-master-ineligible")) return;
             /* Сначала переключаем категорию формы — если поменялась,
@@ -2235,6 +2268,9 @@
     wireTeamMasterClicks();
 
     if (masterSelect) {
+      masterSelect.addEventListener("pointerdown", rememberChoiceScrollPosition, { passive: true });
+      masterSelect.addEventListener("focusin", rememberChoiceScrollPosition);
+      masterSelect.addEventListener("keydown", rememberChoiceScrollPosition);
       masterSelect.addEventListener("change", function () {
         var v = masterSelect.value;
         highlightTeam(v);
@@ -2438,9 +2474,6 @@
 
     var apiBooking = false;
     var publicApiBase = "";
-    var serviceIdBySlug = {};
-    var serviceIdByLookupKey = {};
-    var employeeIdByLookupKey = {};
     var monthDays = null;
     var monthCacheKey = "";
     var salonHolidayDates = {};
@@ -2536,12 +2569,7 @@
     }
 
     function selectedCalendarEmployeeId() {
-      var selected = selectedMasterForAvailability();
-      if (!selected || selected === ANY_MASTER_ID) return ANY_MASTER_ID;
-      if (/^\d+$/.test(selected)) return selected;
-      var opt = masterSelect.options[masterSelect.selectedIndex];
-      var label = opt ? String(opt.textContent || "").split("—")[0].trim() : "";
-      return employeeIdByLookupKey[serviceLookupKey(label)] || ANY_MASTER_ID;
+      return selectedMasterForAvailability();
     }
 
     function bookingChainApi() {
@@ -2570,40 +2598,8 @@
       return "";
     }
 
-    function serviceLookupKey(value) {
-      return String(value || "")
-        .trim()
-        .toLocaleLowerCase("ru")
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/ё/g, "е")
-        .replace(/[^a-z0-9а-я]+/g, " ")
-        .trim();
-    }
-
-    function rememberApiServiceId(value, id) {
-      var key = serviceLookupKey(value);
-      if (key && id) serviceIdByLookupKey[key] = id;
-    }
-
     function selectedCalendarServiceId() {
-      var selectedRaw = selectedServiceIdForAvailability();
-      if (/^\d+$/.test(selectedRaw)) return selectedRaw;
-      if (serviceIdBySlug[serviceSelectEl.value]) return serviceIdBySlug[serviceSelectEl.value];
-
-      var catOpt = serviceSelectEl.options[serviceSelectEl.selectedIndex];
-      if (catOpt) {
-        var catName = catOpt.getAttribute("data-category-name") || catOpt.textContent || "";
-        var byCat = serviceIdByLookupKey[serviceLookupKey(catName)];
-        if (byCat) return byCat;
-      }
-
-      var items = selectedBookingItems();
-      for (var i = 0; i < items.length; i++) {
-        var byLabel = serviceIdByLookupKey[serviceLookupKey(items[i] && items[i].label)];
-        if (byLabel) return byLabel;
-      }
-      return "";
+      return selectedServiceIdForAvailability();
     }
 
     function unionMasterIdsForAvailability() {
@@ -3183,14 +3179,6 @@
           return r.json();
         })
         .then(function (emps) {
-          employeeIdByLookupKey = {};
-          if (Array.isArray(emps)) {
-            for (var ei = 0; ei < emps.length; ei++) {
-              if (emps[ei] && emps[ei].id != null) {
-                employeeIdByLookupKey[serviceLookupKey(emps[ei].name)] = String(emps[ei].id);
-              }
-            }
-          }
           setMasterOptions(emps);
         });
     }
@@ -3213,35 +3201,7 @@
           });
         })
         .then(function (services) {
-          serviceIdBySlug = {};
-          serviceIdByLookupKey = {};
-          for (var si = 0; si < services.length; si++) {
-            if (services[si].slug) serviceIdBySlug[services[si].slug] = services[si].id;
-            rememberApiServiceId(services[si].slug, services[si].id);
-            rememberApiServiceId(services[si].name_et, services[si].id);
-            rememberApiServiceId(services[si].name_en, services[si].id);
-          }
-          rememberApiServiceId("маникюр", serviceIdBySlug.manicure);
-          rememberApiServiceId("ногти", serviceIdBySlug.manicure);
-          rememberApiServiceId("ногтевой сервис", serviceIdBySlug.manicure);
-          rememberApiServiceId("küüned", serviceIdBySlug.manicure);
-          rememberApiServiceId("kuuned", serviceIdBySlug.manicure);
-          rememberApiServiceId("nails", serviceIdBySlug.manicure);
-          rememberApiServiceId("maniküür", serviceIdBySlug.manicure);
-          rememberApiServiceId("manicure", serviceIdBySlug.manicure);
-          rememberApiServiceId("педикюр", serviceIdBySlug.pedicure);
-          rememberApiServiceId("pediküür", serviceIdBySlug.pedicure);
-          rememberApiServiceId("pedicure", serviceIdBySlug.pedicure);
-          rememberApiServiceId("ресницы и брови", serviceIdBySlug["brows-lashes"]);
-          rememberApiServiceId("брови", serviceIdBySlug["brows-lashes"]);
-          rememberApiServiceId("ресницы", serviceIdBySlug["brows-lashes"]);
-          rememberApiServiceId("kulmud", serviceIdBySlug["brows-lashes"]);
-          rememberApiServiceId("ripsmed", serviceIdBySlug["brows-lashes"]);
-          rememberApiServiceId("ripsmed ja kulmud", serviceIdBySlug["brows-lashes"]);
-          rememberApiServiceId("brows lashes", serviceIdBySlug["brows-lashes"]);
-          rememberApiServiceId("волосы", serviceIdBySlug["hair-cut"]);
-          rememberApiServiceId("juuksed", serviceIdBySlug["hair-cut"]);
-          rememberApiServiceId("hair", serviceIdBySlug["hair-cut"]);
+          if (!Array.isArray(services)) throw new Error("bad-services");
           return refillMastersForCurrentService();
         })
         .then(function () {
@@ -3662,61 +3622,65 @@
       });
 
       function continueLegacySubmit() {
-      if (apiBooking) {
-        var svcId = selectedCalendarServiceId();
-        if (!svcId) {
-          serviceSelectEl.focus();
-          return;
+        if (apiBooking) {
+          var svcId = selectedCalendarServiceId();
+          if (!svcId) {
+            serviceSelectEl.focus();
+            return;
+          }
+          var employeeRaw = selectedCalendarEmployeeId();
+          var canUseLegacyApi =
+            /^\d+$/.test(String(svcId)) && (employeeRaw === ANY_MASTER_ID || /^\d+$/.test(String(employeeRaw)));
+          if (canUseLegacyApi) {
+            var nameEl = bookingForm.querySelector('[name="name"]');
+            var phoneEl = bookingForm.querySelector('[name="phone"]');
+            fetch(publicApiUrl("/api/public/bookings"), {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                employeeId: employeeRaw === ANY_MASTER_ID ? ANY_MASTER_ID : Number(employeeRaw),
+                serviceId: svcId,
+                date: selectedKey,
+                time: timeSelect.value,
+                clientName: nameEl ? nameEl.value.trim() : "",
+                clientPhone: phoneEl ? phoneEl.value.trim() : "",
+                notes: publicSiteBookingNote(),
+              }),
+            })
+              .then(function (r) {
+                return r.json().then(function (j) {
+                  return { ok: r.ok, status: r.status, j: j };
+                });
+              })
+              .then(function (x) {
+                if (x.ok) {
+                  showToast(bookingSuccessMessageWithPriceNote(), "ok");
+                  bookingForm.reset();
+                  invalidateMonthCache();
+                  clearSelection();
+                  renderCalendar();
+                } else {
+                  var err =
+                    (x.j && x.j.error) ||
+                    pubT("site.ui.bookingFailedShort", "Could not book. Try another time.");
+                  showToast(err, "err");
+                }
+              })
+              .catch(function () {
+                showToast(pubT("site.ui.networkError", "Network or server unavailable."), "err");
+              });
+            return;
+          }
         }
-        var nameEl = bookingForm.querySelector('[name="name"]');
-        var phoneEl = bookingForm.querySelector('[name="phone"]');
-        fetch(publicApiUrl("/api/public/bookings"), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            employeeId:
-              selectedCalendarEmployeeId() === ANY_MASTER_ID ? ANY_MASTER_ID : Number(selectedCalendarEmployeeId()),
-            serviceId: svcId,
-            date: selectedKey,
-            time: timeSelect.value,
-            clientName: nameEl ? nameEl.value.trim() : "",
-            clientPhone: phoneEl ? phoneEl.value.trim() : "",
-            notes: publicSiteBookingNote(),
-          }),
-        })
-          .then(function (r) {
-            return r.json().then(function (j) {
-              return { ok: r.ok, status: r.status, j: j };
-            });
-          })
-          .then(function (x) {
-            if (x.ok) {
-              showToast(bookingSuccessMessageWithPriceNote(), "ok");
-              bookingForm.reset();
-              invalidateMonthCache();
-              clearSelection();
-              renderCalendar();
-            } else {
-              var err =
-                (x.j && x.j.error) ||
-                pubT("site.ui.bookingFailedShort", "Could not book. Try another time.");
-              showToast(err, "err");
-            }
-          })
-          .catch(function () {
-            showToast(pubT("site.ui.networkError", "Network or server unavailable."), "err");
-          });
-        return;
-      }
-      var fd = new FormData(bookingForm);
-      var lines = [];
-      fd.forEach(function (val, key) {
-        if (key === "master" && (val === ANY_MASTER_ID || !val)) val = anyMasterLabel();
-        lines.push(key + ": " + val);
-      });
-      var subject = encodeURIComponent(pubT("site.ui.mailSubjectBooking", "Booking AlesSanna"));
-      var body = encodeURIComponent(lines.join("\n"));
-      window.location.href = "mailto:alessanna.ilusalong@gmail.com?subject=" + subject + "&body=" + body;
+        var fd = new FormData(bookingForm);
+        var lines = [];
+        fd.forEach(function (val, key) {
+          if (key === "master" && (val === ANY_MASTER_ID || !val)) val = anyMasterLabel();
+          lines.push(key + ": " + val);
+        });
+        var subject = encodeURIComponent(pubT("site.ui.mailSubjectBooking", "Booking AlesSanna"));
+        var body = encodeURIComponent(lines.join("\n"));
+        window.location.href = "mailto:alessanna.ilusalong@gmail.com?subject=" + subject + "&body=" + body;
       } /* end continueLegacySubmit */
     });
 

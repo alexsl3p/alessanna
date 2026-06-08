@@ -249,7 +249,340 @@ function findEmployeeForSlot(serviceId, dateStr, time) {
   return null;
 }
 
-app.get("/api/public/employees", (req, res) => {
+const SALON_TIME_ZONE = "Europe/Tallinn";
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isUuid(value) {
+  return UUID_RE.test(String(value || "").trim());
+}
+
+function timeToMinutes(value) {
+  const match = /^(\d{1,2}):(\d{2})/.exec(String(value || ""));
+  if (!match) return 0;
+  return Number(match[1]) * 60 + Number(match[2]);
+}
+
+function formatSlotMinutes(minutes) {
+  return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+}
+
+function ymdFromParts(parts) {
+  return `${parts.y}-${String(parts.m).padStart(2, "0")}-${String(parts.d).padStart(2, "0")}`;
+}
+
+function zonedParts(date) {
+  const dtf = new Intl.DateTimeFormat("en-US", {
+    timeZone: SALON_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  });
+  const out = {};
+  for (const p of dtf.formatToParts(date)) {
+    if (p.type !== "literal") out[p.type] = p.value;
+  }
+  return {
+    y: Number(out.year),
+    m: Number(out.month),
+    d: Number(out.day),
+    hour: Number(out.hour),
+    minute: Number(out.minute),
+    second: Number(out.second),
+  };
+}
+
+const salonDayStartUtcCache = new Map();
+
+function salonDayStartUtc(dateStr) {
+  const cached = salonDayStartUtcCache.get(dateStr);
+  if (cached) return new Date(cached.getTime());
+  const [y, mo, d] = String(dateStr || "").split("-").map((x) => Number(x));
+  if (!Number.isFinite(y) || !Number.isFinite(mo) || !Number.isFinite(d)) {
+    throw new Error("Invalid date");
+  }
+  const t0 = Date.UTC(y, mo - 1, d - 1, 0, 0, 0);
+  const maxOff = 48 * 60;
+  const cmpLocal = (tMs) => {
+    const p = zonedParts(new Date(tMs));
+    const cur = ymdFromParts(p);
+    if (cur !== dateStr) return cur.localeCompare(dateStr);
+    return p.hour * 60 + p.minute;
+  };
+  let lo = 0;
+  let hi = maxOff;
+  while (lo < hi) {
+    const mid = (lo + hi) >>> 1;
+    if (cmpLocal(t0 + mid * 60000) < 0) lo = mid + 1;
+    else hi = mid;
+  }
+  const out = new Date(t0 + lo * 60000);
+  salonDayStartUtcCache.set(dateStr, out);
+  return new Date(out.getTime());
+}
+
+function salonWeekdaySun0(dateStr) {
+  const weekday = new Intl.DateTimeFormat("en-US", {
+    timeZone: SALON_TIME_ZONE,
+    weekday: "long",
+  }).format(salonDayStartUtc(dateStr));
+  return {
+    Sunday: 0,
+    Monday: 1,
+    Tuesday: 2,
+    Wednesday: 3,
+    Thursday: 4,
+    Friday: 5,
+    Saturday: 6,
+  }[weekday];
+}
+
+function salonNowInfo() {
+  const parts = zonedParts(new Date());
+  return {
+    dateKey: ymdFromParts(parts),
+    minutes: parts.hour * 60 + parts.minute,
+  };
+}
+
+function intervalOverlapsMs(aStart, aEnd, bStart, bEnd) {
+  return aStart < bEnd && aEnd > bStart;
+}
+
+function publicStaffVisible(row) {
+  if (!row || row.is_active === false || row.show_on_marketing_site === false) return false;
+  const roles = String(row.roles || "").toLowerCase();
+  return !/(admin|owner|manager)/.test(roles);
+}
+
+async function loadSupabaseService(serviceId) {
+  const supabase = getSupabaseAdmin();
+  if (!supabase || !isUuid(serviceId)) return null;
+  const selects = [
+    "id,name,duration,buffer_after_min,is_active,price,price_max,sort_order",
+    "id,name,duration,buffer_after_min,is_active,price,sort_order",
+    "id,name,duration,buffer_after_min,is_active",
+    "id,name,duration,is_active",
+    "id,name,duration",
+  ];
+  for (const select of selects) {
+    const { data, error } = await supabase
+      .from("service_listings")
+      .select(select)
+      .eq("id", serviceId)
+      .maybeSingle();
+    if (!error) return data || null;
+  }
+  return null;
+}
+
+async function listSupabasePublicEmployees(serviceId) {
+  const supabase = getSupabaseAdmin();
+  if (!supabase || !isUuid(serviceId)) return null;
+
+  const linkRes = await supabase.from("staff_services").select("*").eq("service_id", serviceId);
+  if (linkRes.error) return null;
+  const staffIds = [
+    ...new Set(
+      (linkRes.data || [])
+        .filter((row) => row && row.show_on_site !== false && isUuid(row.staff_id))
+        .map((row) => row.staff_id)
+    ),
+  ];
+  if (!staffIds.length) return [];
+
+  const staffRes = await supabase
+    .from("staff")
+    .select("id,name,roles,is_active,show_on_marketing_site")
+    .in("id", staffIds)
+    .eq("is_active", true)
+    .order("name");
+  if (staffRes.error) return null;
+  return (staffRes.data || [])
+    .filter(publicStaffVisible)
+    .map((row) => ({ id: row.id, name: row.name || "" }));
+}
+
+async function listSupabasePublicServices() {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return null;
+  const selects = [
+    "id,name,duration,buffer_after_min,is_active,price,price_max,sort_order",
+    "id,name,duration,buffer_after_min,is_active,price,sort_order",
+    "id,name,duration,buffer_after_min,is_active,sort_order",
+    "id,name,duration,is_active",
+    "id,name,duration",
+  ];
+  for (const select of selects) {
+    const { data, error } = await supabase.from("service_listings").select(select).order("name");
+    if (error) continue;
+    return (data || [])
+      .filter((row) => row && row.is_active !== false)
+      .map((row) => ({
+        id: row.id,
+        slug: row.id,
+        name_et: row.name || "",
+        name_en: row.name || "",
+        duration_min: Number(row.duration || 0),
+        buffer_after_min: Number(row.buffer_after_min || 0),
+        price_cents: row.price == null ? null : Math.round(Number(row.price) * 100),
+        price_max_cents: row.price_max == null ? null : Math.round(Number(row.price_max) * 100),
+        sort_order: Number(row.sort_order || 0),
+      }));
+  }
+  return null;
+}
+
+async function loadSupabaseAvailabilityContext(serviceId, employeeId, fromYmd, toYmd) {
+  const supabase = getSupabaseAdmin();
+  if (!supabase || !isUuid(serviceId)) return null;
+  const service = await loadSupabaseService(serviceId);
+  if (!service || service.is_active === false || Number(service.duration || 0) <= 0) {
+    return { service, staff: [], schedules: [], appointments: [], timeOff: [], holidays: new Set() };
+  }
+
+  let staff = [];
+  if (employeeId && employeeId !== "any") {
+    if (!isUuid(employeeId)) return null;
+    const [staffRes, linkRes] = await Promise.all([
+      supabase
+        .from("staff")
+        .select("id,name,roles,is_active,show_on_marketing_site")
+        .eq("id", employeeId)
+        .maybeSingle(),
+      supabase.from("staff_services").select("*").eq("staff_id", employeeId).eq("service_id", serviceId),
+    ]);
+    if (staffRes.error || linkRes.error) return null;
+    const linked = (linkRes.data || []).some((row) => row.show_on_site !== false);
+    if (linked && publicStaffVisible(staffRes.data)) staff = [staffRes.data];
+  } else {
+    staff = await listSupabasePublicEmployees(serviceId);
+    if (!staff) return null;
+  }
+
+  const staffIds = staff.map((row) => row.id).filter(isUuid);
+  if (!staffIds.length) {
+    return { service, staff: [], schedules: [], appointments: [], timeOff: [], holidays: new Set() };
+  }
+
+  const fromStart = salonDayStartUtc(fromYmd);
+  const toEnd = new Date(salonDayStartUtc(toYmd).getTime() + 24 * 60 * 60 * 1000);
+  const [scheduleRes, appointmentServiceRes, appointmentRes, timeOffRes, holidayRes] = await Promise.all([
+    supabase.from("staff_schedule").select("staff_id,day_of_week,start_time,end_time").in("staff_id", staffIds),
+    supabase
+      .from("appointment_services")
+      .select("appointment_id,staff_id,start_time,end_time")
+      .in("staff_id", staffIds)
+      .lt("start_time", toEnd.toISOString())
+      .gt("end_time", fromStart.toISOString()),
+    supabase
+      .from("appointments")
+      .select("id,staff_id,start_time,end_time,status")
+      .in("staff_id", staffIds)
+      .lt("start_time", toEnd.toISOString())
+      .gt("end_time", fromStart.toISOString())
+      .neq("status", "cancelled"),
+    supabase
+      .from("staff_time_off")
+      .select("staff_id,start_time,end_time")
+      .in("staff_id", staffIds)
+      .lt("start_time", toEnd.toISOString())
+      .gt("end_time", fromStart.toISOString()),
+    supabase.from("salon_holidays").select("holiday_date").gte("holiday_date", fromYmd).lte("holiday_date", toYmd),
+  ]);
+  if (scheduleRes.error || appointmentServiceRes.error || timeOffRes.error) return null;
+  const serviceAppointmentIds = new Set(
+    (appointmentServiceRes.data || []).map((row) => String(row.appointment_id || "")).filter(Boolean)
+  );
+  const legacyAppointments = appointmentRes.error
+    ? []
+    : (appointmentRes.data || [])
+        .filter((row) => row && row.id && !serviceAppointmentIds.has(String(row.id)))
+        .map((row) => ({ staff_id: row.staff_id, start_time: row.start_time, end_time: row.end_time }));
+
+  return {
+    service,
+    staff,
+    schedules: scheduleRes.data || [],
+    appointments: [...(appointmentServiceRes.data || []), ...legacyAppointments],
+    timeOff: timeOffRes.data || [],
+    holidays: new Set((holidayRes.data || []).map((row) => String(row.holiday_date || "").slice(0, 10))),
+  };
+}
+
+function supabaseSlotsForStaffDay(ctx, staffId, dateStr) {
+  if (!ctx || !staffId || ctx.holidays.has(dateStr)) return [];
+  const weekday = salonWeekdaySun0(dateStr);
+  const schedule = ctx.schedules.filter((row) => row.staff_id === staffId && Number(row.day_of_week) === weekday);
+  if (!schedule.length) return [];
+
+  const duration = Number(ctx.service.duration || 0);
+  const buffer = Number(ctx.service.buffer_after_min || 0);
+  if (duration <= 0) return [];
+
+  const dayStart = salonDayStartUtc(dateStr);
+  const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+  const busy = [...ctx.appointments, ...ctx.timeOff]
+    .filter((row) => row.staff_id === staffId)
+    .map((row) => ({
+      start: new Date(row.start_time).getTime(),
+      end: new Date(row.end_time).getTime(),
+    }))
+    .filter((row) => Number.isFinite(row.start) && Number.isFinite(row.end) && row.start < dayEnd.getTime() && row.end > dayStart.getTime());
+  const now = salonNowInfo();
+  if (dateStr < now.dateKey) return [];
+
+  const slots = [];
+  for (const row of schedule) {
+    const startMin = timeToMinutes(row.start_time);
+    const endMin = timeToMinutes(row.end_time);
+    for (let min = startMin; min + duration <= endMin; min += 30) {
+      if (dateStr === now.dateKey && min <= now.minutes) continue;
+      const startMs = dayStart.getTime() + min * 60000;
+      const endMs = startMs + (duration + buffer) * 60000;
+      if (busy.some((b) => intervalOverlapsMs(startMs, endMs, b.start, b.end))) continue;
+      slots.push(formatSlotMinutes(min));
+    }
+  }
+  return uniqueSortedSlots(slots);
+}
+
+async function supabaseSlotsForPublic(serviceId, employeeId, dateStr) {
+  const ctx = await loadSupabaseAvailabilityContext(serviceId, employeeId || "any", dateStr, dateStr);
+  if (!ctx) return null;
+  const allSlots = [];
+  for (const employee of ctx.staff) {
+    allSlots.push(...supabaseSlotsForStaffDay(ctx, employee.id, dateStr));
+  }
+  return uniqueSortedSlots(allSlots);
+}
+
+async function supabaseCalendarMonth(serviceId, employeeId, y, m) {
+  const first = `${y}-${String(m + 1).padStart(2, "0")}-01`;
+  const dim = new Date(y, m + 1, 0).getDate();
+  const last = `${y}-${String(m + 1).padStart(2, "0")}-${String(dim).padStart(2, "0")}`;
+  const ctx = await loadSupabaseAvailabilityContext(serviceId, employeeId || "any", first, last);
+  if (!ctx) return null;
+  const days = {};
+  for (let d = 1; d <= dim; d++) {
+    const key = `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    const slots = [];
+    for (const employee of ctx.staff) {
+      slots.push(...supabaseSlotsForStaffDay(ctx, employee.id, key));
+    }
+    days[key] = { slots: uniqueSortedSlots(slots) };
+  }
+  return days;
+}
+
+app.get("/api/public/employees", async (req, res) => {
+  if (isUuid(req.query.serviceId)) {
+    const rows = await listSupabasePublicEmployees(String(req.query.serviceId));
+    if (rows) return res.json(rows);
+  }
   res.json(listPublicEmployees(req.query.serviceId));
 });
 
@@ -258,7 +591,9 @@ app.get("/api/public/employee-services", (_, res) => {
   res.json(rows);
 });
 
-app.get("/api/public/services", (_, res) => {
+app.get("/api/public/services", async (_, res) => {
+  const supabaseRows = await listSupabasePublicServices();
+  if (supabaseRows) return res.json(supabaseRows);
   const rows = db
     .prepare(
       "SELECT id, slug, name_et, name_en, duration_min, buffer_after_min, price_cents FROM services WHERE active = 1 ORDER BY sort_order, id"
@@ -268,10 +603,23 @@ app.get("/api/public/services", (_, res) => {
 });
 
 app.get("/api/public/slots", async (req, res) => {
+  const rawServiceId = String(req.query.serviceId || "");
+  const rawEmployeeId = String(req.query.employeeId || "");
+  const date = req.query.date;
+  if (isUuid(rawServiceId)) {
+    if ((!rawEmployeeId || rawEmployeeId !== "any") && !isUuid(rawEmployeeId)) {
+      return res.status(400).json({ error: "employeeId, date, serviceId required" });
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date || ""))) {
+      return res.status(400).json({ error: "employeeId, date, serviceId required" });
+    }
+    const slots = await supabaseSlotsForPublic(rawServiceId, rawEmployeeId || "any", String(date));
+    if (slots) return res.json({ slots });
+    return res.status(503).json({ error: "CRM availability unavailable" });
+  }
   await refreshSchedulesFromSupabaseIfStale();
   const anyEmployee = req.query.employeeId === "any";
   const employeeId = Number(req.query.employeeId);
-  const date = req.query.date;
   const serviceId = Number(req.query.serviceId);
   if ((!employeeId && !anyEmployee) || !date || !serviceId) {
     return res.status(400).json({ error: "employeeId, date, serviceId required" });
@@ -286,12 +634,25 @@ app.get("/api/public/slots", async (req, res) => {
 
 /** Один запрос на месяц — без десятков отдельных вызовов с клиента */
 app.get("/api/public/calendar-month", async (req, res) => {
+  const rawServiceId = String(req.query.serviceId || "");
+  const rawEmployeeId = String(req.query.employeeId || "");
+  const y = Number(req.query.y);
+  const m = Number(req.query.m);
+  if (isUuid(rawServiceId)) {
+    if ((!rawEmployeeId || rawEmployeeId !== "any") && !isUuid(rawEmployeeId)) {
+      return res.status(400).json({ error: "employeeId, serviceId, y, m (0-11) required" });
+    }
+    if (Number.isNaN(y) || Number.isNaN(m) || m < 0 || m > 11) {
+      return res.status(400).json({ error: "employeeId, serviceId, y, m (0-11) required" });
+    }
+    const days = await supabaseCalendarMonth(rawServiceId, rawEmployeeId || "any", y, m);
+    if (days) return res.json({ days });
+    return res.status(503).json({ error: "CRM availability unavailable" });
+  }
   await refreshSchedulesFromSupabaseIfStale();
   const anyEmployee = req.query.employeeId === "any";
   const employeeId = Number(req.query.employeeId);
   const serviceId = Number(req.query.serviceId);
-  const y = Number(req.query.y);
-  const m = Number(req.query.m);
   if ((!employeeId && !anyEmployee) || !serviceId || Number.isNaN(y) || Number.isNaN(m) || m < 0 || m > 11) {
     return res.status(400).json({ error: "employeeId, serviceId, y, m (0-11) required" });
   }
