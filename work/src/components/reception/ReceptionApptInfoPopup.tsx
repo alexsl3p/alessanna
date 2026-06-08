@@ -80,11 +80,11 @@ export function ReceptionApptInfoPopup({
     <div
       ref={ref}
       style={{ left, top, width: POPUP_W, maxHeight: "calc(100dvh - 16px)" }}
-      className="fixed z-50 overflow-y-auto rounded-2xl border border-line/15 bg-panel shadow-[0_12px_40px_rgba(0,0,0,0.4)]"
+      className="fixed z-50 flex flex-col rounded-2xl border border-line/15 bg-panel shadow-[0_12px_40px_rgba(0,0,0,0.4)]"
       role="dialog"
       aria-modal="true"
     >
-      <div className="flex items-center justify-between border-b border-line/15 px-4 py-2.5">
+      <div className="flex shrink-0 items-center justify-between border-b border-line/15 px-4 py-2.5">
         <span className="text-xs font-semibold uppercase tracking-wider text-muted">
           Информация о записи
         </span>
@@ -95,6 +95,7 @@ export function ReceptionApptInfoPopup({
         </button>
       </div>
 
+      <div className="min-h-0 flex-1 overflow-y-auto">
       <div className="space-y-2.5 p-4">
         <div className="flex items-start gap-3">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface text-muted">
@@ -196,8 +197,9 @@ export function ReceptionApptInfoPopup({
           </div>
         )}
       </div>
+      </div>
 
-      <div className="flex items-center gap-2 border-t border-line/15 px-4 py-3">
+      <div className="flex shrink-0 items-center gap-2 border-t border-line/15 px-4 py-3">
         <button
           type="button"
           onClick={onEdit}
