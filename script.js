@@ -1951,9 +1951,11 @@
       if (!serviceItemSelect) return;
       var serviceItemLabel = serviceItemSelect.closest("label");
       if (serviceItemLabel) serviceItemLabel.hidden = !catId;
+      var prevValue = String(serviceItemSelect.value || "");
       var opts = serviceItemSelect.querySelectorAll("option");
       var matched = 0;
       var firstMatchValue = "";
+      var canKeepPrev = false;
       for (var i = 0; i < opts.length; i++) {
         var opt = opts[i];
         if (!opt.value) {
@@ -1968,6 +1970,7 @@
         if (on) {
           matched++;
           if (!firstMatchValue) firstMatchValue = opt.value;
+          if (prevValue && opt.value === prevValue) canKeepPrev = true;
         }
       }
       /* Failsafe: если категория выбрана, но по data-category-id не нашлось
@@ -1981,6 +1984,7 @@
           allOpt.disabled = false;
           matched++;
           if (!firstMatchValue) firstMatchValue = allOpt.value;
+          if (prevValue && allOpt.value === prevValue) canKeepPrev = true;
         }
       }
       /* Перерисовываем placeholder (всегда первый, всегда видимый,
@@ -1999,7 +2003,7 @@
           : pubT("site.ui.pickService", "Choose a service");
       serviceItemSelect.insertBefore(ph, serviceItemSelect.firstChild);
       serviceItemSelect.disabled = !catId || matched === 0;
-      serviceItemSelect.value = "";
+      serviceItemSelect.value = canKeepPrev ? prevValue : "";
     }
 
     function addPickFromServiceOption(opt) {
@@ -2051,9 +2055,9 @@
     }
 
     if (serviceSelect) {
-      serviceSelect.addEventListener("change", function () {
+      serviceSelect.addEventListener("change", function (e) {
         var catId = String(serviceSelect.value || "");
-        if (!syncingFormFromCart && picked.length) {
+        if (e && e.isTrusted && !syncingFormFromCart && picked.length) {
           picked = [];
           renderList();
         }
