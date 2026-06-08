@@ -492,13 +492,14 @@ export function PublicBookingPage() {
   }, []);
 
   useEffect(() => {
-    if (compareSalonYmd(bookYmd, firstOpenBookableYmd) < 0 || holidaySet.has(bookYmd)) {
+    const todayYmd = salonCalendarYmd(new Date(nowTick));
+    if (compareSalonYmd(bookYmd, todayYmd) < 0 || holidaySet.has(bookYmd)) {
       setDayStr(firstOpenBookableYmd);
       const [y, m] = firstOpenBookableYmd.split("-").map(Number);
       setViewMonth(new Date(y, m - 1, 1));
       setPickedStart(null);
     }
-  }, [bookYmd, firstOpenBookableYmd, holidaySet]);
+  }, [bookYmd, firstOpenBookableYmd, holidaySet, nowTick]);
 
   const svc = services.find((s) => s.id === serviceId);
   const durationMin = svc ? svc.duration_min : 60;
@@ -959,7 +960,14 @@ export function PublicBookingPage() {
         ? "min-h-[2.25rem] px-0.5 py-0.5 text-[10px] sm:min-h-10 sm:text-[11px]"
         : "px-2 py-2 text-xs md:min-h-[54px] md:text-sm";
 
-      const disabled = compareSalonYmd(cellYmd, firstBookableYmd) < 0 || isHoliday;
+      let masterWorksThisDay = true;
+      if (staffId && staffId !== ANY_MASTER_ID) {
+        const weekday = salonWeekdaySun0(cellYmd);
+        masterWorksThisDay = schedules.some(
+          (s) => s.staff_id === staffId && s.day_of_week === weekday,
+        );
+      }
+      const disabled = compareSalonYmd(cellYmd, firstBookableYmd) < 0 || isHoliday || !masterWorksThisDay;
 
       let stateClass: string;
       if (disabled) {

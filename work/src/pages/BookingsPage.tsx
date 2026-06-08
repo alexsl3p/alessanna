@@ -26,6 +26,7 @@ type ServiceName = { id: string; name: string };
 
 type StatusFilter = "all_active" | "client" | "block" | "all" | "pending" | "confirmed" | "cancelled";
 type SourceSort = "none" | "asc" | "desc";
+type CreatedSort = "none" | "asc" | "desc";
 
 const STATUS_FILTERS: StatusFilter[] = [
   "all_active",
@@ -61,6 +62,7 @@ export function BookingsPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all_active");
   const [sourceSort, setSourceSort] = useState<SourceSort>("none");
+  const [createdSort, setCreatedSort] = useState<CreatedSort>("desc");
   const [siteAlerts, setSiteAlerts] = useState<
     Array<{ id: string; client: string; when: string; staffId: string }>
   >([]);
@@ -154,7 +156,6 @@ export function BookingsPage() {
         .toLowerCase();
       return haystack.includes(q);
     });
-    if (sourceSort === "none") return filtered;
     const rank = (source: string | null | undefined): number => {
       const s = String(source ?? "").toLowerCase();
       if (s === "public_site") return 0;
@@ -162,12 +163,22 @@ export function BookingsPage() {
       if (s === "crm") return 2;
       return 3;
     };
-    const sorted = [...filtered].sort((a, b) => {
-      const diff = rank(a.source) - rank(b.source);
-      return sourceSort === "asc" ? diff : -diff;
-    });
+    let sorted = [...filtered];
+    if (sourceSort !== "none") {
+      sorted = sorted.sort((a, b) => {
+        const diff = rank(a.source) - rank(b.source);
+        return sourceSort === "asc" ? diff : -diff;
+      });
+    }
+    if (createdSort !== "none") {
+      sorted = sorted.sort((a, b) => {
+        const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return createdSort === "desc" ? tb - ta : ta - tb;
+      });
+    }
     return sorted;
-  }, [rows, search, statusFilter, staffNames, services, sourceSort]);
+  }, [rows, search, statusFilter, staffNames, services, sourceSort, createdSort]);
 
   const filtersActive = statusFilter !== "all_active" || search.trim().length > 0;
 
@@ -461,6 +472,23 @@ export function BookingsPage() {
                   <button
                     type="button"
                     onClick={() =>
+                      setCreatedSort((prev) =>
+                        prev === "none" ? "desc" : prev === "desc" ? "asc" : "none",
+                      )
+                    }
+                    className="inline-flex items-center gap-1 text-xs uppercase tracking-wide text-muted hover:text-fg"
+                    title="Сортировать по дате добавления"
+                  >
+                    Добавлена
+                    <span className="text-[10px] text-muted">
+                      {createdSort === "asc" ? "↑" : createdSort === "desc" ? "↓" : "↕"}
+                    </span>
+                  </button>
+                </th>
+                <th className="px-4 py-3">
+                  <button
+                    type="button"
+                    onClick={() =>
                       setSourceSort((prev) =>
                         prev === "none" ? "asc" : prev === "asc" ? "desc" : "none",
                       )
@@ -513,6 +541,9 @@ export function BookingsPage() {
                       >
                         {statusLabel(b.status)}
                       </span>
+                    </td>
+                    <td className="px-4 py-3 text-muted text-xs">
+                      {b.created_at ? format(parseISO(b.created_at), "yyyy-MM-dd HH:mm") : t("common.dash")}
                     </td>
                     <td className="px-4 py-3">
                       {canManage ? (
