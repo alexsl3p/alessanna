@@ -277,14 +277,24 @@ export function ReceptionBookingPopup({
               onClick={() => setBlockType("block_time")}
               className={`flex-1 rounded-lg py-1.5 text-xs font-medium transition-colors ${blockType === "block_time" ? "bg-rose-500/15 text-rose-400" : "text-muted hover:bg-surface"}`}
             >
-              🔒 Закрыть время
+              <span className="inline-flex items-center justify-center gap-1.5">
+                <svg viewBox="0 0 16 16" className="h-3 w-3 shrink-0 text-rose-400" fill="currentColor">
+                  <path d="M11 7V5a3 3 0 1 0-6 0v2H4a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1h-1ZM6 5a2 2 0 1 1 4 0v2H6V5Z" />
+                </svg>
+                Закрыть время
+              </span>
             </button>
             <button
               type="button"
               onClick={() => setBlockType("block_personal")}
-              className={`flex-1 rounded-lg py-1.5 text-xs font-medium transition-colors ${blockType === "block_personal" ? "bg-violet-500/15 text-violet-400" : "text-muted hover:bg-surface"}`}
+              className={`flex-1 rounded-lg py-1.5 text-xs font-medium transition-colors ${blockType === "block_personal" ? "bg-rose-500/15 text-rose-400" : "text-muted hover:bg-surface"}`}
             >
-              🫧 Личные дела
+              <span className="inline-flex items-center justify-center gap-1.5">
+                <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 shrink-0 text-rose-400" fill="currentColor">
+                  <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm-5 6s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1H3Z" />
+                </svg>
+                Личные дела
+              </span>
             </button>
           </div>
         )}
