@@ -2922,6 +2922,12 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
   color: var(--gold-bright);
 }
 
+.booking-form label:has(input[required]) > span::after {
+  content: " *";
+  color: #e85f5f;
+  font-weight: 700;
+}
+
 .booking-form input,
 .booking-form select,
 .booking-form textarea {

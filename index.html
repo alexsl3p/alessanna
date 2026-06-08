@@ -312,15 +312,11 @@
               <input type="hidden" name="services_detail" value="" data-field-services-detail />
               <label>
                 <span data-i18n="site.formName">Ваше имя</span>
-                <input type="text" name="name" autocomplete="name" data-i18n-placeholder="site.formNamePlaceholder" placeholder="Анна" />
+                <input type="text" name="name" autocomplete="name" data-i18n-placeholder="site.formNamePlaceholder" placeholder="Анна" required />
               </label>
               <label>
                 <span data-i18n="site.formPhone">Телефон</span>
-                <input type="tel" name="phone" autocomplete="tel" placeholder="+372 529 8225" />
-              </label>
-              <label>
-                <span>Email</span>
-                <input type="email" name="email" autocomplete="email" placeholder="anna@example.com" />
+                <input type="tel" name="phone" autocomplete="tel" placeholder="+372 529 8225" required />
               </label>
               <label>
                 <span data-i18n="site.formCategory">Категория услуги</span>
@@ -370,6 +366,10 @@
                 <p class="booking-chain-total" data-chain-preview-total></p>
                 <p class="booking-chain-hint" data-chain-preview-hint hidden></p>
               </div>
+              <label>
+                <span>E-mail</span>
+                <input type="email" name="email" autocomplete="email" placeholder="anna@example.com" />
+              </label>
               <button class="btn btn-primary booking-submit" type="submit" data-i18n="site.formSubmit">Отправить заявку</button>
             </form>
           </div>

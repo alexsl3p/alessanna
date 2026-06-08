@@ -3570,6 +3570,11 @@
         if (nameFieldEl) nameFieldEl.focus();
         return;
       }
+      if (!phoneVal) {
+        var phoneFieldEl = bookingForm.querySelector('[name="phone"]');
+        if (phoneFieldEl) phoneFieldEl.focus();
+        return;
+      }
 
       /* 1) RPC public_book_chain → наш CRM-календарь. 2) Legacy API/mailto, если Supabase недоступен. */
       trySubmitViaBookChain(nameVal, phoneVal, noteVal, emailVal).then(function (res) {
