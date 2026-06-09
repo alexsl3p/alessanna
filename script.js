@@ -2274,6 +2274,9 @@
             renderList();
           }
           relayoutServiceItemSelect(catId);
+          if (catId && !syncingFormFromCart && refreshServiceItemSelect && refreshServiceItemSelect.open) {
+            refreshServiceItemSelect.open();
+          }
         });
       });
     }
@@ -2705,7 +2708,9 @@
       sel.addEventListener("change", function() { refreshTrigger(); });
 
       refreshTrigger();
-      return function() { refreshTrigger(); buildList(); };
+      var refreshFn = function() { refreshTrigger(); buildList(); };
+      refreshFn.open = open;
+      return refreshFn;
     }
 
     var refreshCategorySelect = serviceSelect ? makeCsel(serviceSelect) : function(){};
