@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { addDays, addMonths, addWeeks, format, subDays, startOfWeek, subMonths, subWeeks } from "date-fns";
+import { addDays, addMonths, addWeeks, subDays, startOfWeek, subMonths, subWeeks } from "date-fns";
 import { supabase } from "../lib/supabase";
 import { useCalendarDataRealtime } from "../hooks/useSalonRealtime";
 import { loadServicesCatalog } from "../lib/loadServicesCatalog";
@@ -161,12 +161,7 @@ export function ReceptionCalendarPage() {
   }
 
   function handleSlotClick(start: Date, anchorX: number, anchorY: number) {
-    const dateStr = format(start, "yyyy-MM-dd");
-    const workingThatDay = workDates
-      .filter((r) => r.work_date === dateStr && visibleStaffIds.has(r.staff_id))
-      .map((r) => r.staff_id);
-    const defaultStaffId = workingThatDay.length === 1 ? workingThatDay[0] : null;
-    setPopup({ anchorX, anchorY, initialStart: start, defaultStaffId });
+    setPopup({ anchorX, anchorY, initialStart: start, defaultStaffId: null });
   }
 
   function handleApptClick(appt: AppointmentRow, x: number, y: number) {
