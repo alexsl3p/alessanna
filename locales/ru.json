@@ -995,6 +995,11 @@
         "november",
         "detsember"
       ]
-    }
+    },
+    "koloristTitle": "Сложные техники окрашивания",
+    "koloristLead": "Балаяж, осветление, сложное многоуровневое окрашивание — только по предварительной записи у специалиста",
+    "koloristMasterLabel": "Мастер",
+    "koloristPhoneLabel": "Телефон",
+    "koloristCall": "Позвонить"
   }
 }

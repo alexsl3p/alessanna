@@ -465,7 +465,12 @@
         "november",
         "december"
       ]
-    }
+    },
+    "koloristTitle": "Complex colouring techniques",
+    "koloristLead": "Balayage, lightening, complex multi-level colouring — by appointment only with a specialist",
+    "koloristMasterLabel": "Master",
+    "koloristPhoneLabel": "Phone",
+    "koloristCall": "Call"
   },
   "adminStaff": {
     "payModel": "Pay model",

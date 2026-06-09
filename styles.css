@@ -3597,3 +3597,167 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
   }
 }
 
+/* ─── Kolorist section ─────────────────────────────────────────────────── */
+.kolorist-section {
+  position: relative;
+  min-height: 480px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 1.5rem;
+  background: #0a0a0a url('/assets/kolorist-bg.png') center/cover no-repeat;
+}
+
+.kolorist-section::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to right,
+    rgba(0,0,0,0.72) 0%,
+    rgba(0,0,0,0.45) 50%,
+    rgba(0,0,0,0.18) 100%
+  );
+  pointer-events: none;
+}
+
+.kolorist-card {
+  position: relative;
+  z-index: 1;
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 1.5rem;
+  padding: 2.5rem 2.25rem 2.25rem;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 24px 56px rgba(0,0,0,0.55);
+}
+
+.kolorist-card__icon {
+  font-size: 1.3rem;
+  color: var(--gold-bright, #c4a574);
+  margin-bottom: 1rem;
+  letter-spacing: 0.1em;
+}
+
+.kolorist-card__title {
+  font-family: var(--font-display, 'Cormorant Garamond', serif);
+  font-size: clamp(1.55rem, 4vw, 2rem);
+  font-weight: 400;
+  color: #f5f0e8;
+  line-height: 1.2;
+  margin: 0 0 0.75rem;
+}
+
+.kolorist-card__lead {
+  font-size: 0.875rem;
+  color: rgba(245, 240, 232, 0.65);
+  line-height: 1.55;
+  margin: 0 0 1.75rem;
+}
+
+.kolorist-card__info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin-bottom: 1.75rem;
+  padding-bottom: 1.75rem;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.kolorist-card__row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.kolorist-card__row-icon {
+  width: 1.1rem;
+  height: 1.1rem;
+  flex-shrink: 0;
+  color: var(--gold-bright, #c4a574);
+  opacity: 0.85;
+}
+
+.kolorist-card__row-label {
+  font-size: 0.78rem;
+  color: rgba(245, 240, 232, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  min-width: 4.5rem;
+}
+
+.kolorist-card__row-value {
+  font-size: 0.95rem;
+  color: #f5f0e8;
+  font-weight: 500;
+}
+
+.kolorist-card__phone {
+  color: var(--gold-bright, #c4a574);
+  text-decoration: none;
+  transition: opacity 0.18s;
+}
+.kolorist-card__phone:hover { opacity: 0.75; }
+
+.kolorist-card__actions {
+  display: flex;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.kolorist-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.6rem 1.1rem;
+  border-radius: 2rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-decoration: none;
+  border: 1px solid rgba(255,255,255,0.2);
+  color: #f5f0e8;
+  background: rgba(255,255,255,0.07);
+  transition: background 0.18s, border-color 0.18s;
+  cursor: pointer;
+}
+.kolorist-btn:hover {
+  background: rgba(255,255,255,0.13);
+  border-color: rgba(255,255,255,0.32);
+}
+.kolorist-btn svg { width: 1rem; height: 1rem; flex-shrink: 0; }
+
+.kolorist-btn--primary {
+  background: var(--gold-bright, #c4a574);
+  border-color: var(--gold-bright, #c4a574);
+  color: #1a1410;
+  font-weight: 600;
+}
+.kolorist-btn--primary svg { stroke: #1a1410; fill: none; }
+.kolorist-btn--primary:hover {
+  background: #d4b888;
+  border-color: #d4b888;
+}
+
+@media (max-width: 540px) {
+  .kolorist-section {
+    padding: 3rem 1rem;
+    justify-content: flex-start;
+    align-items: flex-end;
+    min-height: 420px;
+  }
+  .kolorist-card {
+    padding: 1.75rem 1.5rem 1.5rem;
+    border-radius: 1.25rem;
+  }
+  .kolorist-card__actions {
+    gap: 0.5rem;
+  }
+  .kolorist-btn {
+    padding: 0.55rem 0.9rem;
+    font-size: 0.82rem;
+  }
+}
+

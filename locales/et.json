@@ -996,6 +996,11 @@
         "november",
         "detsember"
       ]
-    }
+    },
+    "koloristTitle": "Keerulised värvimistehnikad",
+    "koloristLead": "Balayage, valgendamine, keeruline mitmeastmeline värvimine — ainult eelregistreerimisega spetsialisti juurde",
+    "koloristMasterLabel": "Meister",
+    "koloristPhoneLabel": "Telefon",
+    "koloristCall": "Helista"
   }
 }
