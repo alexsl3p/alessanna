@@ -3563,16 +3563,37 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
 
 @media (max-width: 720px) {
   .toast-root {
-    top: auto;
-    right: 1rem;
-    left: 1rem;
-    max-width: none;
-    /* выше mobile-book-bar (~64px) + safe area */
-    bottom: calc(env(safe-area-inset-bottom, 0) + 5rem);
+    top: calc(env(safe-area-inset-top, 0) + 0.75rem);
+    right: 0.75rem;
+    left: auto;
+    bottom: auto;
+    max-width: min(20rem, calc(100% - 1.5rem));
+  }
+
+  .toast {
+    font-size: 0.8rem;
+    padding: 0.55rem 0.8rem;
+    gap: 0.5rem;
+    line-height: 1.35;
+    border-radius: 0.7rem;
   }
 
   .toast.toast--lg {
-    font-size: 1.0625rem;
+    font-size: 0.8rem;
+    padding: 0.55rem 0.8rem;
+    gap: 0.5rem;
+  }
+
+  .toast__icon {
+    width: 1.15rem;
+    height: 1.15rem;
+    font-size: 0.75rem;
+    margin-top: 0;
+  }
+
+  .toast__close {
+    font-size: 0.95rem;
+    padding: 0.1rem 0.3rem;
   }
 }
 
