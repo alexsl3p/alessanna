@@ -3923,13 +3923,8 @@
       };
     }
 
-    /** После успешной записи: кратко о том, что цена в прайсе — ориентир. */
     function bookingSuccessMessageWithPriceNote() {
-      return (
-        pubT("site.ui.bookingConfirmed", "Booking confirmed.") +
-        "\n\n" +
-        pubT("site.ui.priceDisclaimer", "Prices are indicative.")
-      );
+      return pubT("site.ui.bookingConfirmed", "Booking confirmed!");
     }
 
     /** Цепочка услуг (picked[] в dock) + Supabase RPC. Возвращает Promise, который резолвится

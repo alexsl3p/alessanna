@@ -396,7 +396,7 @@
       "masterHintSingle": "You can leave “No preference” — we’ll assign a free stylist.",
       "masterHintMultiOr": "Choose a stylist for this booking or leave “No preference”.",
       "masterHintMulti": "Choose a stylist for this booking.",
-      "bookingConfirmed": "Booking confirmed. We look forward to seeing you.",
+      "bookingConfirmed": "Booking confirmed!",
       "priceDisclaimer": "Prices in the list are indicative — the final amount may vary. We’ll confirm the exact cost when we confirm your appointment.",
       "pickServiceFirst": "Pick a service from the price list above so we can find a suitable time.",
       "bookingFailed": "Could not complete the booking. Try another time or contact us.",
@@ -423,9 +423,48 @@
       "errMissingStart": "Pick a day and time.",
       "errEmptyItems": "Pick one service from the price list.",
       "errTooManyItems": "Only one service per booking is available now.",
-      "monthsTitle": ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
-      "monthsGenitive": ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
-      "monthsLower": ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"]
+      "monthsTitle": [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December"
+      ],
+      "monthsGenitive": [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December"
+      ],
+      "monthsLower": [
+        "january",
+        "february",
+        "march",
+        "april",
+        "may",
+        "june",
+        "july",
+        "august",
+        "september",
+        "october",
+        "november",
+        "december"
+      ]
     }
   },
   "adminStaff": {
