@@ -3946,3 +3946,95 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
   .henna-card__actions { flex-direction: column; }
   .henna-btn { justify-content: center; }
 }
+
+/* ==========================================================================
+   Custom booking form selects (replaces native white pickers)
+   ========================================================================== */
+.csel {
+  position: relative;
+  width: 100%;
+}
+.csel__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  border-radius: 0.55rem;
+  border: 1px solid rgba(197,160,89,0.28);
+  background: rgba(10,10,10,0.65);
+  color: var(--text, #f5f0e8);
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  text-align: left;
+  user-select: none;
+}
+.csel__trigger--placeholder { color: rgba(154,149,140,0.65); }
+.csel__trigger--open,
+.csel__trigger:hover {
+  border-color: rgba(197,160,89,0.55);
+  box-shadow: 0 0 0 1px rgba(197,160,89,0.2);
+}
+.csel__trigger svg { width: 1.1rem; height: 1.1rem; flex-shrink: 0; color: var(--gold,#c4a574); transition: transform 0.18s; }
+.csel__trigger--open svg { transform: rotate(180deg); }
+.csel__val { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.csel__list {
+  background: #181510;
+  border: 1px solid rgba(197,160,89,0.35);
+  border-radius: 0.65rem;
+  overflow-y: auto;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.7);
+  overscroll-behavior: contain;
+}
+.csel__opt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.88rem;
+  color: #f0ebe3;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  transition: background 0.12s;
+}
+.csel__opt:last-child { border-bottom: none; }
+.csel__opt:hover:not(.csel__opt--disabled) { background: rgba(197,160,89,0.1); }
+.csel__opt--active { color: var(--gold,#c4a574); font-weight: 600; }
+.csel__opt--disabled { color: rgba(240,235,227,0.35); cursor: default; }
+.csel__phone { color: var(--gold,#c4a574); flex-shrink: 0; display: flex; align-items: center; }
+.csel__phone svg { width: 1rem; height: 1rem; }
+
+/* Service item flat list */
+.booking-service-visual {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(197,160,89,0.28);
+  border-radius: 0.55rem;
+  overflow: hidden;
+  background: rgba(10,10,10,0.65);
+  margin-top: -0.25rem;
+}
+.svc-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.7rem 0.85rem;
+  font-size: 0.88rem;
+  color: #f0ebe3;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  transition: background 0.12s;
+}
+.svc-item:last-child { border-bottom: none; }
+.svc-item:hover:not(.svc-item--phone) { background: rgba(197,160,89,0.1); }
+.svc-item--active { color: var(--gold,#c4a574); font-weight: 600; }
+.svc-item--phone { color: rgba(240,235,227,0.35); cursor: default; }
+.svc-item__name { flex: 1; }
+.svc-item__phone { color: var(--gold,#c4a574); flex-shrink: 0; display: flex; align-items: center; }
+.svc-item__phone svg { width: 1rem; height: 1rem; }

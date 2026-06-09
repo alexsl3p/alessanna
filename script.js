@@ -364,9 +364,8 @@
     if (activeTabPanel) {
       var activeCatKey = (activeTabPanel.getAttribute("data-pick-category") || "").toLowerCase();
       var koloristElTab = document.getElementById("kolorist");
-      var hennaElTab = document.getElementById("henna-promo");
       if (koloristElTab) koloristElTab.hidden = activeCatKey.indexOf("сложные техники окрашивания") === -1;
-      if (hennaElTab) hennaElTab.hidden = activeCatKey.indexOf("татуаж") === -1;
+      /* Henna block is always visible — never hidden */
     }
   });
 
@@ -2017,9 +2016,8 @@
       var isKoloristPick = catLower.indexOf("сложные техники окрашивания") !== -1;
       var isTattooPick = catLower.indexOf("татуаж") !== -1;
       var koloristEl = document.getElementById("kolorist");
-      var hennaEl = document.getElementById("henna-promo");
       if (koloristEl) koloristEl.hidden = !isKoloristPick;
-      if (hennaEl) hennaEl.hidden = !isTattooPick;
+      /* Henna block is always visible — never hidden */
       if (adding && picked.length > 0) {
         blockScrollRestore(1400);
         requestAnimationFrame(function () {
@@ -2155,13 +2153,68 @@
             var isAllowed = isKoloristCat && qname.indexOf("консультация") !== -1;
             if (!isAllowed) {
               qopt.disabled = true;
-              qopt.setAttribute("data-orig-text", qopt.textContent);
-              qopt.textContent = "☎ " + qopt.textContent;
+              if (!qopt.hasAttribute("data-orig-text")) qopt.setAttribute("data-orig-text", qopt.textContent);
             }
           }
         }
       }
+      updateServiceVisualList();
+      if (typeof refreshCategorySelect === "function") refreshCategorySelect();
     }
+
+    /* Custom visual list for the service-item select:
+       native <select> can't host styled SVG icons inside <option>,
+       so we render a custom dark list and keep the hidden <select> for form logic. */
+    var serviceVisualWrap = null;
+
+    function buildServiceVisualList() {
+      if (!serviceItemSelect) return;
+      serviceItemSelect.style.cssText = "position:absolute;opacity:0;pointer-events:none;height:1px;width:1px";
+      serviceVisualWrap = document.createElement("div");
+      serviceVisualWrap.id = "booking-service-visual";
+      serviceVisualWrap.className = "booking-service-visual";
+      serviceVisualWrap.hidden = true;
+      serviceItemSelect.parentNode.insertBefore(serviceVisualWrap, serviceItemSelect.nextSibling);
+    }
+
+    function updateServiceVisualList() {
+      if (!serviceVisualWrap || !serviceItemSelect) return;
+      serviceVisualWrap.innerHTML = "";
+      var opts = serviceItemSelect.querySelectorAll("option");
+      var hasItems = false;
+      var currentVal = serviceItemSelect.value;
+      for (var si = 0; si < opts.length; si++) {
+        var sopt = opts[si];
+        if (!sopt.value || sopt.getAttribute("data-form-placeholder") || sopt.hidden) continue;
+        hasItems = true;
+        var item = document.createElement("div");
+        item.className = "svc-item" + (sopt.disabled ? " svc-item--phone" : "") + (sopt.value === currentVal ? " svc-item--active" : "");
+        var nameEl = document.createElement("span");
+        nameEl.className = "svc-item__name";
+        nameEl.textContent = sopt.getAttribute("data-orig-text") || sopt.textContent;
+        item.appendChild(nameEl);
+        if (sopt.disabled) {
+          var phoneEl = document.createElement("span");
+          phoneEl.className = "svc-item__phone";
+          phoneEl.innerHTML = '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 5a2 2 0 012-2h2.28a1 1 0 01.95.68l.74 2.22a1 1 0 01-.23 1.02L7.34 8.34a11.04 11.04 0 005.32 5.32l1.42-1.42a1 1 0 011.02-.23l2.22.74a1 1 0 01.68.95V15a2 2 0 01-2 2h-1C7.16 17 3 12.84 3 8V5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>';
+          item.appendChild(phoneEl);
+        } else {
+          (function (val) {
+            item.addEventListener("click", function () {
+              serviceItemSelect.value = val;
+              serviceItemSelect.dispatchEvent(new Event("change", { bubbles: true }));
+              updateServiceVisualList();
+            });
+          })(sopt.value);
+        }
+        serviceVisualWrap.appendChild(item);
+      }
+      serviceVisualWrap.hidden = !hasItems;
+      var lbl = serviceItemSelect.closest("label");
+      if (lbl) lbl.hidden = !hasItems;
+    }
+
+    buildServiceVisualList();
 
     function addPickFromServiceOption(opt) {
       return preserveScrollPosition(function () {
@@ -2210,6 +2263,7 @@
       picked = [pick];
       syncFormCategory();
       renderList();
+      updateServiceVisualList();
       });
     }
 
@@ -2540,6 +2594,116 @@
         scrollToBookingBlock();
       }, 80);
     });
+
+    /* ---- Custom select dropdowns for booking form (replaces native white pickers) ---- */
+    var PHONE_SVG = '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 5a2 2 0 012-2h2.28a1 1 0 01.95.68l.74 2.22a1 1 0 01-.23 1.02L7.34 8.34a11.04 11.04 0 005.32 5.32l1.42-1.42a1 1 0 011.02-.23l2.22.74a1 1 0 01.68.95V15a2 2 0 01-2 2h-1C7.16 17 3 12.84 3 8V5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>';
+    var CHEVRON_SVG = '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M5 7.5l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+    function makeCsel(sel) {
+      if (!sel || sel.dataset.cselDone) return function(){};
+      sel.dataset.cselDone = "1";
+      sel.style.cssText = "position:absolute;opacity:0;pointer-events:none;height:0;width:0;overflow:hidden";
+
+      var wrap = document.createElement("div");
+      wrap.className = "csel";
+      sel.parentNode.insertBefore(wrap, sel);
+      wrap.appendChild(sel);
+
+      var trigger = document.createElement("div");
+      trigger.className = "csel__trigger";
+      trigger.setAttribute("role", "combobox");
+      trigger.tabIndex = 0;
+      trigger.innerHTML = '<span class="csel__val"></span>' + CHEVRON_SVG;
+      wrap.appendChild(trigger);
+
+      var list = document.createElement("div");
+      list.className = "csel__list";
+      list.hidden = true;
+      document.body.appendChild(list);
+
+      function refreshTrigger() {
+        var o = sel.value ? sel.querySelector('option[value="' + CSS.escape(sel.value) + '"]') : null;
+        var txt = o ? (o.getAttribute("data-orig-text") || o.textContent) : (sel.options[0] ? sel.options[0].textContent : "");
+        trigger.querySelector(".csel__val").textContent = txt;
+        trigger.classList.toggle("csel__trigger--placeholder", !sel.value);
+      }
+
+      function buildList() {
+        list.innerHTML = "";
+        for (var i = 0; i < sel.options.length; i++) {
+          var o = sel.options[i];
+          if (o.hidden || !o.value || o.getAttribute("data-form-placeholder")) continue;
+          var item = document.createElement("div");
+          item.className = "csel__opt" +
+            (o.disabled ? " csel__opt--disabled" : "") +
+            (o.value === sel.value ? " csel__opt--active" : "");
+          var ns = document.createElement("span");
+          ns.textContent = o.getAttribute("data-orig-text") || o.textContent;
+          item.appendChild(ns);
+          if (o.disabled) {
+            var pi = document.createElement("span");
+            pi.className = "csel__phone";
+            pi.innerHTML = PHONE_SVG;
+            item.appendChild(pi);
+          } else {
+            (function(val) {
+              item.addEventListener("click", function(e) {
+                e.stopPropagation();
+                sel.value = val;
+                sel.dispatchEvent(new Event("change", { bubbles: true }));
+                close();
+              });
+            })(o.value);
+          }
+          list.appendChild(item);
+        }
+      }
+
+      function open() {
+        buildList();
+        var r = trigger.getBoundingClientRect();
+        var spaceBelow = window.innerHeight - r.bottom;
+        list.style.cssText = "position:fixed;z-index:9999;left:" + r.left + "px;width:" + r.width + "px;" +
+          (spaceBelow > 180
+            ? "top:" + r.bottom + "px;max-height:" + Math.min(spaceBelow - 8, 320) + "px"
+            : "bottom:" + (window.innerHeight - r.top) + "px;max-height:" + Math.min(r.top - 8, 320) + "px");
+        list.hidden = false;
+        trigger.classList.add("csel__trigger--open");
+      }
+      function close() {
+        list.hidden = true;
+        trigger.classList.remove("csel__trigger--open");
+        refreshTrigger();
+      }
+
+      trigger.addEventListener("click", function(e) {
+        e.stopPropagation();
+        list.hidden ? open() : close();
+      });
+      trigger.addEventListener("keydown", function(e) {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); list.hidden ? open() : close(); }
+        if (e.key === "Escape") close();
+      });
+      document.addEventListener("click", function() { if (!list.hidden) close(); });
+
+      sel.addEventListener("change", function() { refreshTrigger(); });
+
+      refreshTrigger();
+      return function() { refreshTrigger(); buildList(); };
+    }
+
+    var refreshCategorySelect = serviceSelect ? makeCsel(serviceSelect) : function(){};
+    var refreshMasterSelect = masterSelect ? makeCsel(masterSelect) : function(){};
+
+    /* Refresh custom selects after site-services renders categories */
+    window.addEventListener("teenused-supabase-ready", function() {
+      setTimeout(function() { refreshCategorySelect(); refreshMasterSelect(); }, 0);
+    });
+    /* Refresh master select when its options change */
+    if (masterSelect) {
+      var masterObserver = new MutationObserver(function() { refreshMasterSelect(); });
+      masterObserver.observe(masterSelect, { childList: true });
+    }
 
     renderList();
     void loadSalonSitePublicFeatureFlags().then(function (flags) {
