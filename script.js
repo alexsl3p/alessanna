@@ -2170,6 +2170,10 @@
        dropdowns (category, master). Phone icons on disabled items come from
        the csel__phone CSS class that buildList already adds. */
     var refreshServiceItemSelect = function(){};
+    /* CSEL_CLOSERS must be initialized here (before buildServiceVisualList is
+       called below) — the var declaration near makeCsel is hoisted but the
+       [] assignment runs later, causing undefined.push() crash otherwise. */
+    var CSEL_CLOSERS = [];
 
     function buildServiceVisualList() {
       if (!serviceItemSelect) return;
@@ -2567,8 +2571,6 @@
     /* ---- Custom select dropdowns for booking form (replaces native white pickers) ---- */
     var PHONE_SVG = '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 5a2 2 0 012-2h2.28a1 1 0 01.95.68l.74 2.22a1 1 0 01-.23 1.02L7.34 8.34a11.04 11.04 0 005.32 5.32l1.42-1.42a1 1 0 011.02-.23l2.22.74a1 1 0 01.68.95V15a2 2 0 01-2 2h-1C7.16 17 3 12.84 3 8V5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>';
     var CHEVRON_SVG = '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M5 7.5l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-    /* All csel close-functions — opening one closes the others */
-    var CSEL_CLOSERS = [];
 
     function makeCsel(sel, onSelect) {
       if (!sel || sel.dataset.cselDone) return function(){};
