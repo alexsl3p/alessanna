@@ -545,13 +545,16 @@
     mount.querySelectorAll(".reveal").forEach(function (el) {
       el.classList.add("is-visible");
     });
-    /* Insert flex row-break after index 4 (Укладки) so row 3 starts at index 5 */
-    var breakAfter = mount.querySelector('.tabs-bar .tab-btn[data-tab-index="4"]');
-    if (breakAfter && !breakAfter.nextElementSibling?.classList.contains('tabs-bar-break')) {
+    /* Insert flex row-breaks: after index 0 (kolorist alone) and after index 4 (Укладки) */
+    [0, 4].forEach(function (idx) {
+      var btn = mount.querySelector('.tabs-bar .tab-btn[data-tab-index="' + idx + '"]');
+      if (!btn) return;
+      var next = btn.nextElementSibling;
+      if (next && next.classList.contains('tabs-bar-break')) return;
       var brk = document.createElement("span");
       brk.className = "tabs-bar-break";
-      breakAfter.after(brk);
-    }
+      btn.after(brk);
+    });
   });
 
   /* Флаги публичного сайта из salon_settings (anon): корзина + панель записи #broneeri */

@@ -1164,11 +1164,7 @@ body.site-ilusalong #hero.hero {
   margin-bottom: 1rem;
 }
 
-/* Kolorist category (always first) gets its own top row */
-.tabs-bar .tab-btn[data-tab-index="0"] {
-  flex-basis: 100%;
-  justify-content: center;
-}
+/* Kolorist category (always first) gets its own top row via JS-inserted break after it */
 
 /* Flex row-break injected by JS after index 4 */
 .tabs-bar-break {
