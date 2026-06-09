@@ -358,6 +358,16 @@
     });
 
     applyTeamFilterForActiveTab();
+
+    /* Kolorist block: show when Сложные техники окрашивания tab is active */
+    var koloristElTab = document.getElementById("kolorist");
+    if (koloristElTab) {
+      var activeTabPanel = scope.querySelector(".tab-panel.is-active");
+      if (activeTabPanel) {
+        var activeCatKey = (activeTabPanel.getAttribute("data-pick-category") || "").toLowerCase();
+        koloristElTab.hidden = activeCatKey.indexOf("сложные техники окрашивания") === -1;
+      }
+    }
   });
 
   /**
@@ -840,6 +850,14 @@
         if (masterSelect && masterSelect.value) {
           applyMaster("");
         }
+        return;
+      }
+      /* Kolorist category — booking is by phone only, never show master section */
+      var isKoloristCategory = picked.some(function (p) {
+        return p.category && p.category.toLowerCase().indexOf("сложные техники окрашивания") !== -1;
+      });
+      if (isKoloristCategory) {
+        teamRoot.hidden = true;
         return;
       }
       /* Если пользователь уже находится на секции записи (#broneeri в зоне
@@ -2005,6 +2023,18 @@
         if (!panel) return;
         if (!serviceCategoryFromPanel(panel)) return;
         if (li.getAttribute("data-pick-wired") === "1") return;
+        /* Kolorist services: only консультация and тест пряди are bookable online;
+           all others are phone-only and cannot be picked in the public widget. */
+        var panelCat = (panel.getAttribute("data-pick-category") || "").toLowerCase();
+        if (panelCat.indexOf("сложные техники окрашивания") !== -1) {
+          var svcName = (li.getAttribute("data-service-name") || nameSpan.textContent || "").trim().toLowerCase();
+          var isOnlineBookable = svcName.indexOf("консультация") !== -1 || svcName.indexOf("тест пряди") !== -1;
+          if (!isOnlineBookable) {
+            li.classList.add("menu-phone-only");
+            li.setAttribute("data-pick-wired", "1");
+            return;
+          }
+        }
         li.classList.add("menu-pick-row");
         li.setAttribute("role", "button");
         li.tabIndex = 0;

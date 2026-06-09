@@ -1345,6 +1345,18 @@ body.site-ilusalong #hero.hero {
   padding-top: 0.65rem;
 }
 
+.menu-list li.menu-phone-only {
+  opacity: 0.5;
+  cursor: default;
+  pointer-events: none;
+}
+.menu-list li.menu-phone-only::after {
+  content: "☎";
+  margin-left: 0.4em;
+  font-size: 0.75em;
+  opacity: 0.7;
+}
+
 .menu-footnote {
   text-align: center;
   margin-top: 1.25rem;
