@@ -3708,6 +3708,37 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
   flex-wrap: wrap;
 }
 
+.kolorist-book-consult-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.75rem 1.25rem;
+  background: var(--gold, #c4a574);
+  color: #1a1410;
+  border: none;
+  border-radius: 2rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: background 0.18s, transform 0.12s;
+  margin-bottom: 0.5rem;
+}
+.kolorist-book-consult-btn svg {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+.kolorist-book-consult-btn:hover {
+  background: #d4b584;
+  transform: translateY(-1px);
+}
+.kolorist-book-consult-btn:active {
+  transform: translateY(0);
+}
+
 .kolorist-btn {
   display: inline-flex;
   align-items: center;

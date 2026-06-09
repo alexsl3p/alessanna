@@ -2477,6 +2477,42 @@
       },
     };
 
+    /* Kolorist consult button — pre-selects consultation + Natalja, scrolls to booking */
+    document.addEventListener("click", function (e) {
+      var btn = e.target.closest(".kolorist-book-consult-btn");
+      if (!btn) return;
+      e.preventDefault();
+      /* Find the consultation li in the price list */
+      var allPickLis = teenused ? teenused.querySelectorAll(".menu-list li.menu-pick-row") : [];
+      var consultLi = null;
+      for (var ci = 0; ci < allPickLis.length; ci++) {
+        var lname = (allPickLis[ci].getAttribute("data-service-name") || "").toLowerCase();
+        if (!lname && allPickLis[ci].querySelector("span:not(.price)")) {
+          lname = allPickLis[ci].querySelector("span:not(.price)").textContent.toLowerCase();
+        }
+        if (lname.indexOf("консультация") !== -1) { consultLi = allPickLis[ci]; break; }
+      }
+      if (consultLi) {
+        picked = [];
+        togglePick(consultLi);
+      }
+      /* Find Natalja in the master select and select her */
+      setTimeout(function () {
+        if (masterSelect) {
+          for (var mi = 0; mi < masterSelect.options.length; mi++) {
+            var mname = (masterSelect.options[mi].textContent || "").toLowerCase();
+            if (mname.indexOf("natalja") !== -1 || mname.indexOf("наталь") !== -1) {
+              applyMaster(masterSelect.options[mi].value, false);
+              break;
+            }
+          }
+        }
+        var broneeri = document.getElementById("broneeri");
+        if (broneeri) broneeri.removeAttribute("hidden");
+        scrollToBookingBlock();
+      }, 80);
+    });
+
     renderList();
     void loadSalonSitePublicFeatureFlags().then(function (flags) {
       bookingCartEnabled = flags.cart;
