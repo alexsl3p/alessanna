@@ -113,8 +113,9 @@ export function ReceptionBookingPopup({
     () => selectedStaff?.roles?.includes("manager") || selectedStaff?.roles?.includes("admin") || false,
     [selectedStaff],
   );
+  // Show all services when no master selected yet; filter once master is picked
   const eligibleServices = useMemo(
-    () => servicesEligibleForStaff(services, links, staffId, selectedStaff, { implicitAll: false, privilegedCanDoAll: false }),
+    () => servicesEligibleForStaff(services, links, staffId, selectedStaff, { implicitAll: !staffId, privilegedCanDoAll: false }),
     [services, links, staffId, selectedStaff],
   );
   const svc = useMemo(() => eligibleServices.find((s) => String(s.id) === serviceId) ?? null, [eligibleServices, serviceId]);
