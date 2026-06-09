@@ -2269,7 +2269,8 @@
       serviceSelect.addEventListener("change", function (e) {
         preserveScrollPosition(function () {
           var catId = String(serviceSelect.value || "");
-          if (!syncingFormFromCart && picked.length) {
+          var currentPickCat = picked.length ? picked[picked.length - 1].category : null;
+          if (!syncingFormFromCart && picked.length && catId !== currentPickCat) {
             picked = [];
             renderList();
             /* syncFormFromCart inside renderList resets serviceSelect.value="",
