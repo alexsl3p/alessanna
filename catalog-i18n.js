@@ -115,6 +115,22 @@
       et: "Konsultatsioon + testlokk (tasu tagastatakse visiidil)",
       en: "Consultation + test strand (fee refunded on visit)",
     },
+    /* Short forms (without parenthetical note) */
+    "Консультация + тест-прядь": { et: "Konsultatsioon + testlokk", en: "Consultation + test strand" },
+    /* Gel nail removal variants with parentheses */
+    "Снятие гелевых ногтей (без маникюра)": { et: "Geelküünte eemaldamine (ilma maniküürita)", en: "Gel nail removal (without manicure)" },
+    "Снятие гелевых ногтей (с маникюром)": { et: "Geelküünte eemaldamine maniküüriga", en: "Gel nail removal with manicure" },
+    "Снятие гель-лака (без маникюра)": { et: "Geellaki eemaldamine (ilma maniküürita)", en: "Gel polish removal (without manicure)" },
+    "Снятие гель-лака (с маникюром)": { et: "Geellaki eemaldamine maniküüriga", en: "Gel polish removal with manicure" },
+    "Снятие гель-лака (с педикюром)": { et: "Geellaki eemaldamine pediküüriga", en: "Gel polish removal with pedicure" },
+    /* Haircut variants */
+    "Детская стрижка (мальчики)": { et: "Laste juukselõikus (poisid)", en: "Children's haircut (boys)" },
+    "Мужская стрижка + мытьё головы": { et: "Meeste juukselõikus + pesu", en: "Men's haircut + hair wash" },
+    /* Perm full name variants */
+    "Химическая завивка (длинные)": { et: "Keemiline lokk (pikad)", en: "Perm (long)" },
+    "Химическая завивка (короткие)": { et: "Keemiline lokk (lühikesed)", en: "Perm (short)" },
+    /* Standalone service name */
+    "Педикюр": { et: "Pediküür", en: "Pedicure" },
   };
 
   function currentLang() {

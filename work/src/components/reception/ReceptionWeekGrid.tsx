@@ -382,7 +382,7 @@ export function ReceptionWeekGrid({
                 {birthdayStaff.length > 0 && (
                   <button
                     type="button"
-                    className="text-xs leading-none transition-transform hover:scale-125 active:scale-110"
+                    className="text-base leading-none transition-transform hover:scale-125 active:scale-110"
                     title="День рождения!"
                     onClick={(e) => {
                       e.stopPropagation();

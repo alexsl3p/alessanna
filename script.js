@@ -2140,8 +2140,12 @@
             break;
           }
         }
-        var isKoloristCat = activeCatLabel.indexOf("сложные техники окрашивания") !== -1;
-        var isTattooCat = activeCatLabel.indexOf("татуаж") !== -1;
+        var isKoloristCat = activeCatLabel.indexOf("сложные техники окрашивания") !== -1
+          || activeCatLabel.indexOf("техники мелирования") !== -1
+          || activeCatLabel.indexOf("keerulised värvimistehnikad") !== -1
+          || activeCatLabel.indexOf("complex colouring") !== -1;
+        var isTattooCat = activeCatLabel.indexOf("тату") !== -1
+          || activeCatLabel.indexOf("henna") !== -1;
         if (isKoloristCat || isTattooCat) {
           var allOpts2 = serviceItemSelect.querySelectorAll("option");
           for (var qi = 0; qi < allOpts2.length; qi++) {
@@ -2202,8 +2206,9 @@
           (function (val) {
             item.addEventListener("click", function () {
               serviceItemSelect.value = val;
-              serviceItemSelect.dispatchEvent(new Event("change", { bubbles: true }));
-              updateServiceVisualList();
+              var opt = serviceItemSelect.options[serviceItemSelect.selectedIndex];
+              if (opt) addPickFromServiceOption(opt);
+              if (serviceVisualWrap) serviceVisualWrap.hidden = true;
             });
           })(sopt.value);
         }
