@@ -1164,6 +1164,12 @@ body.site-ilusalong #hero.hero {
   margin-bottom: 1rem;
 }
 
+/* Kolorist category (always first) gets its own top row */
+.tabs-bar .tab-btn[data-tab-index="0"] {
+  flex-basis: 100%;
+  justify-content: center;
+}
+
 .price-list-cta {
   display: flex;
   justify-content: center;
