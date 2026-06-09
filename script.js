@@ -2269,7 +2269,7 @@
       serviceSelect.addEventListener("change", function (e) {
         preserveScrollPosition(function () {
           var catId = String(serviceSelect.value || "");
-          if (e && e.isTrusted && !syncingFormFromCart && picked.length) {
+          if (!syncingFormFromCart && picked.length) {
             picked = [];
             renderList();
           }
