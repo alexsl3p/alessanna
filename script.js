@@ -2640,6 +2640,7 @@
         }
       }
 
+      var _scrollClose = null;
       function open() {
         /* Close every other open csel first */
         for (var ci = 0; ci < CSEL_CLOSERS.length; ci++) { CSEL_CLOSERS[ci](); }
@@ -2652,15 +2653,16 @@
             : "bottom:" + (window.innerHeight - r.top) + "px;max-height:" + Math.min(r.top - 8, 320) + "px");
         list.hidden = false;
         trigger.classList.add("csel__trigger--open");
-        /* Close on scroll (mobile momentum scroll included) */
-        window.addEventListener("scroll", close, { passive: true, capture: true });
+        /* Close when the PAGE scrolls, but NOT when user scrolls inside this list */
+        _scrollClose = function(e) { if (e.target !== list && !list.contains(e.target)) close(); };
+        window.addEventListener("scroll", _scrollClose, { passive: true, capture: true });
       }
       function close() {
         if (list.hidden) return;
         list.hidden = true;
         trigger.classList.remove("csel__trigger--open");
         refreshTrigger();
-        window.removeEventListener("scroll", close, { capture: true });
+        if (_scrollClose) { window.removeEventListener("scroll", _scrollClose, { capture: true }); _scrollClose = null; }
       }
       CSEL_CLOSERS.push(close);
 
@@ -3800,20 +3802,34 @@
     function filterMastersByFormCategory(masters) {
       if (!Array.isArray(masters)) return [];
 
-      /* 1) Если что-то уже выбрано в корзине — берём пересечение мастеров,
-       *    способных выполнить ВСЕ услуги. Источник истины — первый IIFE
-       *    (там mastersForPickedCategories() умеет считать пересечение
-       *    по staff_services). Это единый ответ для chain-формы. */
+      /* 1) Если что-то уже выбрано в корзине — берём мастеров напрямую из
+       *    data-service-masters (UUID'ы из Supabase, хранятся в pick.masters).
+       *    Это надёжнее, чем идти через DOM #meistrid → там могут быть другие
+       *    идентификаторы и промахи, из-за которых показывались «все» мастера. */
       var chainApi = globalThis.__SITE_BOOKING_CHAIN__;
       if (chainApi && typeof chainApi.count === "function" && chainApi.count() > 0) {
-        var common =
-          typeof chainApi.getCommonMasters === "function" ? chainApi.getCommonMasters() : [];
-        if (!common.length) return [];
-        var allowSet = {};
-        for (var p = 0; p < common.length; p++) allowSet[String(common[p])] = true;
-        return masters.filter(function (m) {
-          return allowSet[String(m.id)];
-        });
+        var items = typeof chainApi.getItems === "function" ? chainApi.getItems() : [];
+        if (items.length) {
+          /* Пересечение мастеров по всем выбранным услугам */
+          var intersection = null;
+          for (var ii = 0; ii < items.length; ii++) {
+            var svcMasters = items[ii].masters;
+            if (!Array.isArray(svcMasters) || !svcMasters.length) continue; // пустой = все
+            var set = {};
+            for (var mi = 0; mi < svcMasters.length; mi++) set[String(svcMasters[mi])] = true;
+            if (intersection === null) {
+              intersection = set;
+            } else {
+              var next = {};
+              for (var k in intersection) { if (set[k]) next[k] = true; }
+              intersection = next;
+            }
+          }
+          if (intersection !== null && Object.keys(intersection).length > 0) {
+            return masters.filter(function(m) { return !!intersection[String(m.id)]; });
+          }
+          /* intersection null = все услуги без ограничений → падаём на категорию */
+        }
       }
 
       /* 2) Корзина пуста — фильтруем по категории формы записи. */
