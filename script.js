@@ -2567,6 +2567,8 @@
     /* ---- Custom select dropdowns for booking form (replaces native white pickers) ---- */
     var PHONE_SVG = '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 5a2 2 0 012-2h2.28a1 1 0 01.95.68l.74 2.22a1 1 0 01-.23 1.02L7.34 8.34a11.04 11.04 0 005.32 5.32l1.42-1.42a1 1 0 011.02-.23l2.22.74a1 1 0 01.68.95V15a2 2 0 01-2 2h-1C7.16 17 3 12.84 3 8V5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>';
     var CHEVRON_SVG = '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M5 7.5l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    /* All csel close-functions — opening one closes the others */
+    var CSEL_CLOSERS = [];
 
     function makeCsel(sel, onSelect) {
       if (!sel || sel.dataset.cselDone) return function(){};
@@ -2637,6 +2639,8 @@
       }
 
       function open() {
+        /* Close every other open csel first */
+        for (var ci = 0; ci < CSEL_CLOSERS.length; ci++) { CSEL_CLOSERS[ci](); }
         buildList();
         var r = trigger.getBoundingClientRect();
         var spaceBelow = window.innerHeight - r.bottom;
@@ -2646,12 +2650,17 @@
             : "bottom:" + (window.innerHeight - r.top) + "px;max-height:" + Math.min(r.top - 8, 320) + "px");
         list.hidden = false;
         trigger.classList.add("csel__trigger--open");
+        /* Close on scroll (mobile momentum scroll included) */
+        window.addEventListener("scroll", close, { passive: true, capture: true });
       }
       function close() {
+        if (list.hidden) return;
         list.hidden = true;
         trigger.classList.remove("csel__trigger--open");
         refreshTrigger();
+        window.removeEventListener("scroll", close, { capture: true });
       }
+      CSEL_CLOSERS.push(close);
 
       trigger.addEventListener("click", function(e) {
         e.stopPropagation();
@@ -2663,6 +2672,10 @@
         if (e.key === "Escape") close();
       });
       document.addEventListener("click", function() { if (!list.hidden) close(); });
+      /* Mobile: close on touch outside */
+      document.addEventListener("touchstart", function(e) {
+        if (!list.hidden && !list.contains(e.target) && !wrap.contains(e.target)) close();
+      }, { passive: true });
 
       sel.addEventListener("change", function() { refreshTrigger(); });
 
