@@ -2272,6 +2272,12 @@
           if (!syncingFormFromCart && picked.length) {
             picked = [];
             renderList();
+            /* syncFormFromCart inside renderList resets serviceSelect.value="",
+               restore the category the user just chose */
+            if (catId && serviceSelect.value !== catId) {
+              serviceSelect.value = catId;
+              if (typeof refreshCategorySelect === "function") refreshCategorySelect();
+            }
           }
           relayoutServiceItemSelect(catId);
         });
