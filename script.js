@@ -1982,12 +1982,15 @@
       }
       syncFormCategory();
       renderList();
-      /* Добавление услуги: прокручиваем к блоку мастеров. Блокируем все
-       * restore-механизмы на время навигации, чтобы не было туда-сюда. */
+      /* Добавление услуги: если это «Техники мелирования» — показываем
+       * kolorist-блок и скролл к нему; иначе — стандартный путь к мастерам. */
+      var isKoloristPick = category.toLowerCase().indexOf("техники мелирования") !== -1;
+      var koloristEl = document.getElementById("kolorist");
+      if (koloristEl) koloristEl.hidden = !isKoloristPick;
       if (adding && picked.length > 0) {
         blockScrollRestore(1400);
         requestAnimationFrame(function () {
-          scrollToSectionTitle("meistrid");
+          scrollToSectionTitle(isKoloristPick ? "kolorist" : "meistrid");
         });
       }
     }
