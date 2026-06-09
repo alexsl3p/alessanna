@@ -216,6 +216,8 @@ export function ReceptionCalendarPage() {
   const swipeAxis = useRef<"h" | "v" | null>(null);
 
   function handleTouchStart(e: React.TouchEvent) {
+    // Ignore swipe navigation when the user has pinch-zoomed in
+    if ((window.visualViewport?.scale ?? 1) > 1.05) return;
     swipeStartX.current = e.touches[0].clientX;
     swipeStartY.current = e.touches[0].clientY;
     swipeAxis.current = null;
