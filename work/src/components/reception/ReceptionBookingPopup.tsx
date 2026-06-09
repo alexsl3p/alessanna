@@ -186,9 +186,19 @@ export function ReceptionBookingPopup({
   }
   function handleModeToggle(block: boolean) { setIsBlock(block); setBlockType("block_time"); setEndManual(false); setError(""); }
 
+  // Track picker state via ref so the mousedown handler (registered once) can see the current value
+  const pickerOpenRef = useRef(false);
+  useEffect(() => { pickerOpenRef.current = showServicePicker || showStaffPicker; }, [showServicePicker, showStaffPicker]);
+
   useEffect(() => {
-    function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        if (pickerOpenRef.current) { setShowServicePicker(false); setShowStaffPicker(false); return; }
+        onClose();
+      }
+    }
     function onMouseDown(e: MouseEvent) {
+      if (pickerOpenRef.current) return; // picker portal is open — don't close the popup
       if (popupRef.current && !popupRef.current.contains(e.target as Node)) onClose();
     }
     document.addEventListener("keydown", onKey);
