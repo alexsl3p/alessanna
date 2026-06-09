@@ -2166,57 +2166,21 @@
       if (typeof refreshCategorySelect === "function") refreshCategorySelect();
     }
 
-    /* Custom visual list for the service-item select:
-       native <select> can't host styled SVG icons inside <option>,
-       so we render a custom dark list and keep the hidden <select> for form logic. */
-    var serviceVisualWrap = null;
+    /* Service-item select: wrapped with makeCsel so it looks like the other
+       dropdowns (category, master). Phone icons on disabled items come from
+       the csel__phone CSS class that buildList already adds. */
+    var refreshServiceItemSelect = function(){};
 
     function buildServiceVisualList() {
       if (!serviceItemSelect) return;
-      serviceItemSelect.style.cssText = "position:absolute;opacity:0;pointer-events:none;height:1px;width:1px";
-      serviceVisualWrap = document.createElement("div");
-      serviceVisualWrap.id = "booking-service-visual";
-      serviceVisualWrap.className = "booking-service-visual";
-      serviceVisualWrap.hidden = true;
-      serviceItemSelect.parentNode.insertBefore(serviceVisualWrap, serviceItemSelect.nextSibling);
+      refreshServiceItemSelect = makeCsel(serviceItemSelect, function() {
+        var opt = serviceItemSelect.options[serviceItemSelect.selectedIndex];
+        if (opt) addPickFromServiceOption(opt);
+      });
     }
 
     function updateServiceVisualList() {
-      if (!serviceVisualWrap || !serviceItemSelect) return;
-      serviceVisualWrap.innerHTML = "";
-      var opts = serviceItemSelect.querySelectorAll("option");
-      var hasItems = false;
-      var currentVal = serviceItemSelect.value;
-      for (var si = 0; si < opts.length; si++) {
-        var sopt = opts[si];
-        if (!sopt.value || sopt.getAttribute("data-form-placeholder") || sopt.hidden) continue;
-        hasItems = true;
-        var item = document.createElement("div");
-        item.className = "svc-item" + (sopt.disabled ? " svc-item--phone" : "") + (sopt.value === currentVal ? " svc-item--active" : "");
-        var nameEl = document.createElement("span");
-        nameEl.className = "svc-item__name";
-        nameEl.textContent = sopt.getAttribute("data-orig-text") || sopt.textContent;
-        item.appendChild(nameEl);
-        if (sopt.disabled) {
-          var phoneEl = document.createElement("span");
-          phoneEl.className = "svc-item__phone";
-          phoneEl.innerHTML = '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 5a2 2 0 012-2h2.28a1 1 0 01.95.68l.74 2.22a1 1 0 01-.23 1.02L7.34 8.34a11.04 11.04 0 005.32 5.32l1.42-1.42a1 1 0 011.02-.23l2.22.74a1 1 0 01.68.95V15a2 2 0 01-2 2h-1C7.16 17 3 12.84 3 8V5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>';
-          item.appendChild(phoneEl);
-        } else {
-          (function (val) {
-            item.addEventListener("click", function () {
-              serviceItemSelect.value = val;
-              var opt = serviceItemSelect.options[serviceItemSelect.selectedIndex];
-              if (opt) addPickFromServiceOption(opt);
-              if (serviceVisualWrap) serviceVisualWrap.hidden = true;
-            });
-          })(sopt.value);
-        }
-        serviceVisualWrap.appendChild(item);
-      }
-      serviceVisualWrap.hidden = !hasItems;
-      var lbl = serviceItemSelect.closest("label");
-      if (lbl) lbl.hidden = !hasItems;
+      refreshServiceItemSelect();
     }
 
     buildServiceVisualList();
@@ -2604,7 +2568,7 @@
     var PHONE_SVG = '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 5a2 2 0 012-2h2.28a1 1 0 01.95.68l.74 2.22a1 1 0 01-.23 1.02L7.34 8.34a11.04 11.04 0 005.32 5.32l1.42-1.42a1 1 0 011.02-.23l2.22.74a1 1 0 01.68.95V15a2 2 0 01-2 2h-1C7.16 17 3 12.84 3 8V5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>';
     var CHEVRON_SVG = '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M5 7.5l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
-    function makeCsel(sel) {
+    function makeCsel(sel, onSelect) {
       if (!sel || sel.dataset.cselDone) return function(){};
       sel.dataset.cselDone = "1";
       /* display:none on the select breaks the label's native-picker activation —
@@ -2663,6 +2627,7 @@
                 e.stopPropagation();
                 sel.value = val;
                 sel.dispatchEvent(new Event("change", { bubbles: true }));
+                if (onSelect) onSelect(val);
                 close();
               });
             })(o.value);

@@ -20,6 +20,7 @@
   };
 
   var SERVICES = {
+    /* Brows & lashes */
     "Коррекция бровей": { et: "Kulmude korrigeerimine", en: "Eyebrow shaping" },
     "Окрашивание бровей": { et: "Kulmude värvimine", en: "Eyebrow tinting" },
     "Окрашивание ресниц": { et: "Ripsmete värvimine", en: "Eyelash tinting" },
@@ -27,39 +28,50 @@
       et: "Kulmude ja ripsmete värvimine + korrigeerimine",
       en: "Brow & lash tinting + shaping",
     },
+    /* Manicure */
     "Классический маникюр": { et: "Klassikaline maniküür", en: "Classic manicure" },
     "Маникюр + гель-лак": { et: "Maniküür geellakiga", en: "Manicure + gel polish" },
-    "Покрытие лаком": { et: "Laki pealekandmine", en: "Nail polish application" },
+    "Покрытие лаком": { et: "Küünte lakkimine", en: "Nail polish application" },
     "Снятие гель-лака (с классическим маникюром)": {
-      et: "Geellaki eemaldamine (klassikalise maniküüriga)",
+      et: "Geellaki eemaldus (koos klassikalise manikuuriga)",
       en: "Gel polish removal (with classic manicure)",
     },
-    "Снятие гель-лака": { et: "Geellaki eemaldamine", en: "Gel polish removal" },
-    "Наращивание ногтей (гель)": { et: "Küünte pikendamine (geel)", en: "Gel nail extensions" },
-    "Коррекция гель-ногтей": { et: "Geelküünte korrektsioon", en: "Gel nail infill" },
-    "Снятие наращенных ногтей": { et: "Pikendatud küünte eemaldamine", en: "Extension removal" },
+    "Снятие гель-лака": { et: "Geellaki eemaldus", en: "Gel polish removal" },
+    "Наращивание ногтей (гель)": { et: "Geelküünte paigaldus", en: "Gel nail extensions" },
+    "Коррекция гель-ногтей": { et: "Geelküünte hooldus", en: "Gel nail infill" },
+    "Снятие наращенных ногтей": { et: "Kunstküünte eemaldamine", en: "Extension removal" },
     "Ремонт одного ногтя": { et: "Ühe küüne parandus", en: "Single nail repair" },
+    /* Pedicure */
     "Классический педикюр": { et: "Klassikaline pediküür", en: "Classic pedicure" },
     "Педикюр + гель-лак": { et: "Pediküür geellakiga", en: "Pedicure + gel polish" },
     "Снятие гель-лака (с классическим педикюром)": {
-      et: "Geellaki eemaldamine (klassikalise pediküüriga)",
+      et: "Geellaki eemaldus (koos klassikalise pediküüriga)",
       en: "Gel polish removal (with classic pedicure)",
     },
     "Мужской педикюр": { et: "Meeste pediküür", en: "Men's pedicure" },
+    "Педикюр": { et: "Pediküür", en: "Pedicure" },
+    /* Haircuts */
     "Детская стрижка": { et: "Laste juukselõikus (kuni 12 a.)", en: "Children's haircut (up to 12)" },
+    "Детская стрижка (девочки)": { et: "Laste juukselõikus (tüdrukud)", en: "Children's haircut (girls)" },
+    "Детская стрижка (мальчики)": { et: "Laste juukselõikus (poisid)", en: "Children's haircut (boys)" },
     "Мужская стрижка": { et: "Meeste juukselõikus", en: "Men's haircut" },
     "Женская стрижка": { et: "Naiste juukselõikus", en: "Women's haircut" },
-    "Мужская стрижка машинкой": { et: "Meeste juukselõikus masinaga", en: "Men's clipper cut" },
-    "Стрижка бороды и усов": { et: "Habe ja vuntside lõikus", en: "Beard & moustache trim" },
+    "Мужская стрижка машинкой": { et: "Masinalõikus", en: "Men's clipper cut" },
+    "Стрижка бороды и усов": { et: "Habeme, vuntside piiramine", en: "Beard & moustache trim" },
     "Мытьё головы": { et: "Pesu", en: "Hair wash" },
-    "Подравнивание кончиков": { et: "Otste ühtlustamine", en: "Trim ends" },
-    "Стрижка чёлки": { et: "Patside lõikus", en: "Bangs trim" },
-    "Мытьё + дневная укладка": { et: "Pesu + päevane soeng", en: "Wash + day styling" },
-    "Дневная укладка": { et: "Päevane soeng", en: "Day styling" },
-    "Выпрямление волос": { et: "Juuste sirgendamine", en: "Hair straightening" },
-    "Укладка локонами": { et: "Lokkide soeng", en: "Curls styling" },
+    "Подравнивание кончиков": { et: "Juuste otste tasandamine", en: "Trim ends" },
+    "Стрижка чёлки": { et: "Tuka lõikus", en: "Bangs trim" },
+    "Мужская стрижка + мытьё": { et: "Meeste juukselõikus + pesu", en: "Men's haircut + wash" },
+    "Мужская стрижка + мытьё головы": { et: "Meeste juukselõikus + pesu", en: "Men's haircut + hair wash" },
+    "Мужская стрижка машинкой + мытьё головы": { et: "Masinalõikus + pesu", en: "Men's clipper cut + hair wash" },
+    /* Styling */
+    "Мытьё + дневная укладка": { et: "Pesu + päeva soeng", en: "Wash + day styling" },
+    "Дневная укладка": { et: "Päeva soeng", en: "Day styling" },
+    "Выпрямление волос": { et: "Sirgendamine", en: "Hair straightening" },
+    "Укладка локонами": { et: "Loki soeng", en: "Curls styling" },
     "Праздничная укладка": { et: "Pidulik soeng", en: "Party styling" },
-    "Свадебная укладка": { et: "Pulmasoeng", en: "Wedding styling" },
+    "Свадебная укладка": { et: "Pruudi soeng", en: "Wedding styling" },
+    /* Hair coloring */
     "Окрашивание корней": { et: "Juurte värvimine", en: "Root touch-up" },
     "Полное окрашивание": { et: "Täisvärvimine", en: "Full color" },
     "Тонирование": { et: "Toonimine", en: "Toning" },
@@ -70,24 +82,26 @@
       et: "Värvimine (väga pikad juuksed)",
       en: "Color (very long hair)",
     },
-    "Окрашивание своим красителем": { et: "Värvimine oma värviga", en: "Color with client's dye" },
-    "Мелирование (короткие волосы)": { et: "Mähkimine (lühikesed)", en: "Highlights (short)" },
-    "Мелирование (средние волосы)": { et: "Mähkimine (keskmised)", en: "Highlights (medium)" },
-    "Мелирование (длинные волосы)": { et: "Mähkimine (pikad)", en: "Highlights (long)" },
+    "Окрашивание своим красителем": { et: "Juuste värvimine oma värviga", en: "Color with client's dye" },
+    /* Highlights — трiibutamine replaces mähkimine */
+    "Мелирование (короткие волосы)": { et: "Triibutamine (lühikesed)", en: "Highlights (short)" },
+    "Мелирование (средние волосы)": { et: "Triibutamine (keskmised)", en: "Highlights (medium)" },
+    "Мелирование (длинные волосы)": { et: "Triibutamine (pikad)", en: "Highlights (long)" },
     "Мелирование (очень длинные волосы)": {
-      et: "Mähkimine (väga pikad)",
+      et: "Triibutamine (väga pikad)",
       en: "Highlights (very long)",
     },
+    /* Perm */
     "Хим. завивка (короткие)": { et: "Keemiline lokk (lühikesed)", en: "Perm (short)" },
     "Хим. завивка (длинные)": { et: "Keemiline lokk (pikad)", en: "Perm (long)" },
-    "Химическая завивка (средние)": { et: "Keemiline lokk (keskmised)", en: "Perm (medium)" },
-    /* New / renamed services from DB */
-    "Детская стрижка (девочки)": { et: "Laste juukselõikus (tüdrukud)", en: "Children's haircut (girls)" },
-    "Мужская стрижка + мытьё": { et: "Meeste juukselõikus + pesu", en: "Men's haircut + wash" },
-    "Мужская стрижка машинкой + мытьё головы": { et: "Meeste juukselõikus masinaga + pesu", en: "Men's clipper cut + hair wash" },
+    "Химическая завивка (средние)": { et: "Keemiline lokk (poolpikad)", en: "Perm (medium)" },
+    "Химическая завивка (длинные)": { et: "Keemiline lokk (pikad)", en: "Perm (long)" },
+    "Химическая завивка (короткие)": { et: "Keemiline lokk (lühikesed)", en: "Perm (short)" },
+    /* Complex coloring / kolorist */
     "Консультация + тест прядь": { et: "Konsultatsioon + testlokk", en: "Consultation + test strand" },
+    "Консультация + тест-прядь": { et: "Konsultatsioon + testlokk", en: "Consultation + test strand" },
     "Снятие гелевых ногтей с маникюром": { et: "Geelküünte eemaldamine maniküüriga", en: "Gel nail removal with manicure" },
-    "Снятие гель-лака с маникюром": { et: "Geellaki eemaldamine maniküüriga", en: "Gel polish removal with manicure" },
+    "Снятие гель-лака с маникюром": { et: "Geellaki eemaldus maniküüriga", en: "Gel polish removal with manicure" },
     "Тату хной": { et: "Hennamaaling", en: "Henna tattoo" },
     "Блонд ( Осветление пудрой + тонирования+ уход )": {
       et: "Blond (pulbriga valgendamine + toonimine + hooldus)",
@@ -95,7 +109,7 @@
     },
     "Выход из темного": { et: "Väljumine tumedast", en: "Dark-to-light transformation" },
     "Техники ( Мелирование, шатуш, омбре, airtouch, балаяж, комбинация техник )": {
-      et: "Tehnikad (mähkimine, shatush, ombre, airtouch, balayage, kombinatsioon)",
+      et: "Tehnikad (triibutamine, shatush, ombre, airtouch, balayage, kombinatsioon)",
       en: "Techniques (highlights, shatush, ombre, airtouch, balayage, combo)",
     },
     "Холодное восстановление": { et: "Külm taastamine", en: "Cold restoration treatment" },
@@ -115,22 +129,12 @@
       et: "Konsultatsioon + testlokk (tasu tagastatakse visiidil)",
       en: "Consultation + test strand (fee refunded on visit)",
     },
-    /* Short forms (without parenthetical note) */
-    "Консультация + тест-прядь": { et: "Konsultatsioon + testlokk", en: "Consultation + test strand" },
-    /* Gel nail removal variants with parentheses */
+    /* Gel removal variants with parentheses */
     "Снятие гелевых ногтей (без маникюра)": { et: "Geelküünte eemaldamine (ilma maniküürita)", en: "Gel nail removal (without manicure)" },
     "Снятие гелевых ногтей (с маникюром)": { et: "Geelküünte eemaldamine maniküüriga", en: "Gel nail removal with manicure" },
-    "Снятие гель-лака (без маникюра)": { et: "Geellaki eemaldamine (ilma maniküürita)", en: "Gel polish removal (without manicure)" },
-    "Снятие гель-лака (с маникюром)": { et: "Geellaki eemaldamine maniküüriga", en: "Gel polish removal with manicure" },
-    "Снятие гель-лака (с педикюром)": { et: "Geellaki eemaldamine pediküüriga", en: "Gel polish removal with pedicure" },
-    /* Haircut variants */
-    "Детская стрижка (мальчики)": { et: "Laste juukselõikus (poisid)", en: "Children's haircut (boys)" },
-    "Мужская стрижка + мытьё головы": { et: "Meeste juukselõikus + pesu", en: "Men's haircut + hair wash" },
-    /* Perm full name variants */
-    "Химическая завивка (длинные)": { et: "Keemiline lokk (pikad)", en: "Perm (long)" },
-    "Химическая завивка (короткие)": { et: "Keemiline lokk (lühikesed)", en: "Perm (short)" },
-    /* Standalone service name */
-    "Педикюр": { et: "Pediküür", en: "Pedicure" },
+    "Снятие гель-лака (без маникюра)": { et: "Geellaki eemaldus (ilma maniküürita)", en: "Gel polish removal (without manicure)" },
+    "Снятие гель-лака (с маникюром)": { et: "Geellaki eemaldus maniküüriga", en: "Gel polish removal with manicure" },
+    "Снятие гель-лака (с педикюром)": { et: "Geellaki eemaldus pediküüriga", en: "Gel polish removal with pedicure" },
   };
 
   function currentLang() {
