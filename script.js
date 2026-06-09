@@ -1921,14 +1921,6 @@
         window.dispatchEvent(new CustomEvent("salon-picks-changed"));
       } catch (_) {}
       syncMasterSelectEligibility();
-      if (masterSelectLabel) {
-        var _showMaster = picked.length > 0;
-        masterSelectLabel.hidden = !_showMaster;
-        if (!_showMaster && masterSelect) {
-          masterSelect.value = "";
-          if (typeof refreshMasterSelect === "function") refreshMasterSelect();
-        }
-      }
       renderMasterChips();
       validateMasterForPicks();
       /* Главная точка двунаправленной синхронизации: после ЛЮБОГО
