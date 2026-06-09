@@ -366,7 +366,7 @@ export function ReceptionWeekGrid({
               <span className={`text-[11px] font-medium uppercase tracking-wide ${isHoliday ? "text-rose-400" : mutedCls}`}>
                 {ruDay}
               </span>
-              <div className="flex items-center justify-center gap-1">
+              <div className="flex items-center justify-center gap-0.5">
                 <span
                   className={[
                     "flex h-7 w-7 items-center justify-center rounded-full text-base font-medium md:h-8 md:w-8 md:text-lg",
@@ -382,7 +382,7 @@ export function ReceptionWeekGrid({
                 {birthdayStaff.length > 0 && (
                   <button
                     type="button"
-                    className="text-base leading-none transition-transform hover:scale-125 active:scale-110"
+                    className="text-xs leading-none transition-transform hover:scale-125 active:scale-110"
                     title="День рождения!"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -393,11 +393,6 @@ export function ReceptionWeekGrid({
                   </button>
                 )}
               </div>
-              {isHoliday && (
-                <span className="mt-0.5 text-[9px] font-medium uppercase tracking-wide text-rose-400 md:text-[10px]">
-                  закрыто
-                </span>
-              )}
               {!isHoliday && workingStaff.length > 0 && (
                 <div className="mt-0.5 flex flex-wrap justify-center gap-0.5 px-0.5">
                   {workingStaff.map((m) => {

@@ -2602,17 +2602,16 @@
     function makeCsel(sel) {
       if (!sel || sel.dataset.cselDone) return function(){};
       sel.dataset.cselDone = "1";
-      /* display:none fully hides the native select so the enclosing <label> can
-         no longer activate it when something inside the label is clicked */
+      /* display:none on the select breaks the label's native-picker activation —
+         a display:none control cannot be activated by its label, so label-click
+         forwarding becomes harmless even when the trigger lives inside the label */
       sel.style.cssText = "display:none";
 
-      /* Insert the custom wrapper AFTER the enclosing <label> (or after sel
-         itself if it has no label parent) so the trigger is not a label descendant
-         and label-click forwarding can never interfere */
-      var anchor = (sel.closest ? sel.closest("label") : null) || sel;
+      /* Wrap stays IN the label so CSS order/:has() selectors keep working */
       var wrap = document.createElement("div");
       wrap.className = "csel";
-      anchor.parentNode.insertBefore(wrap, anchor.nextSibling);
+      sel.parentNode.insertBefore(wrap, sel);
+      wrap.appendChild(sel);
 
       var trigger = document.createElement("div");
       trigger.className = "csel__trigger";

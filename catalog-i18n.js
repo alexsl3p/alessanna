@@ -13,6 +13,10 @@
     "Стрижка": { et: "Juukselõikus", en: "Haircuts" },
     "Укладки": { et: "Soengud", en: "Styling" },
     "Химическая завивка": { et: "Keemiline lokk", en: "Perm" },
+    "Сложные техники окрашивания": { et: "Keerulised värvimistehnikad", en: "Complex colouring" },
+    "Татуаж": { et: "Hennamaaling", en: "Henna tattoo" },
+    "Техники мелирования": { et: "Keerulised värvimistehnikad", en: "Complex colouring" },
+    "Тату": { et: "Hennamaaling", en: "Henna tattoo" },
   };
 
   var SERVICES = {
@@ -77,6 +81,40 @@
     "Хим. завивка (короткие)": { et: "Keemiline lokk (lühikesed)", en: "Perm (short)" },
     "Хим. завивка (длинные)": { et: "Keemiline lokk (pikad)", en: "Perm (long)" },
     "Химическая завивка (средние)": { et: "Keemiline lokk (keskmised)", en: "Perm (medium)" },
+    /* New / renamed services from DB */
+    "Детская стрижка (девочки)": { et: "Laste juukselõikus (tüdrukud)", en: "Children's haircut (girls)" },
+    "Мужская стрижка + мытьё": { et: "Meeste juukselõikus + pesu", en: "Men's haircut + wash" },
+    "Мужская стрижка машинкой + мытьё головы": { et: "Meeste juukselõikus masinaga + pesu", en: "Men's clipper cut + hair wash" },
+    "Консультация + тест прядь": { et: "Konsultatsioon + testlokk", en: "Consultation + test strand" },
+    "Снятие гелевых ногтей с маникюром": { et: "Geelküünte eemaldamine maniküüriga", en: "Gel nail removal with manicure" },
+    "Снятие гель-лака с маникюром": { et: "Geellaki eemaldamine maniküüriga", en: "Gel polish removal with manicure" },
+    "Тату хной": { et: "Hennamaaling", en: "Henna tattoo" },
+    "Блонд ( Осветление пудрой + тонирования+ уход )": {
+      et: "Blond (pulbriga valgendamine + toonimine + hooldus)",
+      en: "Blonde (powder bleach + toning + care)",
+    },
+    "Выход из темного": { et: "Väljumine tumedast", en: "Dark-to-light transformation" },
+    "Техники ( Мелирование, шатуш, омбре, airtouch, балаяж, комбинация техник )": {
+      et: "Tehnikad (mähkimine, shatush, ombre, airtouch, balayage, kombinatsioon)",
+      en: "Techniques (highlights, shatush, ombre, airtouch, balayage, combo)",
+    },
+    "Холодное восстановление": { et: "Külm taastamine", en: "Cold restoration treatment" },
+    "Консультация + туст-прядь ( при явке  по записи сумма возвращается )": {
+      et: "Konsultatsioon + testlokk (tasu tagastatakse visiidil)",
+      en: "Consultation + test strand (fee refunded on visit)",
+    },
+    "Консультация + тест-прядь ( при явке  по записи сумма возвращается )": {
+      et: "Konsultatsioon + testlokk (tasu tagastatakse visiidil)",
+      en: "Consultation + test strand (fee refunded on visit)",
+    },
+    "Консультация + туст-прядь ( при явке по записи сумма возвращается )": {
+      et: "Konsultatsioon + testlokk (tasu tagastatakse visiidil)",
+      en: "Consultation + test strand (fee refunded on visit)",
+    },
+    "Консультация + тест-прядь ( при явке по записи сумма возвращается )": {
+      et: "Konsultatsioon + testlokk (tasu tagastatakse visiidil)",
+      en: "Consultation + test strand (fee refunded on visit)",
+    },
   };
 
   function currentLang() {
