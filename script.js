@@ -1984,7 +1984,7 @@
       renderList();
       /* Добавление услуги: если это «Техники мелирования» — показываем
        * kolorist-блок и скролл к нему; иначе — стандартный путь к мастерам. */
-      var isKoloristPick = category.toLowerCase().indexOf("техники мелирования") !== -1;
+      var isKoloristPick = category.toLowerCase().indexOf("сложные техники окрашивания") !== -1;
       var koloristEl = document.getElementById("kolorist");
       if (koloristEl) koloristEl.hidden = !isKoloristPick;
       if (adding && picked.length > 0) {
