@@ -2274,9 +2274,6 @@
             renderList();
           }
           relayoutServiceItemSelect(catId);
-          if (catId && !syncingFormFromCart && refreshServiceItemSelect && refreshServiceItemSelect.open) {
-            refreshServiceItemSelect.open();
-          }
         });
       });
     }
