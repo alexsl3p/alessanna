@@ -359,14 +359,14 @@
 
     applyTeamFilterForActiveTab();
 
-    /* Kolorist block: show when Сложные техники окрашивания tab is active */
-    var koloristElTab = document.getElementById("kolorist");
-    if (koloristElTab) {
-      var activeTabPanel = scope.querySelector(".tab-panel.is-active");
-      if (activeTabPanel) {
-        var activeCatKey = (activeTabPanel.getAttribute("data-pick-category") || "").toLowerCase();
-        koloristElTab.hidden = activeCatKey.indexOf("сложные техники окрашивания") === -1;
-      }
+    /* Show/hide special promo blocks based on active tab */
+    var activeTabPanel = scope.querySelector(".tab-panel.is-active");
+    if (activeTabPanel) {
+      var activeCatKey = (activeTabPanel.getAttribute("data-pick-category") || "").toLowerCase();
+      var koloristElTab = document.getElementById("kolorist");
+      var hennaElTab = document.getElementById("henna-promo");
+      if (koloristElTab) koloristElTab.hidden = activeCatKey.indexOf("сложные техники окрашивания") === -1;
+      if (hennaElTab) hennaElTab.hidden = activeCatKey.indexOf("татуаж") === -1;
     }
   });
 
@@ -545,8 +545,8 @@
     mount.querySelectorAll(".reveal").forEach(function (el) {
       el.classList.add("is-visible");
     });
-    /* Insert flex row-breaks: after index 0 (kolorist alone) and after index 4 (Укладки) */
-    [0, 4].forEach(function (idx) {
+    /* Insert flex row-breaks: after index 1 (Татуаж+Сложные в ряд 1), after index 5 (Укладки) */
+    [1, 5].forEach(function (idx) {
       var btn = mount.querySelector('.tabs-bar .tab-btn[data-tab-index="' + idx + '"]');
       if (!btn) return;
       var next = btn.nextElementSibling;
@@ -862,9 +862,10 @@
         }
         return;
       }
-      /* Kolorist category — booking is by phone only, never show master section */
+      /* Phone-only categories — booking by phone, never show master section */
       var isKoloristCategory = picked.some(function (p) {
-        return p.category && p.category.toLowerCase().indexOf("сложные техники окрашивания") !== -1;
+        var cat = (p.category || "").toLowerCase();
+        return cat.indexOf("сложные техники окрашивания") !== -1 || cat.indexOf("татуаж") !== -1;
       });
       if (isKoloristCategory) {
         teamRoot.hidden = true;
@@ -2012,13 +2013,18 @@
       renderList();
       /* Добавление услуги: если это «Техники мелирования» — показываем
        * kolorist-блок и скролл к нему; иначе — стандартный путь к мастерам. */
-      var isKoloristPick = category.toLowerCase().indexOf("сложные техники окрашивания") !== -1;
+      var catLower = category.toLowerCase();
+      var isKoloristPick = catLower.indexOf("сложные техники окрашивания") !== -1;
+      var isTattooPick = catLower.indexOf("татуаж") !== -1;
       var koloristEl = document.getElementById("kolorist");
+      var hennaEl = document.getElementById("henna-promo");
       if (koloristEl) koloristEl.hidden = !isKoloristPick;
+      if (hennaEl) hennaEl.hidden = !isTattooPick;
       if (adding && picked.length > 0) {
         blockScrollRestore(1400);
         requestAnimationFrame(function () {
-          scrollToSectionTitle(isKoloristPick ? "kolorist" : "meistrid");
+          var target = isKoloristPick ? "kolorist" : isTattooPick ? "henna-promo" : "meistrid";
+          scrollToSectionTitle(target);
         });
       }
     }
@@ -2122,8 +2128,13 @@
       serviceItemSelect.disabled = !catId || matched === 0;
       serviceItemSelect.value = canKeepPrev ? prevValue : "";
 
-      /* Kolorist category: disable all services except консультация in the online form */
+      /* Phone-only categories: disable services + add ☎ prefix to blocked options */
       if (catId && serviceSelect) {
+        /* First restore any previously added ☎ prefix */
+        serviceItemSelect.querySelectorAll("option[data-orig-text]").forEach(function (o) {
+          o.textContent = o.getAttribute("data-orig-text");
+          o.removeAttribute("data-orig-text");
+        });
         var activeCatLabel = "";
         for (var bi = 0; bi < serviceSelect.options.length; bi++) {
           if (serviceSelect.options[bi].value === catId) {
@@ -2131,14 +2142,21 @@
             break;
           }
         }
-        if (activeCatLabel.indexOf("сложные техники окрашивания") !== -1) {
+        var isKoloristCat = activeCatLabel.indexOf("сложные техники окрашивания") !== -1;
+        var isTattooCat = activeCatLabel.indexOf("татуаж") !== -1;
+        if (isKoloristCat || isTattooCat) {
           var allOpts2 = serviceItemSelect.querySelectorAll("option");
           for (var qi = 0; qi < allOpts2.length; qi++) {
             var qopt = allOpts2[qi];
             if (!qopt.value || qopt.hidden) continue;
-            var qname = (qopt.getAttribute("data-service-name") || qopt.textContent || "").toLowerCase();
-            if (qname.indexOf("консультация") === -1) {
+            var origName = qopt.getAttribute("data-service-name") || qopt.textContent || "";
+            var qname = origName.toLowerCase();
+            /* Kolorist: консультация allowed; Tatoo: all blocked */
+            var isAllowed = isKoloristCat && qname.indexOf("консультация") !== -1;
+            if (!isAllowed) {
               qopt.disabled = true;
+              qopt.setAttribute("data-orig-text", qopt.textContent);
+              qopt.textContent = "☎ " + qopt.textContent;
             }
           }
         }
