@@ -3603,8 +3603,8 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
   min-height: 480px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 4rem 1.5rem;
+  justify-content: flex-start;
+  padding: 4rem 1.5rem 4rem 6%;
   background: #0a0a0a url('/assets/kolorist-bg.png') center/cover no-repeat;
 }
 
