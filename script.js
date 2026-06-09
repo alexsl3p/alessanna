@@ -2602,12 +2602,17 @@
     function makeCsel(sel) {
       if (!sel || sel.dataset.cselDone) return function(){};
       sel.dataset.cselDone = "1";
-      sel.style.cssText = "position:absolute;opacity:0;pointer-events:none;height:0;width:0;overflow:hidden";
+      /* display:none fully hides the native select so the enclosing <label> can
+         no longer activate it when something inside the label is clicked */
+      sel.style.cssText = "display:none";
 
+      /* Insert the custom wrapper AFTER the enclosing <label> (or after sel
+         itself if it has no label parent) so the trigger is not a label descendant
+         and label-click forwarding can never interfere */
+      var anchor = (sel.closest ? sel.closest("label") : null) || sel;
       var wrap = document.createElement("div");
       wrap.className = "csel";
-      sel.parentNode.insertBefore(wrap, sel);
-      wrap.appendChild(sel);
+      anchor.parentNode.insertBefore(wrap, anchor.nextSibling);
 
       var trigger = document.createElement("div");
       trigger.className = "csel__trigger";
@@ -2622,7 +2627,10 @@
       document.body.appendChild(list);
 
       function refreshTrigger() {
-        var o = sel.value ? sel.querySelector('option[value="' + CSS.escape(sel.value) + '"]') : null;
+        var o = null;
+        for (var i = 0; i < sel.options.length; i++) {
+          if (sel.options[i].value === sel.value) { o = sel.options[i]; break; }
+        }
         var txt = o ? (o.getAttribute("data-orig-text") || o.textContent) : (sel.options[0] ? sel.options[0].textContent : "");
         trigger.querySelector(".csel__val").textContent = txt;
         trigger.classList.toggle("csel__trigger--placeholder", !sel.value);
@@ -2678,6 +2686,7 @@
 
       trigger.addEventListener("click", function(e) {
         e.stopPropagation();
+        e.preventDefault();
         list.hidden ? open() : close();
       });
       trigger.addEventListener("keydown", function(e) {
