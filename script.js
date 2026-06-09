@@ -2023,18 +2023,6 @@
         if (!panel) return;
         if (!serviceCategoryFromPanel(panel)) return;
         if (li.getAttribute("data-pick-wired") === "1") return;
-        /* Kolorist services: only консультация and тест пряди are bookable online;
-           all others are phone-only and cannot be picked in the public widget. */
-        var panelCat = (panel.getAttribute("data-pick-category") || "").toLowerCase();
-        if (panelCat.indexOf("сложные техники окрашивания") !== -1) {
-          var svcName = (li.getAttribute("data-service-name") || nameSpan.textContent || "").trim().toLowerCase();
-          var isOnlineBookable = svcName.indexOf("консультация") !== -1 || svcName.indexOf("тест пряди") !== -1;
-          if (!isOnlineBookable) {
-            li.classList.add("menu-phone-only");
-            li.setAttribute("data-pick-wired", "1");
-            return;
-          }
-        }
         li.classList.add("menu-pick-row");
         li.setAttribute("role", "button");
         li.tabIndex = 0;
@@ -2123,6 +2111,28 @@
       serviceItemSelect.insertBefore(ph, serviceItemSelect.firstChild);
       serviceItemSelect.disabled = !catId || matched === 0;
       serviceItemSelect.value = canKeepPrev ? prevValue : "";
+
+      /* Kolorist category: disable all services except консультация in the online form */
+      if (catId && serviceSelect) {
+        var activeCatLabel = "";
+        for (var bi = 0; bi < serviceSelect.options.length; bi++) {
+          if (serviceSelect.options[bi].value === catId) {
+            activeCatLabel = (serviceSelect.options[bi].textContent || "").toLowerCase();
+            break;
+          }
+        }
+        if (activeCatLabel.indexOf("сложные техники окрашивания") !== -1) {
+          var allOpts2 = serviceItemSelect.querySelectorAll("option");
+          for (var qi = 0; qi < allOpts2.length; qi++) {
+            var qopt = allOpts2[qi];
+            if (!qopt.value || qopt.hidden) continue;
+            var qname = (qopt.getAttribute("data-service-name") || qopt.textContent || "").toLowerCase();
+            if (qname.indexOf("консультация") === -1) {
+              qopt.disabled = true;
+            }
+          }
+        }
+      }
     }
 
     function addPickFromServiceOption(opt) {
