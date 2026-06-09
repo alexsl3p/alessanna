@@ -1002,6 +1002,12 @@
     "koloristMasterLabel": "Meister",
     "koloristPhoneLabel": "Telefon",
     "koloristBookConsult": "Broneeri konsultatsioon",
+    "hennaBadge": "Uus teenus",
+    "hennaTitle": "Hennatatoveering",
+    "hennaSubtitle": "Suvine aktsent salongis",
+    "hennaLead": "Elegantne hennakaunistus eelregistreerimisega. Noor meister.",
+    "hennaAppointmentOnly": "Ainult eelregistreerimisega",
+    "hennaCall": "Helista",
     "koloristCall": "Helista"
   }
 }

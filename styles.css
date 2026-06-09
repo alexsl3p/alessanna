@@ -3800,3 +3800,136 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
   }
 }
 
+
+/* ==========================================================================
+   Henna promo section
+   ========================================================================== */
+.henna-section {
+  position: relative;
+  min-height: 480px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 4rem 1.5rem 4rem 6%;
+  background: #0a0a0a url('/assets/henna-bg.png') center/cover no-repeat;
+}
+.henna-section::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to right,
+    rgba(0,0,0,0.80) 0%,
+    rgba(0,0,0,0.52) 55%,
+    rgba(0,0,0,0.15) 100%
+  );
+  pointer-events: none;
+}
+.henna-card {
+  position: relative;
+  z-index: 1;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 1.5rem;
+  padding: 2.25rem 2.25rem 2rem;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 24px 56px rgba(0,0,0,0.55);
+}
+.henna-card__badge {
+  display: inline-block;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gold, #c4a574);
+  border: 1px solid rgba(196,165,116,0.4);
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem;
+  margin-bottom: 1rem;
+}
+.henna-card__title {
+  font-family: var(--font-display, 'Cormorant Garamond', serif);
+  font-size: clamp(2rem, 5vw, 2.75rem);
+  font-weight: 400;
+  color: #f5f0e8;
+  line-height: 1.1;
+  margin: 0 0 0.25rem;
+}
+.henna-card__subtitle {
+  font-size: 1rem;
+  color: var(--gold-bright, #d4b584);
+  font-style: italic;
+  margin: 0 0 0.9rem;
+}
+.henna-card__lead {
+  font-size: 0.9rem;
+  color: rgba(245,240,232,0.7);
+  line-height: 1.6;
+  margin: 0 0 1.25rem;
+}
+.henna-card__info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.henna-card__row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.82rem;
+  color: rgba(245,240,232,0.65);
+}
+.henna-card__row svg {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  color: var(--gold, #c4a574);
+}
+.henna-card__row a {
+  color: var(--gold-bright, #d4b584);
+  text-decoration: none;
+}
+.henna-card__row a:hover { opacity: 0.75; }
+.henna-card__actions {
+  display: flex;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+.henna-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.6rem 1.2rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  cursor: pointer;
+  border: 1px solid rgba(196,165,116,0.5);
+  background: rgba(196,165,116,0.1);
+  color: #f5f0e8;
+  transition: background 0.18s, border-color 0.18s, transform 0.12s;
+}
+.henna-btn:hover { background: rgba(196,165,116,0.2); border-color: var(--gold); transform: translateY(-1px); }
+.henna-btn svg { width: 1rem; height: 1rem; flex-shrink: 0; }
+.henna-btn--primary {
+  background: var(--gold, #c4a574);
+  color: #1a1410;
+  border-color: var(--gold, #c4a574);
+}
+.henna-btn--primary svg { stroke: #1a1410; fill: none; }
+.henna-btn--primary:hover { background: #d4b584; border-color: #d4b584; }
+
+@media (max-width: 640px) {
+  .henna-section { padding: 3rem 1.25rem; justify-content: center; }
+  .henna-card { max-width: 100%; }
+  .henna-card__actions { flex-direction: column; }
+  .henna-btn { justify-content: center; }
+}

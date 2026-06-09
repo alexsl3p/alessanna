@@ -471,6 +471,12 @@
     "koloristMasterLabel": "Master",
     "koloristPhoneLabel": "Phone",
     "koloristBookConsult": "Book consultation",
+    "hennaBadge": "New service",
+    "hennaTitle": "Henna Tattoo",
+    "hennaSubtitle": "A summer accent in the salon",
+    "hennaLead": "Elegant henna patterns by appointment only. Young master.",
+    "hennaAppointmentOnly": "By appointment only",
+    "hennaCall": "Call",
     "koloristCall": "Call"
   },
   "adminStaff": {

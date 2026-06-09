@@ -1001,6 +1001,12 @@
     "koloristMasterLabel": "Мастер",
     "koloristPhoneLabel": "Телефон",
     "koloristBookConsult": "Записаться на консультацию",
+    "hennaBadge": "Новая услуга",
+    "hennaTitle": "Тату хной",
+    "hennaSubtitle": "Летний акцент в салоне",
+    "hennaLead": "Изящные узоры хной по предварительной записи. Молодой мастер.",
+    "hennaAppointmentOnly": "Только по предварительной записи",
+    "hennaCall": "Позвонить",
     "koloristCall": "Позвонить"
   }
 }
