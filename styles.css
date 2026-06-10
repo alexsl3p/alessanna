@@ -249,8 +249,7 @@ a:hover {
 }
 .address-maps-link:hover {
   color: var(--gold-bright);
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  text-decoration: none;
 }
 
 /* ---------- Шапка ---------- */
