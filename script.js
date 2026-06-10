@@ -276,19 +276,45 @@
     });
   }
 
-  /* ─── Мобильный аккордеон календаря записи ────────────────────────────
-   * На ≤900px календарь скрыт CSS-ом (.booking-calendar:not(.cal-open)),
-   * кнопка [data-cal-toggle] раскрывает его. Вешаем обработчик здесь,
-   * а не в booking-init: тот ждёт асинхронные feature-флаги Supabase,
-   * и до их загрузки кнопка была бы мёртвой при уже скрытом календаре. */
+  /* ─── Мобильный календарь: bottom-sheet из поля даты ────────────────────
+   * На ≤900px .booking-calendar — фиксированный лист, скрытый внизу экрана.
+   * Клик по полю [data-booking-date] поднимает его; клик по бэкдропу или
+   * выбор даты закрывают. Вешаем здесь (синхронно), не внутри booking-init,
+   * который ждёт асинхронные feature-флаги и инициализируется позже. */
   (function () {
-    var calWrap = document.querySelector(".booking-calendar");
-    var calToggle = calWrap ? calWrap.querySelector("[data-cal-toggle]") : null;
-    if (!calWrap || !calToggle) return;
-    calToggle.addEventListener("click", function () {
-      var open = calWrap.classList.toggle("cal-open");
-      calToggle.setAttribute("aria-expanded", open ? "true" : "false");
-    });
+    var calEl = document.querySelector(".booking-calendar");
+    var dateEl = document.querySelector("[data-booking-date]");
+    if (!calEl) return;
+
+    var backdrop = document.createElement("div");
+    backdrop.className = "cal-mobile-backdrop";
+    document.body.appendChild(backdrop);
+
+    function openSheet() {
+      calEl.classList.add("cal-open");
+      backdrop.classList.add("cal-open");
+      document.body.style.overflow = "hidden";
+      if (dateEl) dateEl.classList.add("cal-date-open");
+    }
+    function closeSheet() {
+      calEl.classList.remove("cal-open");
+      backdrop.classList.remove("cal-open");
+      document.body.style.overflow = "";
+      if (dateEl) dateEl.classList.remove("cal-date-open");
+    }
+
+    window.ALESSANNA_OPEN_MOBILE_CAL = openSheet;
+    window.ALESSANNA_CLOSE_MOBILE_CAL = closeSheet;
+
+    backdrop.addEventListener("click", closeSheet);
+
+    if (dateEl) {
+      dateEl.addEventListener("click", function () {
+        if (window.innerWidth <= 900) {
+          calEl.classList.contains("cal-open") ? closeSheet() : openSheet();
+        }
+      });
+    }
   })();
 
   /* Anchor links: land on section titles with a fixed-header offset. */
@@ -3239,18 +3265,12 @@
       fillTimeOptions();
       setNotes();
       renderCalendar();
-      /* On mobile: collapse calendar and scroll to time picker */
       if (window.innerWidth <= 900) {
-        var calEl = document.querySelector(".booking-calendar");
-        var toggleBtn = calEl && calEl.querySelector("[data-cal-toggle]");
-        if (calEl) {
-          calEl.classList.remove("cal-open");
-          if (toggleBtn) toggleBtn.setAttribute("aria-expanded", "false");
-        }
+        if (window.ALESSANNA_CLOSE_MOBILE_CAL) window.ALESSANNA_CLOSE_MOBILE_CAL();
         if (timeSelect) {
           setTimeout(function () {
             timeSelect.scrollIntoView({ behavior: "smooth", block: "center" });
-          }, 120);
+          }, 360);
         }
       }
     }

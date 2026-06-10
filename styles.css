@@ -3150,10 +3150,7 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
 
 @media (max-width: 900px) {
   .booking-shell {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "calendar"
-      "form";
+    display: block; /* calendar is a fixed overlay, form takes full width */
   }
 
   .calendar-day {
@@ -4152,57 +4149,78 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
   }
 }
 
-/* ── Mobile calendar accordion ─────────────────────────────────────────── */
-/* Toggle button hidden on desktop */
-.cal-mobile-toggle {
-  display: none;
+/* ── Mobile calendar — bottom-sheet dropdown ────────────────────────────── */
+
+.cal-mobile-toggle { display: none; } /* legacy button, hidden everywhere */
+
+/* Backdrop (injected by JS) */
+.cal-mobile-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 501;
+  background: rgba(0, 0, 0, 0.55);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+.cal-mobile-backdrop.cal-open {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 @media (max-width: 900px) {
-  .cal-mobile-toggle {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    width: 100%;
-    min-height: 2.75rem;
-    padding: 0.65rem 1.25rem;
-    background: transparent;
-    border: 1px solid var(--gold-dim);
-    border-radius: 0.5rem;
-    color: var(--gold-bright);
-    font-size: 0.82rem;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+  /* Calendar slides up from bottom of screen */
+  .booking-calendar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: auto;
+    z-index: 502;
+    border-radius: 1.35rem 1.35rem 0 0;
+    max-height: 88vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    transform: translateY(100%);
+    transition: transform 0.32s var(--ease-silk);
+  }
+  .booking-calendar.cal-open {
+    transform: translateY(0);
+  }
+
+  /* Drag handle */
+  .booking-calendar::before {
+    content: "";
+    display: block;
+    width: 2.5rem;
+    height: 3px;
+    background: rgba(197, 160, 89, 0.4);
+    border-radius: 2px;
+    margin: 0.8rem auto 0.2rem;
+  }
+
+  /* Date input field — looks and behaves like a custom picker trigger */
+  label:has([data-booking-date]) {
     cursor: pointer;
-    transition:
-      border-color 0.25s var(--ease-silk),
-      box-shadow 0.3s var(--ease-silk);
-    margin-bottom: 0.25rem;
+    position: relative;
   }
-
-  .cal-mobile-toggle::after {
+  label:has([data-booking-date])::after {
     content: "›";
-    font-size: 1rem;
-    transition: transform 0.25s var(--ease-silk);
-    display: inline-block;
-  }
-
-  .cal-mobile-toggle[aria-expanded="true"]::after {
+    position: absolute;
+    right: 0.9rem;
+    bottom: 0.78rem;
+    color: var(--gold-bright);
+    font-size: 1.15rem;
+    line-height: 1;
     transform: rotate(90deg);
+    pointer-events: none;
+    transition: transform 0.25s var(--ease-silk);
   }
-
-  .cal-mobile-toggle:hover {
-    border-color: var(--gold-bright);
-    box-shadow: 0 0 14px var(--gold-glow);
+  label:has([data-booking-date].cal-date-open)::after {
+    transform: rotate(-90deg);
   }
-
-  /* Hide calendar body when not open */
-  .booking-calendar:not(.cal-open) .calendar-head,
-  .booking-calendar:not(.cal-open) .calendar-weekdays,
-  .booking-calendar:not(.cal-open) .calendar-grid,
-  .booking-calendar:not(.cal-open) .calendar-note {
-    display: none;
+  [data-booking-date] {
+    cursor: pointer;
+    padding-right: 2.25rem;
   }
 }
