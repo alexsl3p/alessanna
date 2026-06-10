@@ -72,13 +72,13 @@ fs.mkdirSync(dist, { recursive: true });
 // Root HTML pages
 for (const f of [
   "index.html", "404.html", "cookies.html", "privacy.html",
-  "en.html", "et.html", "ru.html", "work.html",
+  "en.html", "et.html", "ru.html",
 ]) cp(f);
 
 // Styles & scripts
 for (const f of [
-  "styles.css", "legal.css", "work.css",
-  "script.js", "work.js", "catalog-i18n.js",
+  "styles.css", "legal.css",
+  "script.js", "catalog-i18n.js",
   "cookie-consent.js", "translations.js", "legal-renderer.js",
   "supabase-public-config.js",
 ]) cp(f);
@@ -95,14 +95,6 @@ for (const d of ["ru", "et", "en"]) cpDir(d);
 // Shared directories
 cpDir("assets");
 cpDir("locales");
-
-// public-site booking widget: expose at root so ./book.css etc. resolve
-for (const f of ["book.html", "book.css", "book.js", "config.js"]) {
-  const src = path.join(root, "public-site", f);
-  const dst = path.join(dist, f);
-  if (!fs.existsSync(src)) { console.warn(`skip (missing): public-site/${f}`); continue; }
-  fs.copyFileSync(src, dst);
-}
 
 // ── 3. Copy CRM build → dist/_crm_dist/ ──────────────────────────────────────
 

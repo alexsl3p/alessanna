@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { supabase } from "../../lib/supabase";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import {
@@ -68,6 +69,7 @@ export function ReceptionSidebar({
   const [crmPrompt, setCrmPrompt] = useState(false);
   const [pwValue, setPwValue] = useState("");
   const [pwError, setPwError] = useState(false);
+  const [pwLoading, setPwLoading] = useState(false);
   const today = new Date();
   const staffHueMap = buildStaffHueMap(staff.map((m) => m.id));
 
@@ -318,14 +320,24 @@ export function ReceptionSidebar({
             </div>
             <form
               className="p-5"
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
-                if (pwValue === "2025alessanna") {
-                  try { sessionStorage.setItem("crm_role_override", "manager"); } catch { /* */ }
-                  navigate("/calendar");
-                } else {
+                if (pwLoading) return;
+                setPwLoading(true);
+                try {
+                  const { data, error } = await supabase.rpc("verify_crm_access", { p_password: pwValue });
+                  if (!error && data === true) {
+                    try { sessionStorage.setItem("crm_role_override", "manager"); } catch { /* */ }
+                    navigate("/calendar");
+                  } else {
+                    setPwError(true);
+                    setPwValue("");
+                  }
+                } catch {
                   setPwError(true);
                   setPwValue("");
+                } finally {
+                  setPwLoading(false);
                 }
               }}
             >
@@ -357,14 +369,15 @@ export function ReceptionSidebar({
                 </button>
                 <button
                   type="submit"
+                  disabled={pwLoading}
                   className={[
-                    "rounded-lg px-4 py-2 text-sm font-medium transition-colors",
+                    "rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50",
                     useGold
                       ? "bg-gold text-canvas hover:bg-gold/90"
                       : "bg-[#1a73e8] text-white hover:bg-[#1557b0]",
                   ].join(" ")}
                 >
-                  {t("common.confirm")}
+                  {pwLoading ? "…" : t("common.confirm")}
                 </button>
               </div>
             </form>

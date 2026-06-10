@@ -77,12 +77,18 @@ function savePop(key: string, o: Record<string, number>) {
   }
 }
 
+const bumpUsageTimers = new Map<string, ReturnType<typeof setTimeout>>();
 function bumpUsage(storageKey: string, id: string) {
-  const prev = lsRecent(storageKey).filter((x) => x !== id);
-  saveRecent(storageKey, [id, ...prev]);
-  const pop = lsPop(storageKey);
-  pop[id] = (pop[id] ?? 0) + 1;
-  savePop(storageKey, pop);
+  const key = `${storageKey}:${id}`;
+  if (bumpUsageTimers.has(key)) clearTimeout(bumpUsageTimers.get(key)!);
+  bumpUsageTimers.set(key, setTimeout(() => {
+    bumpUsageTimers.delete(key);
+    const prev = lsRecent(storageKey).filter((x) => x !== id);
+    saveRecent(storageKey, [id, ...prev]);
+    const pop = lsPop(storageKey);
+    pop[id] = (pop[id] ?? 0) + 1;
+    savePop(storageKey, pop);
+  }, 300));
 }
 
 function ServiceTileThumb({

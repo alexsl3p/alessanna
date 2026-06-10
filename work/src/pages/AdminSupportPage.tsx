@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useVisiblePolling } from "../lib/useVisiblePolling";
 import { useTranslation } from "react-i18next";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../context/AuthContext";
@@ -330,15 +331,8 @@ export function AdminSupportPage() {
     }
   }, [staffMember, topicFilter]);
 
-  useEffect(() => {
-    void loadList();
-    void loadStats();
-    const id = window.setInterval(() => {
-      void loadList();
-      void loadStats();
-    }, POLL_LIST_MS);
-    return () => window.clearInterval(id);
-  }, [loadList, loadStats]);
+  useEffect(() => { void loadList(); void loadStats(); }, [loadList, loadStats]);
+  useVisiblePolling(() => { void loadList(); void loadStats(); }, POLL_LIST_MS);
 
   /* Список активных сотрудников — нужен админу для «передать другому».
      Менеджеру/мастеру не подгружаем. RLS на staff открыт, выбираем минимум. */
@@ -373,18 +367,14 @@ export function AdminSupportPage() {
   }, [isAdmin]);
 
   useEffect(() => {
-    if (!selectedId) {
-      setDetail(null);
-      setMessages([]);
-      return;
-    }
+    if (!selectedId) { setDetail(null); setMessages([]); return; }
     void loadThread(selectedId);
-    const id = window.setInterval(
-      () => void loadThread(selectedId, { silent: true }),
-      POLL_THREAD_MS
-    );
-    return () => window.clearInterval(id);
   }, [selectedId, loadThread]);
+  useVisiblePolling(
+    () => { if (selectedId) void loadThread(selectedId, { silent: true }); },
+    POLL_THREAD_MS,
+    !!selectedId,
+  );
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });

@@ -1,6 +1,6 @@
 /**
- * Vercel build: копирует только публичные статические файлы лендинга в vercel-static-out/.
- * Сервер Node (server/), БД, CRM и секреты в артефакт не попадают.
+ * Utility script: copies public landing page static files to vercel-static-out/.
+ * Use build-all.mjs for the full Vercel production build.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -13,12 +13,9 @@ const out = path.join(root, "vercel-static-out");
 const ROOT_FILES = [
   "index.html",
   "ru.html",
-  "work.html",
   "styles.css",
   "script.js",
   "translations.js",
-  "work.css",
-  "work.js",
 ];
 
 function rmOut() {
@@ -30,8 +27,8 @@ function copyFile(rel) {
   const from = path.join(root, rel);
   const to = path.join(out, rel);
   if (!fs.existsSync(from)) {
-    console.error(`Missing required file: ${rel}`);
-    process.exit(1);
+    console.warn(`Optional skip: ${rel}`);
+    return;
   }
   fs.mkdirSync(path.dirname(to), { recursive: true });
   fs.copyFileSync(from, to);
@@ -41,8 +38,8 @@ function copyDir(rel) {
   const from = path.join(root, rel);
   const to = path.join(out, rel);
   if (!fs.existsSync(from)) {
-    console.error(`Missing required directory: ${rel}`);
-    process.exit(1);
+    console.warn(`Optional skip dir: ${rel}`);
+    return;
   }
   fs.cpSync(from, to, { recursive: true });
 }
@@ -63,17 +60,6 @@ for (const f of [
   "site-builder.mjs",
 ]) {
   copyFile(f);
-}
-
-// public-site/book.html → корень (пути ./book.css, ./book.js)
-for (const f of ["book.html", "book.css", "book.js", "config.js"]) {
-  const from = path.join(root, "public-site", f);
-  const to = path.join(out, f);
-  if (!fs.existsSync(from)) {
-    console.warn(`Optional skip: public-site/${f}`);
-    continue;
-  }
-  fs.copyFileSync(from, to);
 }
 
 console.log("vercel-static-out ready:", out);

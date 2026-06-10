@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useVisiblePolling } from "../lib/useVisiblePolling";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
@@ -241,59 +242,44 @@ export function Layout() {
   const lastChimeAtRef = useRef(0);
   const lastCountRef = useRef(0);
 
-  useEffect(() => {
-    if (!staffMember || !canManage) return;
-    let cancelled = false;
-    const tick = async () => {
-      try {
-        const { data, error } = await supabase.rpc("support_staff_unread_count", {
-          p_staff_id: staffMember.id,
-        });
-        if (cancelled || error) return;
-        const next = typeof data === "number" ? data : Number(data) || 0;
-        if (next > lastCountRef.current && Date.now() - lastChimeAtRef.current > 3000) {
-          try {
-            playChime();
-            lastChimeAtRef.current = Date.now();
-          } catch {
-            /* ignore */
+  useVisiblePolling(
+    () => {
+      if (!staffMember || !canManage) return;
+      void (async () => {
+        try {
+          const { data, error } = await supabase.rpc("support_staff_unread_count", {
+            p_staff_id: staffMember.id,
+          });
+          if (error) return;
+          const next = typeof data === "number" ? data : Number(data) || 0;
+          if (next > lastCountRef.current && Date.now() - lastChimeAtRef.current > 3000) {
+            try { playChime(); lastChimeAtRef.current = Date.now(); } catch { /* ignore */ }
           }
-        }
-        lastCountRef.current = next;
-        setSupportUnread(next);
-      } catch {
-        /* ignore */
-      }
-    };
-    void tick();
-    const id = window.setInterval(tick, 10_000);
-    return () => {
-      cancelled = true;
-      window.clearInterval(id);
-    };
-  }, [staffMember, canManage]);
+          lastCountRef.current = next;
+          setSupportUnread(next);
+        } catch { /* ignore */ }
+      })();
+    },
+    10_000,
+    !!(staffMember && canManage),
+  );
 
-  useEffect(() => {
-    if (!staffMember) return;
-    let cancelled = false;
-    const tick = async () => {
-      try {
-        const { data, error } = await supabase.rpc("support_staff_self_unread_count", {
-          p_staff_id: staffMember.id,
-        });
-        if (cancelled || error) return;
-        setMyHelpUnread(typeof data === "number" ? data : Number(data) || 0);
-      } catch {
-        /* ignore */
-      }
-    };
-    void tick();
-    const id = window.setInterval(tick, 15_000);
-    return () => {
-      cancelled = true;
-      window.clearInterval(id);
-    };
-  }, [staffMember]);
+  useVisiblePolling(
+    () => {
+      if (!staffMember) return;
+      void (async () => {
+        try {
+          const { data, error } = await supabase.rpc("support_staff_self_unread_count", {
+            p_staff_id: staffMember.id,
+          });
+          if (error) return;
+          setMyHelpUnread(typeof data === "number" ? data : Number(data) || 0);
+        } catch { /* ignore */ }
+      })();
+    },
+    15_000,
+    !!staffMember,
+  );
 
   /* ── derive ────────────────────────────────────────────────── */
   const previewOptions: Role[] = ["admin", "manager", "worker"];

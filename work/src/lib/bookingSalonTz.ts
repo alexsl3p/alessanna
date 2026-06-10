@@ -88,8 +88,22 @@ function ymdFromZonedParts(p: ReturnType<typeof zonedParts>): string {
   return `${p.y}-${String(p.m).padStart(2, "0")}-${String(p.d).padStart(2, "0")}`;
 }
 
-/** Кэш: до 2880×Intl на каждый день убивали FPS на /book и /reception. */
+/** Кэш: до 2880×Intl на каждый день убивали FPS на /book и /reception.
+ *  Ограничен 1000 записями (≈3 года дней) и инвалидируется раз в час,
+ *  чтобы переход DST не оставлял стейл-значения в долгоживущих вкладках. */
 const salonDayStartUtcCache = new Map<string, Date>();
+let salonDayStartUtcCacheHour = -1;
+function ensureCacheFresh() {
+  const nowHour = Math.floor(Date.now() / 3_600_000);
+  if (nowHour !== salonDayStartUtcCacheHour) {
+    salonDayStartUtcCache.clear();
+    salonDayStartUtcCacheHour = nowHour;
+  } else if (salonDayStartUtcCache.size >= 1000) {
+    // LRU-light: drop oldest half when limit reached
+    const keys = salonDayStartUtcCache.keys();
+    for (let i = 0; i < 500; i++) salonDayStartUtcCache.delete(keys.next().value as string);
+  }
+}
 
 /**
  * UTC-момент начала календарного дня ymd в Europe/Tallinn (00:00 местного времени).
@@ -97,6 +111,7 @@ const salonDayStartUtcCache = new Map<string, Date>();
  * Ищем минуту off ∈ [0, 48×60] от (d−1) 00:00 UTC бинарным поиском (~12×Intl вместо тысяч).
  */
 export function salonDayStartUtc(ymd: string): Date {
+  ensureCacheFresh();
   const cached = salonDayStartUtcCache.get(ymd);
   if (cached) return new Date(cached.getTime());
 

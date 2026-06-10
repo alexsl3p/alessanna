@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useVisiblePolling } from "../lib/useVisiblePolling";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { supabase } from "../lib/supabase";
@@ -166,23 +167,19 @@ export function MyHelpPage() {
   );
 
   useEffect(() => {
-    if (!staffMember) return;
-    void loadList();
-    const id = window.setInterval(() => void loadList(), POLL_LIST_MS);
-    return () => window.clearInterval(id);
+    if (staffMember) void loadList();
   }, [staffMember, loadList]);
+  useVisiblePolling(() => { if (staffMember) void loadList(); }, POLL_LIST_MS, !!staffMember);
 
   useEffect(() => {
-    if (!selectedId) {
-      setDetail(null);
-      setMessages([]);
-      return;
-    }
-    if (!staffMember) return;
-    void loadThread(selectedId);
-    const id = window.setInterval(() => void loadThread(selectedId), POLL_THREAD_MS);
-    return () => window.clearInterval(id);
+    if (!selectedId) { setDetail(null); setMessages([]); return; }
+    if (staffMember) void loadThread(selectedId);
   }, [staffMember, selectedId, loadThread]);
+  useVisiblePolling(
+    () => { if (staffMember && selectedId) void loadThread(selectedId); },
+    POLL_THREAD_MS,
+    !!(staffMember && selectedId),
+  );
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });

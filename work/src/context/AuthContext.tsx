@@ -217,22 +217,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (error) {
-      // Fallback на старый RPC для случая если миграция 041 ещё не применена
-      // на каком-то окружении (dev/staging). На проде после деплоя его можно
-      // удалить через несколько релизов.
-      if (/staff_login.*does not exist/i.test(error.message || "")) {
-        const legacy = await supabase.rpc("verify_staff_phone", { phone_input: cleanPhone });
-        if (legacy.error) {
-          return { ok: false, errorKey: "auth.error.rpcFailed", message: legacy.error.message };
-        }
-        const legacyRow = legacy.data && typeof legacy.data === "object" && "id" in legacy.data
-          ? staffTableRowToMember(legacy.data as Record<string, unknown>)
-          : null;
-        if (!legacyRow) return { ok: false, status: "access_denied" };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(legacyRow));
-        setStaffMember(legacyRow);
-        return { ok: true, mode: "legacy_verify_staff_phone" };
-      }
       console.error(error);
       return { ok: false, errorKey: "auth.error.rpcFailed", message: error.message };
     }
