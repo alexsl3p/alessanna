@@ -280,7 +280,10 @@
    * На ≤900px .booking-calendar — фиксированный лист, скрытый внизу экрана.
    * Клик по полю [data-booking-date] поднимает его; клик по бэкдропу или
    * выбор даты закрывают. Вешаем здесь (синхронно), не внутри booking-init,
-   * который ждёт асинхронные feature-флаги и инициализируется позже. */
+   * который ждёт асинхронные feature-флаги и инициализируется позже.
+   *
+   * Блокировка фона: техника position:fixed+top чтобы iOS/Android не
+   * прыгал скролл при overflow:hidden. */
   (function () {
     var calEl = document.querySelector(".booking-calendar");
     var dateEl = document.querySelector("[data-booking-date]");
@@ -290,16 +293,26 @@
     backdrop.className = "cal-mobile-backdrop";
     document.body.appendChild(backdrop);
 
+    var _savedScroll = 0;
+
     function openSheet() {
+      _savedScroll = window.scrollY || window.pageYOffset;
+      document.body.style.top = "-" + _savedScroll + "px";
+      document.body.style.position = "fixed";
+      document.body.style.width = "100%";
+      document.body.style.overflowY = "scroll";
       calEl.classList.add("cal-open");
       backdrop.classList.add("cal-open");
-      document.body.style.overflow = "hidden";
       if (dateEl) dateEl.classList.add("cal-date-open");
     }
     function closeSheet() {
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.width = "";
+      document.body.style.overflowY = "";
+      window.scrollTo(0, _savedScroll);
       calEl.classList.remove("cal-open");
       backdrop.classList.remove("cal-open");
-      document.body.style.overflow = "";
       if (dateEl) dateEl.classList.remove("cal-date-open");
     }
 
@@ -309,8 +322,14 @@
     backdrop.addEventListener("click", closeSheet);
 
     if (dateEl) {
-      dateEl.addEventListener("click", function () {
+      /* mousedown:preventDefault предотвращает нативный скролл браузера
+       * к readonly-инпуту при тапе на мобильном */
+      dateEl.addEventListener("mousedown", function (e) {
+        if (window.innerWidth <= 900) e.preventDefault();
+      });
+      dateEl.addEventListener("click", function (e) {
         if (window.innerWidth <= 900) {
+          e.preventDefault();
           calEl.classList.contains("cal-open") ? closeSheet() : openSheet();
         }
       });

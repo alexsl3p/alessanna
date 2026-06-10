@@ -4157,7 +4157,7 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
 .cal-mobile-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 501;
+  z-index: 10001;
   background: rgba(0, 0, 0, 0.55);
   opacity: 0;
   pointer-events: none;
@@ -4176,7 +4176,7 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
     left: 0;
     right: 0;
     top: auto;
-    z-index: 502;
+    z-index: 10002;
     border-radius: 1.35rem 1.35rem 0 0;
     max-height: 88vh;
     overflow-y: auto;
