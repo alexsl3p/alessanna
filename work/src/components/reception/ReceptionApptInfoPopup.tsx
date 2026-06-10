@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { format, parseISO } from "date-fns";
 import { supabase } from "../../lib/supabase";
 import { useTheme } from "../../context/ThemeContext";
@@ -74,7 +74,16 @@ export function ReceptionApptInfoPopup({
   const labelCls = useGold ? "text-gold/75" : "text-[#a47a3f]";
   const cancelBtnCls = "border-rose-400/25 bg-rose-400/10 text-rose-300 hover:bg-rose-400/15";
   const left = Math.min(anchorX + 8, window.innerWidth - POPUP_W - 8);
-  const top = Math.max(8, Math.min(anchorY - 8, window.innerHeight - POPUP_H - 8));
+  // POPUP_H — лишь оценка для первого рендера; реальную высоту меряем ниже,
+  // иначе при заполненных полях (телефон, email, комментарий) низ уезжает за экран
+  const [top, setTop] = useState(() => Math.max(8, Math.min(anchorY - 8, window.innerHeight - POPUP_H - 8)));
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const h = el.offsetHeight;
+    setTop((prev) => Math.max(8, Math.min(prev, window.innerHeight - h - 8)));
+  }, []);
 
   return (
     <div
