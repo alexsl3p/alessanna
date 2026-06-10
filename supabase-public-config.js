@@ -1,5 +1,5 @@
 /**
- * Public marketing site + public-site/book — load before any module bundle.
+ * Public marketing site — load before any module bundle.
  * Plain script: no import.meta (use site-services.mjs / book.js for VITE_* fallback when bundled).
  *
  * Set anonKey here for static hosting, or inject another script BEFORE this one:
