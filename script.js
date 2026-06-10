@@ -2172,10 +2172,10 @@
       ph.selected = true;
       ph.setAttribute("data-form-placeholder", "1");
       ph.textContent = !catId
-        ? pubT("site.formCategoryFirst", "Choose a category first")
+        ? pubT("site.formCategoryFirst", "Сначала выберите категорию")
         : matched === 0
-          ? pubT("site.ui.noServicesInCategory", "No services in category")
-          : pubT("site.ui.pickService", "Choose a service");
+          ? pubT("site.ui.noServicesInCategory", "Нет услуг в категории")
+          : pubT("site.ui.pickService", "Выберите услугу");
       serviceItemSelect.insertBefore(ph, serviceItemSelect.firstChild);
       serviceItemSelect.disabled = !catId || matched === 0;
       serviceItemSelect.value = canKeepPrev ? prevValue : "";
@@ -2850,23 +2850,23 @@
     function buildCalendarMsgs() {
       if (window.ALESSANNA_BUILD_CALENDAR_MSGS) return window.ALESSANNA_BUILD_CALENDAR_MSGS();
       return {
-        noTime: "No available times",
-        noTimeShort: "None",
-        pickMaster: "Choose a stylist",
-        pickDay: "Pick a day",
-        pickTimeFirst: "Pick a day first",
-        pickTime: "Pick a time",
-        many: "Many slots",
-        busy: "Almost full",
-        best: "Best day",
-        slotsAvailable: "Available:",
-        dayPast: "Past date",
-        dayOff: "Day off",
-        dayNoSlots: "No openings",
-        legendBest: "Best",
-        legendMany: "Many",
-        legendBusy: "Busy",
-        legendUnavailable: "Closed",
+        noTime: "Нет свободного времени",
+        noTimeShort: "–",
+        pickMaster: "Выберите мастера",
+        pickDay: "Выберите день",
+        pickTimeFirst: "Сначала выберите день",
+        pickTime: "Выберите время",
+        many: "Много окон",
+        busy: "Почти занято",
+        best: "Лучший день",
+        slotsAvailable: "Доступно:",
+        dayPast: "Прошедшая дата",
+        dayOff: "Выходной",
+        dayNoSlots: "Нет свободных окон",
+        legendBest: "Лучшие",
+        legendMany: "Много",
+        legendBusy: "Занято",
+        legendUnavailable: "Закрыто",
       };
     }
     var MSGS = buildCalendarMsgs();
@@ -3147,7 +3147,7 @@
     /** Две строки под календарём: подсказки в зависимости от мастера / даты */
     function setNotes() {
       if (!hasSelectedBookingService()) {
-        if (notePrimary) notePrimary.textContent = pubT("site.ui.pickService", "Choose a service");
+        if (notePrimary) notePrimary.textContent = pubT("site.ui.pickService", "Выберите услугу");
         if (noteSecondary) noteSecondary.textContent = "";
         return;
       }
@@ -3224,6 +3224,20 @@
       fillTimeOptions();
       setNotes();
       renderCalendar();
+      /* On mobile: collapse calendar and scroll to time picker */
+      if (window.innerWidth <= 900) {
+        var calEl = document.querySelector(".booking-calendar");
+        var toggleBtn = calEl && calEl.querySelector("[data-cal-toggle]");
+        if (calEl) {
+          calEl.classList.remove("cal-open");
+          if (toggleBtn) toggleBtn.setAttribute("aria-expanded", "false");
+        }
+        if (timeSelect) {
+          setTimeout(function () {
+            timeSelect.scrollIntoView({ behavior: "smooth", block: "center" });
+          }, 120);
+        }
+      }
     }
 
     /** Короткий текст внутри ячейки (статус дня) */
@@ -4106,6 +4120,16 @@
       clearSelection();
       renderCalendar();
     });
+
+    /* Mobile calendar accordion toggle */
+    var calToggleBtn = bookingSection.querySelector("[data-cal-toggle]");
+    var calWrapEl = bookingSection.querySelector(".booking-calendar");
+    if (calToggleBtn && calWrapEl) {
+      calToggleBtn.addEventListener("click", function () {
+        var isOpen = calWrapEl.classList.toggle("cal-open");
+        calToggleBtn.setAttribute("aria-expanded", isOpen ? "true" : "false");
+      });
+    }
 
     masterSelect.addEventListener("change", function () {
       /* Programmatic rebuild (setMasterOptions changed the value): just

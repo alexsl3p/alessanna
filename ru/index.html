@@ -60,7 +60,10 @@
           <a href="/en/" data-lang="en">EN</a>
         </span>
         <a href="#broneeri" class="nav-cta" data-i18n="site.ctaBook">Записаться</a>
-        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" id="nav-toggle" data-i18n="site.menu">Меню</button>
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" id="nav-toggle" aria-label="Меню" data-i18n-attr="aria-label:site.menu">
+          <svg class="nav-toggle__icon nav-toggle__icon--open" width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><rect y="4" width="22" height="2" rx="1" fill="currentColor"/><rect y="10" width="22" height="2" rx="1" fill="currentColor"/><rect y="16" width="22" height="2" rx="1" fill="currentColor"/></svg>
+          <svg class="nav-toggle__icon nav-toggle__icon--close" width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><line x1="3" y1="3" x2="19" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="19" y1="3" x2="3" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
       </div>
     </div>
   </header>
@@ -351,6 +354,7 @@
 
         <div class="booking-shell reveal">
           <div class="booking-calendar" data-i18n-attr="aria-label:site.bookingCalendarAria">
+            <button class="cal-mobile-toggle" type="button" data-cal-toggle aria-expanded="false" data-i18n="site.ui.calPickDay">Выберите день в календаре</button>
             <div class="calendar-head">
               <div class="calendar-head-top">
                 <div>
