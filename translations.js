@@ -161,7 +161,7 @@
     return "/locales/" + lang + ".json";
   }
 
-  function loadBundle(lang, done) {
+  function loadBundle(lang, done, attempt) {
     lang = normalizeLang(lang);
     setDocumentLang(lang);
     updateLangSwitcher(lang);
@@ -185,6 +185,13 @@
         return bundle;
       })
       .catch(function (err) {
+        /* Сеть/мигнувший 401: без бандла все pubT-строки падают на английские
+         * дефолты при русской статике. Пробуем ещё дважды, потом сдаёмся. */
+        var n = attempt || 0;
+        if (n < 2) {
+          setTimeout(function () { loadBundle(lang, done, n + 1); }, 1200 * (n + 1));
+          return;
+        }
         if (typeof done === "function") done(err);
       });
   }
