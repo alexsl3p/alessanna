@@ -414,6 +414,14 @@ export function AdminStaffPage() {
     setExpandedById((prev) => ({ ...prev, [r.id]: true }));
   }
 
+  /* Сворачиваем «подробнее» обратно: панель раскрывается автоматически при
+   * входе в редактирование (startEdit), значит после сохранения или отмены
+   * карточка должна вернуться в свёрнутый вид. */
+  function cancelEdit() {
+    if (editingId) setExpandedById((prev) => ({ ...prev, [editingId]: false }));
+    setEditingId(null);
+  }
+
   async function saveEdit() {
     if (!editingId) return;
     setErr(null);
@@ -438,6 +446,7 @@ export function AdminStaffPage() {
       setErr(error.message);
       return;
     }
+    setExpandedById((prev) => ({ ...prev, [editingId]: false }));
     setEditingId(null);
     void load();
   }
@@ -1367,7 +1376,7 @@ export function AdminStaffPage() {
                           <button
                             type="button"
                             className="flex h-7 w-7 items-center justify-center rounded text-muted transition hover:bg-line/[0.08] hover:text-fg"
-                            onClick={() => setEditingId(null)}
+                            onClick={cancelEdit}
                             title={t("common.cancel")}
                             aria-label={t("common.cancel")}
                           >
@@ -1619,9 +1628,6 @@ export function AdminStaffPage() {
                                             aria-controls={assignedCatPanelId}
                                             draggable={false}
                                           >
-                                            <span className="shrink-0 rounded border border-line/20 px-1.5 py-0.5 text-[10px] text-muted transition group-hover:border-line/25">
-                                              {expanded ? "▼" : "▶"}
-                                            </span>
                                             <span className="min-w-0 flex-1 text-xs font-medium text-fg">
                                               {catName}
                                             </span>
@@ -1803,7 +1809,7 @@ export function AdminStaffPage() {
                                               <button
                                                 type="button"
                                                 onClick={() => toggleSkillCategoryPanel(r.id, catName)}
-                                                className="shrink-0 rounded border border-line/20 px-1.5 py-0.5 text-[10px] text-muted transition hover:border-line/30 hover:bg-surface"
+                                                className="flex min-w-0 flex-1 items-center gap-2 text-left"
                                                 aria-expanded={expanded}
                                                 aria-controls={catPanelId}
                                                 title={
@@ -1811,11 +1817,10 @@ export function AdminStaffPage() {
                                                 }
                                                 draggable={false}
                                               >
-                                                {expanded ? "▼" : "▶"}
+                                                <span className="min-w-0 flex-1 text-xs font-medium text-fg">
+                                                  {catName}
+                                                </span>
                                               </button>
-                                              <span className="min-w-0 flex-1 text-xs font-medium text-fg">
-                                                {catName}
-                                              </span>
                                               <span className="shrink-0 rounded-full bg-surface/80 px-1.5 py-0.5 text-[10px] font-medium text-muted">
                                                 {catSvcs.length} не включено
                                               </span>
@@ -2021,7 +2026,7 @@ export function AdminStaffPage() {
                         <button
                           type="button"
                           className="flex h-7 w-7 items-center justify-center rounded text-muted transition hover:bg-line/[0.08] hover:text-fg"
-                          onClick={() => setEditingId(null)}
+                          onClick={cancelEdit}
                           title={t("common.cancel")}
                           aria-label={t("common.cancel")}
                         >
