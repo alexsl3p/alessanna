@@ -108,6 +108,19 @@ export function ReceptionBookingPopup({
   const left = Math.max(8, Math.min(anchorX + 8, window.innerWidth - popupWidth - 8));
   const top = Math.max(8, Math.min(anchorY - 8, window.innerHeight - clampedPopupHeight - 8));
 
+  /** Desktop (sm+): pin the service/staff picker sheets over the popup itself
+   *  instead of viewport center — otherwise they open far away when the popup
+   *  is docked near a screen edge. Mobile keeps the bottom-sheet layout. */
+  const pickerSheetPosition = (width: number): { left: number; top: number } | undefined => {
+    if (window.innerWidth < 640) return undefined;
+    const rect = popupRef.current?.getBoundingClientRect();
+    if (!rect) return undefined;
+    return {
+      left: Math.max(8, Math.min(rect.left + rect.width / 2 - width / 2, window.innerWidth - width - 8)),
+      top: Math.max(8, Math.min(rect.top, window.innerHeight * 0.35)),
+    };
+  };
+
   const selectedStaff = useMemo(() => staff.find((s) => s.id === staffId) ?? null, [staff, staffId]);
   const isManagerOrAdmin = useMemo(
     () => selectedStaff?.roles?.includes("manager") || selectedStaff?.roles?.includes("admin") || false,
@@ -494,7 +507,7 @@ export function ReceptionBookingPopup({
       {showServicePicker && createPortal(
         <>
           <div className="fixed inset-0 z-[200] bg-black/50" onClick={() => setShowServicePicker(false)} />
-          <div className="fixed bottom-0 left-0 right-0 z-[201] flex max-h-[65vh] flex-col overflow-hidden rounded-t-2xl border-t border-line/15 bg-panel shadow-2xl sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:w-[420px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:border">
+          <div style={pickerSheetPosition(420)} className="fixed bottom-0 left-0 right-0 z-[201] flex max-h-[65vh] flex-col overflow-hidden rounded-t-2xl border-t border-line/15 bg-panel shadow-2xl sm:bottom-auto sm:right-auto sm:w-[420px] sm:rounded-2xl sm:border">
             {/* Sheet header */}
             <div className="flex shrink-0 items-center justify-between border-b border-line/15 px-4 py-3">
               <span className="text-sm font-semibold text-fg">{t("modal.selectService")}</span>
@@ -536,7 +549,7 @@ export function ReceptionBookingPopup({
       {showStaffPicker && createPortal(
         <>
           <div className="fixed inset-0 z-[200] bg-black/50" onClick={() => setShowStaffPicker(false)} />
-          <div className="fixed bottom-0 left-0 right-0 z-[201] flex max-h-[65vh] flex-col overflow-hidden rounded-t-2xl border-t border-line/15 bg-panel shadow-2xl sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:w-[360px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:border">
+          <div style={pickerSheetPosition(360)} className="fixed bottom-0 left-0 right-0 z-[201] flex max-h-[65vh] flex-col overflow-hidden rounded-t-2xl border-t border-line/15 bg-panel shadow-2xl sm:bottom-auto sm:right-auto sm:w-[360px] sm:rounded-2xl sm:border">
             <div className="flex shrink-0 items-center justify-between border-b border-line/15 px-4 py-3">
               <span className="text-sm font-semibold text-fg">Выберите мастера</span>
               <button type="button" onClick={() => setShowStaffPicker(false)} className="rounded-full p-1 text-muted hover:bg-surface">
