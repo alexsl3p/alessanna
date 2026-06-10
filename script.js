@@ -3337,7 +3337,10 @@
             var isHidden = function (r) {
               if (!r || r.is_active === false || r.show_on_marketing_site === false) return true;
               var roles = Array.isArray(r.roles) ? r.roles.join(",") : String(r.roles || "");
-              return /(admin|owner|manager)/i.test(roles);
+              /* Скрываем только «чистых» управленцев. Если человек одновременно
+               * manager И worker (мастер с правами CRM) — он принимает клиентов,
+               * и его свободное время должно показываться на сайте. */
+              return /(admin|owner|manager)/i.test(roles) && !/worker/i.test(roles);
             };
             var visible = {};
             (staffRows || []).forEach(function (r) {
