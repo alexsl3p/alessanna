@@ -11,7 +11,25 @@ export default async function middleware(request) {
   const url = new URL(request.url);
   const { hostname, pathname } = url;
 
-  if (hostname !== "work.alessannailu.com") return; // landing page: pass through
+  if (hostname !== "work.alessannailu.com") {
+    // Preview deployments (*.vercel.app) serve the landing by default.
+    // Visiting /?crm=1 switches this browser to the CRM via cookie, /?crm=0 back.
+    if (!hostname.endsWith(".vercel.app")) return; // landing page: pass through
+    const flag = url.searchParams.get("crm");
+    if (flag === "1" || flag === "0") {
+      const redirect = new URL(request.url);
+      redirect.searchParams.delete("crm");
+      return new Response(null, {
+        status: 307,
+        headers: {
+          location: redirect.pathname + redirect.search,
+          "set-cookie": `crm_preview=${flag}; Path=/; SameSite=Lax`,
+        },
+      });
+    }
+    const cookies = request.headers.get("cookie") || "";
+    if (!/(?:^|;\s*)crm_preview=1/.test(cookies)) return; // landing page: pass through
+  }
 
   // Requests already pointing at /_crm_dist/ (internal re-fetch) — serve directly
   if (pathname.startsWith("/_crm_dist/")) return;
