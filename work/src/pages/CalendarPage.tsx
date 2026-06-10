@@ -31,18 +31,8 @@ import type {
 import { isStaffRowAdmin, normalizeStaffMember } from "../lib/roles";
 import { effectiveCanWorkCalendar } from "../lib/effectiveRole";
 import { loadServicesCatalog } from "../lib/loadServicesCatalog";
-import {
-  serviceRowToPublicCatalogEntry,
-  splitStaffIntoHairAndNailsForCrm,
-} from "../lib/publicMasterPanel";
-import {
-  DEFAULT_RECEPTION_MASTERS_PANEL,
-  loadReceptionLayoutStore,
-  type ReceptionMastersPanelConfig,
-} from "../lib/receptionLayout";
-import { fetchReceptionLayoutFromServer } from "../lib/receptionLayoutRemote";
-import { BookingModal } from "../components/BookingModal";
 import { ReceptionWeekGrid } from "../components/reception/ReceptionWeekGrid";
+import { ReceptionBookingPopup } from "../components/reception/ReceptionBookingPopup";
 import { ReceptionApptInfoPopup } from "../components/reception/ReceptionApptInfoPopup";
 import { AdminDaySchedulePopup } from "../components/reception/AdminDaySchedulePopup";
 import { buildStaffHueMap } from "../lib/staffHue";
@@ -66,26 +56,21 @@ export function CalendarPage() {
   const [staffServiceLinks, setStaffServiceLinks] = useState<StaffServiceRow[]>([]);
   const [calendarServiceId, setCalendarServiceId] = useState<string | number | null>(null);
   const [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState<{ start: Date; staffId: string; editAppt?: AppointmentRow | null } | null>(null);
+  const [modal, setModal] = useState<{ start: Date; staffId: string; anchorX: number; anchorY: number; editAppt?: AppointmentRow | null } | null>(null);
   const [infoPopup, setInfoPopup] = useState<{ appt: AppointmentRow; anchorX: number; anchorY: number } | null>(null);
   const [dayPopup, setDayPopup] = useState<{ day: Date; x: number; y: number } | null>(null);
-  const [receptionMastersConfig, setReceptionMastersConfig] = useState<ReceptionMastersPanelConfig>(() => ({
-    ...DEFAULT_RECEPTION_MASTERS_PANEL,
-  }));
-
   const load = useCallback(async () => {
     let apQuery = supabase.from("appointments").select("*").neq("status", "cancelled");
     if (isWorkerOnlyEffective && staffMember) {
       apQuery = apQuery.eq("staff_id", staffMember.id);
     }
-    const [st, sch, to, ap, svCatalog, ss, remoteLayout, wd] = await Promise.all([
+    const [st, sch, to, ap, svCatalog, ss, wd] = await Promise.all([
       supabase.from("staff").select("*").order("name"),
       supabase.from("staff_schedule").select("*"),
       supabase.from("staff_time_off").select("*"),
       apQuery,
       loadServicesCatalog({ activeOnly: true }),
       supabase.from("staff_services").select("*"),
-      fetchReceptionLayoutFromServer(),
       supabase.from("staff_work_dates").select("*"),
     ]);
     if (st.data) {
@@ -100,11 +85,6 @@ export function CalendarPage() {
     if (ap.data) setAppointments(ap.data as AppointmentRow[]);
     if (ss.data) setStaffServiceLinks(ss.data as StaffServiceRow[]);
     setServices(svCatalog);
-    if (remoteLayout) {
-      setReceptionMastersConfig(remoteLayout.masters);
-    } else {
-      setReceptionMastersConfig(loadReceptionLayoutStore().masters);
-    }
     setLoading(false);
   }, [isWorkerOnlyEffective, staffMember]);
 
@@ -124,35 +104,6 @@ export function CalendarPage() {
     const s = services.find((x) => x.id === calendarServiceId);
     return Math.max(15, s?.duration_min ?? 60);
   }, [calendarServiceId, services]);
-
-  const servicesCatalog = useMemo(
-    () => services.map((s) => serviceRowToPublicCatalogEntry(s)!),
-    [services],
-  );
-
-  const mastersPanelStaffForHall = useMemo(() => {
-    if (receptionMastersConfig.assignment === "manual") {
-      const byId = new Map(staff.map((m) => [m.id, m]));
-      const ids = [
-        ...new Set([...receptionMastersConfig.hairStaffIds, ...receptionMastersConfig.nailsStaffIds]),
-      ];
-      return ids.map((id) => byId.get(id)).filter((m): m is StaffMember => m != null);
-    }
-    return staff;
-  }, [receptionMastersConfig, staff]);
-
-  const mastersSplitResolved = useMemo(() => {
-    if (receptionMastersConfig.assignment === "manual") {
-      const byId = new Map(staff.map((m) => [m.id, m]));
-      const pick = (ids: string[]) =>
-        ids.map((id) => byId.get(id)).filter((m): m is StaffMember => m != null);
-      return {
-        hair: pick(receptionMastersConfig.hairStaffIds),
-        nails: pick(receptionMastersConfig.nailsStaffIds),
-      };
-    }
-    return splitStaffIntoHairAndNailsForCrm(staff, staffServiceLinks, servicesCatalog);
-  }, [receptionMastersConfig, staff, staffServiceLinks, servicesCatalog]);
 
   /* The reception-style calendar shows every active master (colour-coded
    * columns + day-header chips). No per-service filtering here — that was
@@ -284,12 +235,13 @@ export function CalendarPage() {
     const hour = sameDay ? now.getHours() : 10;
     const mins = sameDay ? (now.getMinutes() <= 30 ? 30 : 0) : 0;
     const start = setMinutes(setHours(base, hour), mins);
-    setModal({ start, staffId: sid });
+    // Toolbar button has no slot click — anchor the popup near screen center.
+    setModal({ start, staffId: sid, anchorX: Math.max(8, window.innerWidth / 2 - 170), anchorY: window.innerHeight / 4 });
   }
 
-  function openEditFromInfo(appt: AppointmentRow) {
+  function openEditFromInfo(appt: AppointmentRow, anchorX: number, anchorY: number) {
     setInfoPopup(null);
-    setModal({ start: parseISO(appt.start_time), staffId: appt.staff_id, editAppt: appt });
+    setModal({ start: parseISO(appt.start_time), staffId: appt.staff_id, anchorX, anchorY, editAppt: appt });
   }
 
   return (
@@ -382,12 +334,12 @@ export function CalendarPage() {
               workDates={workDates}
               holidays={[]}
               visibleStaffIds={effectiveVisibleIds}
-              onSlotClick={(start) => {
+              onSlotClick={(start, x, y) => {
                 if (!canUseCalendar) return;
                 const sid = isWorkerOnlyEffective && staffMember
                   ? staffMember.id
                   : [...effectiveVisibleIds][0] ?? activeStaffForCalendar[0]?.id;
-                if (sid) setModal({ start, staffId: sid });
+                if (sid) setModal({ start, staffId: sid, anchorX: x, anchorY: y });
               }}
               onApptClick={(appt, x, y) => {
                 if (!canUseCalendar) return;
@@ -482,21 +434,17 @@ export function CalendarPage() {
       </div>
 
       {modal && (
-        <BookingModal
-          open
-          variant="pro"
-          layout="modal"
-          onClose={() => setModal(null)}
-          onSaved={load}
+        <ReceptionBookingPopup
+          anchorX={modal.anchorX}
+          anchorY={modal.anchorY}
           initialStart={modal.start}
-          initialStaffId={modal.staffId}
-          staffList={staff}
+          defaultStaffId={modal.staffId}
+          staff={!canManage && staffMember ? staff.filter((s) => s.id === staffMember.id) : staff}
           services={services}
           links={staffServiceLinks}
-          lockStaff={!canManage}
-          mastersHallSplit={mastersSplitResolved}
-          mastersHallFullPanel={mastersPanelStaffForHall}
-          editAppointment={modal.editAppt ?? null}
+          editAppt={modal.editAppt ?? null}
+          onSave={() => { setModal(null); void load(); }}
+          onClose={() => setModal(null)}
         />
       )}
 
@@ -509,7 +457,7 @@ export function CalendarPage() {
           services={services}
           canManage={canManage}
           onClose={() => setInfoPopup(null)}
-          onEdit={() => openEditFromInfo(infoPopup.appt)}
+          onEdit={() => openEditFromInfo(infoPopup.appt, infoPopup.anchorX, infoPopup.anchorY)}
           onSaved={() => { setInfoPopup(null); void load(); }}
         />
       )}
