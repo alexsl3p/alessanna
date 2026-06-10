@@ -56,7 +56,7 @@ export function CalendarPage() {
   const [staffServiceLinks, setStaffServiceLinks] = useState<StaffServiceRow[]>([]);
   const [calendarServiceId, setCalendarServiceId] = useState<string | number | null>(null);
   const [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState<{ start: Date; staffId: string; anchorX: number; anchorY: number; editAppt?: AppointmentRow | null } | null>(null);
+  const [modal, setModal] = useState<{ start: Date; staffId: string | null; anchorX: number; anchorY: number; editAppt?: AppointmentRow | null } | null>(null);
   const [infoPopup, setInfoPopup] = useState<{ appt: AppointmentRow; anchorX: number; anchorY: number } | null>(null);
   const [dayPopup, setDayPopup] = useState<{ day: Date; x: number; y: number } | null>(null);
   const load = useCallback(async () => {
@@ -224,11 +224,9 @@ export function CalendarPage() {
   const periodLabel = cursor.toLocaleString("ru-RU", { month: "long", year: "numeric" });
 
   function openQuickBooking() {
-    if (!canUseCalendar) return;
-    const sid = isWorkerOnlyEffective && staffMember
-      ? staffMember.id
-      : [...effectiveVisibleIds][0] ?? activeStaffForCalendar[0]?.id;
-    if (!sid) return;
+    // Only manager/admin create bookings in the CRM calendar; master stays
+    // unselected by default — same as the reception page.
+    if (!canManage) return;
     const base = startOfDay(cursor);
     const now = new Date();
     const sameDay = isSameDay(base, now);
@@ -236,7 +234,7 @@ export function CalendarPage() {
     const mins = sameDay ? (now.getMinutes() <= 30 ? 30 : 0) : 0;
     const start = setMinutes(setHours(base, hour), mins);
     // Toolbar button has no slot click — anchor the popup near screen center.
-    setModal({ start, staffId: sid, anchorX: Math.max(8, window.innerWidth / 2 - 170), anchorY: window.innerHeight / 4 });
+    setModal({ start, staffId: null, anchorX: Math.max(8, window.innerWidth / 2 - 170), anchorY: window.innerHeight / 4 });
   }
 
   function openEditFromInfo(appt: AppointmentRow, anchorX: number, anchorY: number) {
@@ -303,7 +301,7 @@ export function CalendarPage() {
 
         {/* Right: create booking */}
         <div className="flex items-center">
-          {canUseCalendar && (
+          {canManage && (
             <button
               type="button"
               onClick={openQuickBooking}
@@ -335,17 +333,15 @@ export function CalendarPage() {
               holidays={[]}
               visibleStaffIds={effectiveVisibleIds}
               onSlotClick={(start, x, y) => {
-                if (!canUseCalendar) return;
-                const sid = isWorkerOnlyEffective && staffMember
-                  ? staffMember.id
-                  : [...effectiveVisibleIds][0] ?? activeStaffForCalendar[0]?.id;
-                if (sid) setModal({ start, staffId: sid, anchorX: x, anchorY: y });
+                // Create — manager/admin only; no master preselected (parity with reception).
+                if (!canManage) return;
+                setModal({ start, staffId: null, anchorX: x, anchorY: y });
               }}
               onApptClick={(appt, x, y) => {
                 if (!canUseCalendar) return;
                 setInfoPopup({ appt, anchorX: x, anchorY: y });
               }}
-              onApptResize={canUseCalendar ? handleApptResize : undefined}
+              onApptResize={canManage ? handleApptResize : undefined}
               onDayHeaderClick={canManage ? (day, x, y) => setDayPopup({ day, x, y }) : undefined}
             />
           ) : (
@@ -439,7 +435,7 @@ export function CalendarPage() {
           anchorY={modal.anchorY}
           initialStart={modal.start}
           defaultStaffId={modal.staffId}
-          staff={!canManage && staffMember ? staff.filter((s) => s.id === staffMember.id) : staff}
+          staff={staff}
           services={services}
           links={staffServiceLinks}
           editAppt={modal.editAppt ?? null}
