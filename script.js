@@ -276,6 +276,21 @@
     });
   }
 
+  /* ─── Мобильный аккордеон календаря записи ────────────────────────────
+   * На ≤900px календарь скрыт CSS-ом (.booking-calendar:not(.cal-open)),
+   * кнопка [data-cal-toggle] раскрывает его. Вешаем обработчик здесь,
+   * а не в booking-init: тот ждёт асинхронные feature-флаги Supabase,
+   * и до их загрузки кнопка была бы мёртвой при уже скрытом календаре. */
+  (function () {
+    var calWrap = document.querySelector(".booking-calendar");
+    var calToggle = calWrap ? calWrap.querySelector("[data-cal-toggle]") : null;
+    if (!calWrap || !calToggle) return;
+    calToggle.addEventListener("click", function () {
+      var open = calWrap.classList.toggle("cal-open");
+      calToggle.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+  })();
+
   /* Anchor links: land on section titles with a fixed-header offset. */
   function scrollToSectionTitle(sectionId, hash) {
     var kicker = document.querySelector("#" + sectionId + " .section-kicker");
@@ -4120,16 +4135,6 @@
       clearSelection();
       renderCalendar();
     });
-
-    /* Mobile calendar accordion toggle */
-    var calToggleBtn = bookingSection.querySelector("[data-cal-toggle]");
-    var calWrapEl = bookingSection.querySelector(".booking-calendar");
-    if (calToggleBtn && calWrapEl) {
-      calToggleBtn.addEventListener("click", function () {
-        var isOpen = calWrapEl.classList.toggle("cal-open");
-        calToggleBtn.setAttribute("aria-expanded", isOpen ? "true" : "false");
-      });
-    }
 
     masterSelect.addEventListener("change", function () {
       /* Programmatic rebuild (setMasterOptions changed the value): just
