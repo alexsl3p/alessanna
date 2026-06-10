@@ -362,6 +362,7 @@ a:hover {
   border: 1px solid var(--stroke-strong);
   color: var(--gold-bright);
   padding: 0.52rem 0.85rem;
+  min-height: 2.75rem;
   border-radius: 0.4rem;
   cursor: pointer;
   font-size: 0.68rem;
@@ -433,8 +434,10 @@ a:hover {
 
 .nav-list a {
   color: var(--text-muted);
-  display: inline-block;
-  padding: 0.28em 0;
+  display: flex;
+  align-items: center;
+  padding: 0.72rem 0.25rem;
+  min-height: 2.75rem;
   transition: color 0.45s var(--ease-silk), letter-spacing 0.45s var(--ease-silk), text-shadow 0.45s var(--ease-silk);
 }
 
@@ -1196,6 +1199,7 @@ body.site-ilusalong #hero.hero {
 
 .tab-btn {
   padding: 0.58rem 1.15rem;
+  min-height: 2.75rem;
   border: 1px solid var(--gold-dim);
   background: transparent;
   color: var(--text-muted);
@@ -1680,6 +1684,9 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
   appearance: none;
   margin: 0;
   padding: 0.3rem 0.65rem;
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
   border-radius: 999px;
   border: 1px solid var(--line-strong);
   background: rgba(255, 255, 255, 0.025);
@@ -1823,6 +1830,9 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
   appearance: none;
   margin: 0;
   padding: 0.45rem 0.75rem;
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
   border-radius: 999px;
   border: 1px solid var(--line-strong);
   background: rgba(255, 255, 255, 0.03);
@@ -2684,8 +2694,8 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
 .calendar-nav-button {
   display: inline-grid;
   place-items: center;
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 2.75rem;
+  height: 2.75rem;
   padding: 0;
   border-radius: 50%;
   border: 1px solid rgba(197, 160, 89, 0.35);
@@ -4058,3 +4068,75 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
 .svc-item__name { flex: 1; }
 .svc-item__phone { color: var(--gold,#c4a574); flex-shrink: 0; display: flex; align-items: center; }
 .svc-item__phone svg { width: 1rem; height: 1rem; }
+
+/* ==========================================================================
+   Mobile UX improvements
+   Touch targets ≥ 44px (WCAG 2.5.5), hero CTA stack, header overflow fix
+   ========================================================================== */
+
+/* Hero: stack buttons vertically on narrow screens so primary CTA is prominent */
+@media (max-width: 600px) {
+  .hero-actions {
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 2rem;
+  }
+
+  .hero-actions .btn {
+    width: min(18rem, 88vw);
+    justify-content: center;
+  }
+}
+
+/* Header overflow fix: on mobile the logo + lang + CTA + toggle overflows the container.
+   Hide header CTA since hero has one and mobile-book-bar covers scrolled state. */
+@media (max-width: 900px) {
+  .header-actions .nav-cta {
+    display: none;
+  }
+}
+
+/* Kolorist & henna action buttons — raise touch target on mobile */
+@media (max-width: 900px) {
+  .kolorist-btn,
+  .kolorist-book-consult-btn,
+  .henna-btn {
+    min-height: 2.75rem;
+    padding: 0.65rem 1.1rem;
+  }
+}
+
+/* Booking calendar — tighter cells on very small screens */
+@media (max-width: 400px) {
+  .calendar-day {
+    min-height: 3.25rem;
+    padding: 0.25rem 0.2rem;
+  }
+
+  .calendar-meta,
+  .calendar-slots {
+    font-size: 0.5rem;
+  }
+
+  .calendar-day-num {
+    font-size: 0.8rem;
+  }
+}
+
+/* Trust strip — single column on very small screens */
+@media (max-width: 480px) {
+  .trust-inner {
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    text-align: center;
+  }
+}
+
+/* Section spacing — tighter on phones */
+@media (max-width: 480px) {
+  :root {
+    --section-space: clamp(3rem, 9vw, 5rem);
+  }
+}
