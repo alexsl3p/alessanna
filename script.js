@@ -107,7 +107,7 @@
     var closeBtn = document.createElement("button");
     closeBtn.type = "button";
     closeBtn.className = "toast__close";
-    closeBtn.setAttribute("aria-label", pubT("site.ui.toastClose", "Close notification"));
+    closeBtn.setAttribute("aria-label", pubT("site.ui.toastClose", "Закрыть уведомление"));
     closeBtn.textContent = "×";
     t.appendChild(closeBtn);
 
@@ -769,7 +769,7 @@
 
     function getPickUi() {
       return {
-        remove: pubT("site.ui.removeFromList", "Remove from list"),
+        remove: pubT("site.ui.removeFromList", "Убрать из списка"),
         masterNone: "—",
       };
     }
@@ -970,7 +970,7 @@
 
     function masterNameById(id) {
       if (id === "any") {
-        return pubT("site.ui.anyMaster", "No preference");
+        return pubT("site.ui.anyMaster", "Не важно");
       }
       var st = globalThis.__SALON_PUBLIC_STAFF__;
       if (st && id) {
@@ -1559,7 +1559,7 @@
           var masterLabel = "";
           if (mid === ANY_MASTER_ID) masterLabel = anyMasterLabelForChip();
           else if (mid) masterLabel = masterNameById(mid);
-          if (masterLabel) parts.push(pubT("site.ui.masterWord", "stylist") + ": " + masterLabel);
+          if (masterLabel) parts.push(pubT("site.ui.masterWord", "мастер") + ": " + masterLabel);
           return p.label + " (" + parts.join(", ") + ")";
         })
         .join("; ");
@@ -1643,7 +1643,7 @@
         } else if (p.selectedMaster) {
           master.textContent = masterNameById(p.selectedMaster);
         } else {
-          master.textContent = pubT("site.ui.masterNotSelected", "stylist not selected");
+          master.textContent = pubT("site.ui.masterNotSelected", "мастер не выбран");
           master.classList.add("booking-chain-master--empty");
           missingMaster = true;
         }
@@ -1665,7 +1665,7 @@
          * слотов и для конца окна визита. */
         var totalMin = computePlanTotalMinutes();
         totalEl.textContent =
-          pubT("site.ui.approxUntil", "Approximately until") + " " + formatTimeHm(startMin + totalMin);
+          pubT("site.ui.approxUntil", "Ориентировочно до") + " " + formatTimeHm(startMin + totalMin);
       } else {
         totalEl.textContent = "";
       }
@@ -1676,13 +1676,13 @@
           hintEl.hidden = false;
           hintEl.textContent = pubT(
             "site.ui.chainHintMaster",
-            "Choose a stylist (or No preference)."
+            "Выберите мастера (или «Не важно» — тогда подберём свободного)."
           );
         } else if (startMin == null) {
           hintEl.hidden = false;
           hintEl.textContent = pubT(
             "site.ui.chainHintTime",
-            "Pick a day and time for your visit schedule."
+            "Выберите день и время — и мы покажем точное расписание визита."
           );
         } else {
           hintEl.hidden = true;
@@ -1707,11 +1707,11 @@
     function formatDuration(min) {
       var m = Math.max(0, Math.round(Number(min) || 0));
       if (!m) return "";
-      if (m < 60) return m + " " + pubT("site.ui.durationMin", "min");
+      if (m < 60) return m + " " + pubT("site.ui.durationMin", "мин");
       var h = Math.floor(m / 60);
       var r = m % 60;
-      var hour = pubT("site.ui.durationHour", "h");
-      var min = pubT("site.ui.durationMin", "min");
+      var hour = pubT("site.ui.durationHour", "ч");
+      var min = pubT("site.ui.durationMin", "мин");
       return r ? h + " " + hour + " " + r + " " + min : h + " " + hour;
     }
 
@@ -1825,7 +1825,7 @@
     }
 
     function anyMasterLabelForChip() {
-      return pubT("site.ui.anyMaster", "No preference");
+      return pubT("site.ui.anyMaster", "Не важно");
     }
 
     function renderPickMasterChips(host, pick) {
@@ -1834,13 +1834,13 @@
       host.setAttribute("role", "radiogroup");
       host.setAttribute(
         "aria-label",
-        pubT("site.ui.masterForService", "Stylist for service") + " " + pick.label
+        pubT("site.ui.masterForService", "Мастер для услуги") + " " + pick.label
       );
       var masters = mastersForSpecificPick(pick);
       if (!masters.length) {
         var empty = document.createElement("span");
         empty.className = "pick-chip-masters-empty";
-        empty.textContent = pubT("site.ui.mastersNotLoaded", "Loading stylists…");
+        empty.textContent = pubT("site.ui.mastersNotLoaded", "Мастера пока не загружены");
         host.appendChild(empty);
         return;
       }
@@ -2977,7 +2977,7 @@
     }
 
     function anyMasterLabel() {
-      return pubT("site.ui.anyMaster", "No preference");
+      return pubT("site.ui.anyMaster", "Не важно");
     }
 
     function selectedMasterForAvailability() {
@@ -3872,11 +3872,11 @@
 
       var msg = "";
       if (pickedCount === 1) {
-        msg = pubT("site.ui.masterHintSingle", "You can leave No preference.");
+        msg = pubT("site.ui.masterHintSingle", "Можно оставить «Не важно» — мы подберём свободного мастера.");
       } else if (commonMasterCount > 0 || hasPartialMasters) {
-        msg = pubT("site.ui.masterHintMultiOr", "Choose a stylist or leave No preference.");
+        msg = pubT("site.ui.masterHintMultiOr", "Выберите мастера для записи или оставьте «Не важно».");
       } else {
-        msg = pubT("site.ui.masterHintMulti", "Choose a stylist for this booking.");
+        msg = pubT("site.ui.masterHintMulti", "Выберите мастера для записи.");
       }
       hintEl.textContent = msg;
       hintEl.hidden = false;
@@ -4320,7 +4320,7 @@
     }
 
     function bookingSuccessMessageWithPriceNote() {
-      return pubT("site.ui.bookingConfirmed", "Booking confirmed!");
+      return pubT("site.ui.bookingConfirmed", "Запись успешна!");
     }
 
     /** Цепочка услуг (picked[] в dock) + Supabase RPC. Возвращает Promise, который резолвится
@@ -4341,7 +4341,7 @@
         showToast(
           pubT(
             "site.ui.pickServiceFirst",
-            "Pick a service from the price list above."
+            "Выберите услугу в прайсе выше — так мы поймём длительность и сможем подбрать время."
           ),
           "err"
         );
@@ -4485,12 +4485,12 @@
                 } else {
                   var err =
                     (x.j && x.j.error) ||
-                    pubT("site.ui.bookingFailedShort", "Could not book. Try another time.");
+                    pubT("site.ui.bookingFailedShort", "Не удалось забронировать. Выберите другое время.");
                   showToast(err, "err");
                 }
               })
               .catch(function () {
-                showToast(pubT("site.ui.networkError", "Network or server unavailable."), "err");
+                showToast(pubT("site.ui.networkError", "Сеть или сервер недоступны."), "err");
               });
             return;
           }
@@ -4501,7 +4501,7 @@
           if (key === "master" && (val === ANY_MASTER_ID || !val)) val = anyMasterLabel();
           lines.push(key + ": " + val);
         });
-        var subject = encodeURIComponent(pubT("site.ui.mailSubjectBooking", "Booking AlesSanna"));
+        var subject = encodeURIComponent(pubT("site.ui.mailSubjectBooking", "Запись AlesSanna"));
         var body = encodeURIComponent(lines.join("\n"));
         window.location.href = "mailto:alessanna.ilusalong@gmail.com?subject=" + subject + "&body=" + body;
       } /* end continueLegacySubmit */
