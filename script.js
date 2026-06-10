@@ -1470,8 +1470,21 @@
       var pos = activeChoiceScrollPosition();
       var sx = pos.sx;
       var sy = pos.sy;
+      /* Отложенные restore (до 1с) дрались с ручной прокруткой: пользователь
+       * крутит вниз, а restore дёргает страницу обратно. Первое же действие
+       * пользователя (колесо/тач/клавиатура) отменяет оставшиеся restore. */
+      var cancelled = false;
+      var cancel = function () {
+        cancelled = true;
+        window.removeEventListener("wheel", cancel);
+        window.removeEventListener("touchmove", cancel);
+        window.removeEventListener("keydown", cancel);
+      };
+      window.addEventListener("wheel", cancel, { passive: true });
+      window.addEventListener("touchmove", cancel, { passive: true });
+      window.addEventListener("keydown", cancel, { passive: true });
       var restore = function () {
-        if (scrollRestoreBlocked()) return;
+        if (cancelled || scrollRestoreBlocked()) return;
         if (anchor && beforeTop != null) {
           var delta = anchor.getBoundingClientRect().top - beforeTop;
           if (Math.abs(delta) > 1) {
@@ -1486,7 +1499,10 @@
       requestAnimationFrame(restore);
       setTimeout(restore, 80);
       setTimeout(restore, 240);
-      setTimeout(restore, 1000);
+      setTimeout(function () {
+        restore();
+        cancel(); // снимаем слушатели после последнего restore
+      }, 1000);
       return result;
     }
 
@@ -3008,8 +3024,20 @@
       var beforeTop = anchor ? anchor.getBoundingClientRect().top : null;
       var sx = window.scrollX || window.pageXOffset || 0;
       var sy = window.scrollY || window.pageYOffset || 0;
+      /* Ручная прокрутка пользователя отменяет оставшиеся restore — иначе
+       * отложенные вызовы (до 1с) дёргают страницу против движения юзера. */
+      var cancelled = false;
+      var cancel = function () {
+        cancelled = true;
+        window.removeEventListener("wheel", cancel);
+        window.removeEventListener("touchmove", cancel);
+        window.removeEventListener("keydown", cancel);
+      };
+      window.addEventListener("wheel", cancel, { passive: true });
+      window.addEventListener("touchmove", cancel, { passive: true });
+      window.addEventListener("keydown", cancel, { passive: true });
       var restore = function () {
-        if (scrollRestoreBlocked()) return;
+        if (cancelled || scrollRestoreBlocked()) return;
         if (anchor && beforeTop != null) {
           var delta = anchor.getBoundingClientRect().top - beforeTop;
           if (Math.abs(delta) > 1) {
@@ -3025,7 +3053,10 @@
       setTimeout(restore, 80);
       setTimeout(restore, 240);
       setTimeout(restore, 600);
-      setTimeout(restore, 1000);
+      setTimeout(function () {
+        restore();
+        cancel(); // снимаем слушатели после последнего restore
+      }, 1000);
       return result;
     }
 
