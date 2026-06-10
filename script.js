@@ -171,6 +171,12 @@
 
   /** Открытое меню: body.nav-open + подложка #nav-backdrop (см. styles.css) */
   function setNavOpen(open) {
+    /* overflow:hidden убирает полосу прокрутки и контент прыгает вправо-влево.
+     * Компенсируем ширину скроллбара паддингом (см. body.nav-open в CSS). */
+    if (open) {
+      var sbw = window.innerWidth - document.documentElement.clientWidth;
+      document.documentElement.style.setProperty("--scrollbar-comp", (sbw > 0 ? sbw : 0) + "px");
+    }
     document.body.classList.toggle("nav-open", open);
     if (navBackdrop) {
       if (open) navBackdrop.removeAttribute("hidden");
@@ -358,6 +364,24 @@
     });
 
     applyTeamFilterForActiveTab();
+
+    /* После выбора категории мягко подводим страницу к открывшемуся списку
+     * услуг — иначе панель раскрывается ниже видимой области и кажется,
+     * что клик ничего не сделал. */
+    var openedPanel = document.getElementById(targetId);
+    if (openedPanel) {
+      requestAnimationFrame(function () {
+        var top = openedPanel.getBoundingClientRect().top;
+        /* Скроллим только если заголовок панели не виден целиком в верхней
+         * половине экрана (не дёргаем страницу, когда и так всё видно). */
+        if (top < 0 || top > window.innerHeight * 0.45) {
+          openedPanel.scrollIntoView({
+            behavior: reduceMotionMq.matches ? "auto" : "smooth",
+            block: "start",
+          });
+        }
+      });
+    }
 
     /* Show/hide special promo blocks based on active tab */
     var activeTabPanel = scope.querySelector(".tab-panel.is-active");

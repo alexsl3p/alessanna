@@ -19,6 +19,10 @@ const LOG_PREFIX = "[site-services]";
 
 let lastGroups = null;
 let lastSvcMasters = null;
+/* HTML последнего рендера каталога: фоновые refresh (раз в минуту + realtime)
+ * не должны трогать DOM, если данные не изменились — иначе у пользователя
+ * сворачивается открытая категория и сбрасывается прокрутка. */
+let lastRenderedHtml = null;
 
 function tr(key, fb) {
   return window.ALESSANNA_T ? window.ALESSANNA_T(key, fb) : fb != null ? fb : key;
@@ -457,7 +461,37 @@ function render(groups, serviceMasters) {
     return;
   }
 
-  mount.innerHTML = buildCatalogHtml(groups, svcMasters, "");
+  const html = buildCatalogHtml(groups, svcMasters, "");
+  /* Данные не изменились — DOM не трогаем (фоновый poll каждые 60с). */
+  if (html === lastRenderedHtml && mount.innerHTML !== "") {
+    if (warn) warn.hidden = true;
+    return;
+  }
+  lastRenderedHtml = html;
+
+  /* Запоминаем открытую категорию, чтобы вернуть её после пересборки DOM. */
+  const prevActivePanel = mount.querySelector(".tab-panel.is-active");
+  const prevActiveCat = prevActivePanel
+    ? prevActivePanel.getAttribute("data-pick-category")
+    : null;
+
+  mount.innerHTML = html;
+
+  if (prevActiveCat != null) {
+    const panels = mount.querySelectorAll(".tab-panel");
+    for (const panel of panels) {
+      if (panel.getAttribute("data-pick-category") !== prevActiveCat) continue;
+      panel.hidden = false;
+      panel.classList.add("is-active");
+      const tab = mount.querySelector('.tab-btn[aria-controls="' + panel.id + '"]');
+      if (tab) {
+        tab.classList.add("is-active");
+        tab.setAttribute("aria-selected", "true");
+      }
+      break;
+    }
+  }
+
   renderFormSelects(groups, svcMasters);
 
   if (warn) warn.hidden = true;

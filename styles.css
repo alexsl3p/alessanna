@@ -167,6 +167,12 @@ body {
 
 body.nav-open {
   overflow: hidden;
+  /* Компенсация исчезнувшего скроллбара — страница не дёргается вправо */
+  padding-right: var(--scrollbar-comp, 0px);
+}
+/* Шапка fixed и на body-паддинг не реагирует — компенсируем отдельно */
+body.nav-open .site-header {
+  padding-right: var(--scrollbar-comp, 0px);
 }
 
 #main {
@@ -235,6 +241,16 @@ a:hover {
 
 .container--booking {
   width: min(1180px, 94vw);
+}
+
+/* Адрес салона → Google Maps: выглядит как обычный текст, золотой на ховере */
+.address-maps-link {
+  color: inherit;
+}
+.address-maps-link:hover {
+  color: var(--gold-bright);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 /* ---------- Шапка ---------- */
@@ -3765,6 +3781,8 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
 .kolorist-btn:hover {
   background: rgba(255,255,255,0.13);
   border-color: rgba(255,255,255,0.32);
+  /* Глобальный a:hover красит текст в золотой — возвращаем читаемый цвет */
+  color: #f5f0e8;
 }
 .kolorist-btn svg { width: 1rem; height: 1rem; flex-shrink: 0; }
 
@@ -3778,6 +3796,8 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
 .kolorist-btn--primary:hover {
   background: #d4b888;
   border-color: #d4b888;
+  /* a:hover делал текст золотым на золотом фоне — текст пропадал */
+  color: #1a1410;
 }
 
 @media (max-width: 540px) {
@@ -3929,7 +3949,7 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
   color: #f5f0e8;
   transition: background 0.18s, border-color 0.18s, transform 0.12s;
 }
-.henna-btn:hover { background: rgba(196,165,116,0.2); border-color: var(--gold); transform: translateY(-1px); }
+.henna-btn:hover { background: rgba(196,165,116,0.2); border-color: var(--gold); transform: translateY(-1px); color: #f5f0e8; }
 .henna-btn svg { width: 1rem; height: 1rem; flex-shrink: 0; }
 .henna-btn--primary {
   background: var(--gold, #c4a574);
@@ -3937,7 +3957,7 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
   border-color: var(--gold, #c4a574);
 }
 .henna-btn--primary svg { stroke: #1a1410; fill: none; }
-.henna-btn--primary:hover { background: #d4b584; border-color: #d4b584; }
+.henna-btn--primary:hover { background: #d4b584; border-color: #d4b584; color: #1a1410; }
 
 @media (max-width: 640px) {
   .henna-section { padding: 3rem 1.25rem; justify-content: center; }
