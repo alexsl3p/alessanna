@@ -131,7 +131,7 @@ function renderTeam(groups, staffList) {
   if (!root) return;
   lastTeamGroups = groups;
   lastTeamStaff = staffList;
-  const fallbackTitle = tr("site.teamTitle", "Stylists");
+  const fallbackTitle = tr("site.teamTitle", "Мастера");
 
   if (!staffList.length) {
     root.innerHTML =

@@ -107,7 +107,7 @@
     var closeBtn = document.createElement("button");
     closeBtn.type = "button";
     closeBtn.className = "toast__close";
-    closeBtn.setAttribute("aria-label", pubT("site.ui.toastClose", "Close notification"));
+    closeBtn.setAttribute("aria-label", pubT("site.ui.toastClose", "Закрыть уведомление"));
     closeBtn.textContent = "×";
     t.appendChild(closeBtn);
 
@@ -275,6 +275,172 @@
       });
     });
   }
+
+  /* ─── Мобильный календарь: bottom-sheet из поля даты ────────────────────
+   * На ≤900px .booking-calendar — фиксированный лист, скрытый внизу экрана.
+   * Клик по полю [data-booking-date] поднимает его; клик по бэкдропу или
+   * выбор даты закрывают. Вешаем здесь (синхронно), не внутри booking-init,
+   * который ждёт асинхронные feature-флаги и инициализируется позже.
+   *
+   * Блокировка фона: техника position:fixed+top чтобы iOS/Android не
+   * прыгал скролл при overflow:hidden. */
+  (function () {
+    var calEl = document.querySelector(".booking-calendar");
+    var dateEl = document.querySelector("[data-booking-date]");
+    if (!calEl) return;
+
+    var backdrop = document.createElement("div");
+    backdrop.className = "cal-mobile-backdrop";
+    document.body.appendChild(backdrop);
+
+    var _savedScroll = 0;
+    /* Комментарий-якорь: запоминает место календаря в .booking-shell,
+     * чтобы вернуть его при ресайзе на десктоп (grid-раскладка). */
+    var calHome = null;
+
+    /* Переносим календарь прямым ребёнком <body>: предки с transform
+     * (например .reveal.is-visible) делают position:fixed относительным
+     * себя, и лист открывался посреди страницы вместо низа экрана. */
+    function portalCalToBody() {
+      if (calEl.parentElement === document.body) return;
+      if (!calHome) {
+        calHome = document.createComment("cal-home");
+        calEl.parentNode.insertBefore(calHome, calEl);
+      }
+      document.body.appendChild(calEl);
+    }
+    function restoreCalHome() {
+      if (calHome && calHome.parentNode && calEl.parentElement === document.body) {
+        calHome.parentNode.insertBefore(calEl, calHome);
+      }
+    }
+    window.addEventListener("resize", function () {
+      if (window.innerWidth > 900) restoreCalHome();
+    });
+
+    var _bodyLocked = false;
+    function lockBody() {
+      if (_bodyLocked) return;
+      _bodyLocked = true;
+      _savedScroll = window.scrollY || window.pageYOffset;
+      document.body.style.top = "-" + _savedScroll + "px";
+      document.body.style.position = "fixed";
+      document.body.style.width = "100%";
+      document.body.style.overflowY = "scroll";
+    }
+    function unlockBody() {
+      if (!_bodyLocked) return;
+      _bodyLocked = false;
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.width = "";
+      document.body.style.overflowY = "";
+      /* Use behavior:'instant' to bypass html{scroll-behavior:smooth} — without
+       * it the browser smooth-scrolls from y=0 (where position:fixed lands the
+       * page) back to the saved position, causing the visible scroll jump. */
+      window.scrollTo({ top: _savedScroll, left: 0, behavior: "instant" });
+    }
+
+    /* ── Лист выбора времени (тот же стиль, что календарь) ───────────── */
+    var timeSheet = null;
+    var timeSheetLabel = null;
+    var timeSheetTitle = null;
+    var timeSheetGrid = null;
+    function ensureTimeSheet() {
+      if (timeSheet) return;
+      timeSheet = document.createElement("div");
+      timeSheet.className = "time-mobile-sheet";
+      timeSheet.innerHTML =
+        '<div class="time-sheet-head">' +
+        '<p class="time-sheet-label"></p>' +
+        '<h3 class="time-sheet-title"></h3>' +
+        "</div>" +
+        '<div class="time-sheet-grid"></div>';
+      document.body.appendChild(timeSheet);
+      timeSheetLabel = timeSheet.querySelector(".time-sheet-label");
+      timeSheetTitle = timeSheet.querySelector(".time-sheet-title");
+      timeSheetGrid = timeSheet.querySelector(".time-sheet-grid");
+    }
+    function hideTimeSheet() {
+      if (timeSheet) timeSheet.classList.remove("cal-open");
+    }
+
+    function openSheet() {
+      portalCalToBody();
+      hideTimeSheet();
+      lockBody();
+      calEl.classList.add("cal-open");
+      backdrop.classList.add("cal-open");
+      if (dateEl) dateEl.classList.add("cal-date-open");
+    }
+    function closeSheet() {
+      unlockBody();
+      calEl.classList.remove("cal-open");
+      hideTimeSheet();
+      backdrop.classList.remove("cal-open");
+      if (dateEl) dateEl.classList.remove("cal-date-open");
+    }
+
+    /* Календарь → лист времени: фон остаётся заблокирован (нет прыжка
+     * скролла), бэкдроп не мигает — меняется только содержимое листа. */
+    function openTimeSheet(opts) {
+      opts = opts || {};
+      ensureTimeSheet();
+      timeSheetLabel.textContent = opts.label || "";
+      timeSheetTitle.textContent = opts.title || "";
+      timeSheetGrid.innerHTML = "";
+      (opts.slots || []).forEach(function (t) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "time-sheet-slot";
+        b.textContent = t;
+        b.addEventListener("click", function () {
+          closeSheet();
+          if (typeof opts.onPick === "function") opts.onPick(t);
+        });
+        timeSheetGrid.appendChild(b);
+      });
+      lockBody();
+      calEl.classList.remove("cal-open");
+      if (dateEl) dateEl.classList.remove("cal-date-open");
+      backdrop.classList.add("cal-open");
+      timeSheet.classList.add("cal-open");
+    }
+
+    window.ALESSANNA_OPEN_MOBILE_CAL = openSheet;
+    window.ALESSANNA_CLOSE_MOBILE_CAL = closeSheet;
+    window.ALESSANNA_OPEN_TIME_SHEET = openTimeSheet;
+
+    backdrop.addEventListener("click", closeSheet);
+
+    if (dateEl) {
+      /* mousedown:preventDefault предотвращает нативный скролл браузера
+       * к readonly-инпуту при тапе на мобильном */
+      dateEl.addEventListener("mousedown", function (e) {
+        if (window.innerWidth <= 900) e.preventDefault();
+      });
+      dateEl.addEventListener("click", function (e) {
+        if (window.innerWidth <= 900) {
+          e.preventDefault();
+          if (calEl.classList.contains("cal-open")) { closeSheet(); return; }
+          /* Если услуга не выбрана — не открываем календарь, а скроллируем
+           * к полю выбора услуги и подсвечиваем его золотым пульсом. */
+          var chain = typeof globalThis !== "undefined" ? globalThis.__SITE_BOOKING_CHAIN__ : null;
+          if (chain && typeof chain.count === "function" && chain.count() === 0) {
+            var target = document.querySelector(".csel__trigger--placeholder, select[data-form-category]");
+            if (target) {
+              var wrap = target.closest("label, .csel, .booking-form-group") || target;
+              wrap.scrollIntoView({ behavior: "smooth", block: "center" });
+              wrap.classList.add("needs-pick");
+              setTimeout(function () { wrap.classList.remove("needs-pick"); }, 1200);
+            }
+            return;
+          }
+          openSheet();
+        }
+      });
+    }
+  })();
 
   /* Anchor links: land on section titles with a fixed-header offset. */
   function scrollToSectionTitle(sectionId, hash) {
@@ -754,7 +920,7 @@
 
     function getPickUi() {
       return {
-        remove: pubT("site.ui.removeFromList", "Remove from list"),
+        remove: pubT("site.ui.removeFromList", "Убрать из списка"),
         masterNone: "—",
       };
     }
@@ -955,7 +1121,7 @@
 
     function masterNameById(id) {
       if (id === "any") {
-        return pubT("site.ui.anyMaster", "No preference");
+        return pubT("site.ui.anyMaster", "Не важно");
       }
       var st = globalThis.__SALON_PUBLIC_STAFF__;
       if (st && id) {
@@ -1544,7 +1710,7 @@
           var masterLabel = "";
           if (mid === ANY_MASTER_ID) masterLabel = anyMasterLabelForChip();
           else if (mid) masterLabel = masterNameById(mid);
-          if (masterLabel) parts.push(pubT("site.ui.masterWord", "stylist") + ": " + masterLabel);
+          if (masterLabel) parts.push(pubT("site.ui.masterWord", "мастер") + ": " + masterLabel);
           return p.label + " (" + parts.join(", ") + ")";
         })
         .join("; ");
@@ -1628,7 +1794,7 @@
         } else if (p.selectedMaster) {
           master.textContent = masterNameById(p.selectedMaster);
         } else {
-          master.textContent = pubT("site.ui.masterNotSelected", "stylist not selected");
+          master.textContent = pubT("site.ui.masterNotSelected", "мастер не выбран");
           master.classList.add("booking-chain-master--empty");
           missingMaster = true;
         }
@@ -1650,7 +1816,7 @@
          * слотов и для конца окна визита. */
         var totalMin = computePlanTotalMinutes();
         totalEl.textContent =
-          pubT("site.ui.approxUntil", "Approximately until") + " " + formatTimeHm(startMin + totalMin);
+          pubT("site.ui.approxUntil", "Ориентировочно до") + " " + formatTimeHm(startMin + totalMin);
       } else {
         totalEl.textContent = "";
       }
@@ -1661,13 +1827,13 @@
           hintEl.hidden = false;
           hintEl.textContent = pubT(
             "site.ui.chainHintMaster",
-            "Choose a stylist (or No preference)."
+            "Выберите мастера (или «Не важно» — тогда подберём свободного)."
           );
         } else if (startMin == null) {
           hintEl.hidden = false;
           hintEl.textContent = pubT(
             "site.ui.chainHintTime",
-            "Pick a day and time for your visit schedule."
+            "Выберите день и время — и мы покажем точное расписание визита."
           );
         } else {
           hintEl.hidden = true;
@@ -1692,11 +1858,11 @@
     function formatDuration(min) {
       var m = Math.max(0, Math.round(Number(min) || 0));
       if (!m) return "";
-      if (m < 60) return m + " " + pubT("site.ui.durationMin", "min");
+      if (m < 60) return m + " " + pubT("site.ui.durationMin", "мин");
       var h = Math.floor(m / 60);
       var r = m % 60;
-      var hour = pubT("site.ui.durationHour", "h");
-      var min = pubT("site.ui.durationMin", "min");
+      var hour = pubT("site.ui.durationHour", "ч");
+      var min = pubT("site.ui.durationMin", "мин");
       return r ? h + " " + hour + " " + r + " " + min : h + " " + hour;
     }
 
@@ -1810,7 +1976,7 @@
     }
 
     function anyMasterLabelForChip() {
-      return pubT("site.ui.anyMaster", "No preference");
+      return pubT("site.ui.anyMaster", "Не важно");
     }
 
     function renderPickMasterChips(host, pick) {
@@ -1819,13 +1985,13 @@
       host.setAttribute("role", "radiogroup");
       host.setAttribute(
         "aria-label",
-        pubT("site.ui.masterForService", "Stylist for service") + " " + pick.label
+        pubT("site.ui.masterForService", "Мастер для услуги") + " " + pick.label
       );
       var masters = mastersForSpecificPick(pick);
       if (!masters.length) {
         var empty = document.createElement("span");
         empty.className = "pick-chip-masters-empty";
-        empty.textContent = pubT("site.ui.mastersNotLoaded", "Loading stylists…");
+        empty.textContent = pubT("site.ui.mastersNotLoaded", "Мастера пока не загружены");
         host.appendChild(empty);
         return;
       }
@@ -2172,10 +2338,10 @@
       ph.selected = true;
       ph.setAttribute("data-form-placeholder", "1");
       ph.textContent = !catId
-        ? pubT("site.formCategoryFirst", "Choose a category first")
+        ? pubT("site.formCategoryFirst", "Сначала выберите категорию")
         : matched === 0
-          ? pubT("site.ui.noServicesInCategory", "No services in category")
-          : pubT("site.ui.pickService", "Choose a service");
+          ? pubT("site.ui.noServicesInCategory", "Нет услуг в категории")
+          : pubT("site.ui.pickService", "Выберите услугу");
       serviceItemSelect.insertBefore(ph, serviceItemSelect.firstChild);
       serviceItemSelect.disabled = !catId || matched === 0;
       serviceItemSelect.value = canKeepPrev ? prevValue : "";
@@ -2850,23 +3016,23 @@
     function buildCalendarMsgs() {
       if (window.ALESSANNA_BUILD_CALENDAR_MSGS) return window.ALESSANNA_BUILD_CALENDAR_MSGS();
       return {
-        noTime: "No available times",
-        noTimeShort: "None",
-        pickMaster: "Choose a stylist",
-        pickDay: "Pick a day",
-        pickTimeFirst: "Pick a day first",
-        pickTime: "Pick a time",
-        many: "Many slots",
-        busy: "Almost full",
-        best: "Best day",
-        slotsAvailable: "Available:",
-        dayPast: "Past date",
-        dayOff: "Day off",
-        dayNoSlots: "No openings",
-        legendBest: "Best",
-        legendMany: "Many",
-        legendBusy: "Busy",
-        legendUnavailable: "Closed",
+        noTime: "Нет свободного времени",
+        noTimeShort: "–",
+        pickMaster: "Выберите мастера",
+        pickDay: "Выберите день",
+        pickTimeFirst: "Сначала выберите день",
+        pickTime: "Выберите время",
+        many: "Много окон",
+        busy: "Почти занято",
+        best: "Лучший день",
+        slotsAvailable: "Доступно:",
+        dayPast: "Прошедшая дата",
+        dayOff: "Выходной",
+        dayNoSlots: "Нет свободных окон",
+        legendBest: "Лучшие",
+        legendMany: "Много",
+        legendBusy: "Занято",
+        legendUnavailable: "Закрыто",
       };
     }
     var MSGS = buildCalendarMsgs();
@@ -2962,7 +3128,7 @@
     }
 
     function anyMasterLabel() {
-      return pubT("site.ui.anyMaster", "No preference");
+      return pubT("site.ui.anyMaster", "Не важно");
     }
 
     function selectedMasterForAvailability() {
@@ -3147,7 +3313,7 @@
     /** Две строки под календарём: подсказки в зависимости от мастера / даты */
     function setNotes() {
       if (!hasSelectedBookingService()) {
-        if (notePrimary) notePrimary.textContent = pubT("site.ui.pickService", "Choose a service");
+        if (notePrimary) notePrimary.textContent = pubT("site.ui.pickService", "Выберите услугу");
         if (noteSecondary) noteSecondary.textContent = "";
         return;
       }
@@ -3224,6 +3390,19 @@
       fillTimeOptions();
       setNotes();
       renderCalendar();
+      if (window.innerWidth <= 900 && window.ALESSANNA_OPEN_TIME_SHEET) {
+        /* Календарь сменяется листом времени в том же стиле; фон остаётся
+         * заблокированным — страница не дёргается. */
+        window.ALESSANNA_OPEN_TIME_SHEET({
+          label: MSGS.pickTime,
+          title: dateInput.value,
+          slots: slots,
+          onPick: function (t) {
+            timeSelect.value = t;
+            timeSelect.dispatchEvent(new Event("change", { bubbles: true }));
+          },
+        });
+      }
     }
 
     /** Короткий текст внутри ячейки (статус дня) */
@@ -3843,11 +4022,11 @@
 
       var msg = "";
       if (pickedCount === 1) {
-        msg = pubT("site.ui.masterHintSingle", "You can leave No preference.");
+        msg = pubT("site.ui.masterHintSingle", "Можно оставить «Не важно» — мы подберём свободного мастера.");
       } else if (commonMasterCount > 0 || hasPartialMasters) {
-        msg = pubT("site.ui.masterHintMultiOr", "Choose a stylist or leave No preference.");
+        msg = pubT("site.ui.masterHintMultiOr", "Выберите мастера для записи или оставьте «Не важно».");
       } else {
-        msg = pubT("site.ui.masterHintMulti", "Choose a stylist for this booking.");
+        msg = pubT("site.ui.masterHintMulti", "Выберите мастера для записи.");
       }
       hintEl.textContent = msg;
       hintEl.hidden = false;
@@ -4291,7 +4470,7 @@
     }
 
     function bookingSuccessMessageWithPriceNote() {
-      return pubT("site.ui.bookingConfirmed", "Booking confirmed!");
+      return pubT("site.ui.bookingConfirmed", "Запись успешна!");
     }
 
     /** Цепочка услуг (picked[] в dock) + Supabase RPC. Возвращает Promise, который резолвится
@@ -4312,7 +4491,7 @@
         showToast(
           pubT(
             "site.ui.pickServiceFirst",
-            "Pick a service from the price list above."
+            "Выберите услугу в прайсе выше — так мы поймём длительность и сможем подбрать время."
           ),
           "err"
         );
@@ -4456,12 +4635,12 @@
                 } else {
                   var err =
                     (x.j && x.j.error) ||
-                    pubT("site.ui.bookingFailedShort", "Could not book. Try another time.");
+                    pubT("site.ui.bookingFailedShort", "Не удалось забронировать. Выберите другое время.");
                   showToast(err, "err");
                 }
               })
               .catch(function () {
-                showToast(pubT("site.ui.networkError", "Network or server unavailable."), "err");
+                showToast(pubT("site.ui.networkError", "Сеть или сервер недоступны."), "err");
               });
             return;
           }
@@ -4472,7 +4651,7 @@
           if (key === "master" && (val === ANY_MASTER_ID || !val)) val = anyMasterLabel();
           lines.push(key + ": " + val);
         });
-        var subject = encodeURIComponent(pubT("site.ui.mailSubjectBooking", "Booking AlesSanna"));
+        var subject = encodeURIComponent(pubT("site.ui.mailSubjectBooking", "Запись AlesSanna"));
         var body = encodeURIComponent(lines.join("\n"));
         window.location.href = "mailto:alessanna.ilusalong@gmail.com?subject=" + subject + "&body=" + body;
       } /* end continueLegacySubmit */

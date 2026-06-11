@@ -57,7 +57,7 @@ function setLoading() {
   if (!mount) return;
   mount.innerHTML =
     '<p class="menu-footnote" data-i18n="site.ui.servicesLoading">' +
-    esc(tr("site.ui.servicesLoading", "Loading services…")) +
+    esc(tr("site.ui.servicesLoading", "Загружаем услуги…")) +
     "</p>";
 }
 
@@ -246,7 +246,7 @@ function buildCatalogHtml(groups, svcMasters, prefix) {
   const px = prefix || "";
   let tabHtml =
     '<div class="tabs-bar" role="tablist" aria-label="' +
-    esc(tr("site.ui.categoriesAria", "Service categories")) +
+    esc(tr("site.ui.categoriesAria", "Категории услуг")) +
     '">';
   let panelHtml = "";
   for (let ti = 0; ti < groups.length; ti++) {
@@ -283,7 +283,7 @@ function buildCatalogHtml(groups, svcMasters, prefix) {
     if (!gr.items || gr.items.length === 0) {
       panelHtml +=
         '<li><span class="menu-footnote">' +
-        esc(tr("site.ui.servicesSoon", "Services will be added soon.")) +
+        esc(tr("site.ui.servicesSoon", "Услуги скоро появятся.")) +
         "</span></li>";
     } else {
       for (let j = 0; j < gr.items.length; j++) {
@@ -348,7 +348,7 @@ function renderFormSelects(groups, svcMasters) {
   catSel.innerHTML = "";
   const catPlaceholder = document.createElement("option");
   catPlaceholder.value = "";
-  catPlaceholder.textContent = tr("site.ui.pickCategory", "Choose a category");
+  catPlaceholder.textContent = tr("site.ui.pickCategory", "Выберите категорию");
   catSel.appendChild(catPlaceholder);
 
   itemSel.innerHTML = "";
@@ -383,7 +383,7 @@ function renderFormSelects(groups, svcMasters) {
       /* В списке услуг формы — только название (без цены): ориентир из прайса
        * не равен финальному счёту. Цена остаётся в data-service-price для
        * слотов и служебной логики. */
-      itemOpt.textContent = catalogName("service", String(it.name || "")) || tr("site.ui.serviceDefault", "Service");
+      itemOpt.textContent = catalogName("service", String(it.name || "")) || tr("site.ui.serviceDefault", "Услуга");
       itemOpt.setAttribute("data-category-id", gr.id);
       itemOpt.setAttribute("data-service-id", sid);
       itemOpt.setAttribute("data-service-name", String(it.name || ""));
@@ -419,7 +419,7 @@ function renderFormSelects(groups, svcMasters) {
     ph.disabled = true;
     ph.selected = true;
     ph.setAttribute("data-form-placeholder", "1");
-    ph.textContent = tr("site.formCategoryFirst", "Choose a category first");
+    ph.textContent = tr("site.formCategoryFirst", "Сначала выберите категорию");
     itemSel.insertBefore(ph, itemSel.firstChild);
   }
   if (restoredCat) {
@@ -451,7 +451,7 @@ function render(groups, serviceMasters) {
   if (!groups || groups.length === 0) {
     const empty =
       '<p class="menu-footnote">' +
-      esc(tr("site.ui.servicesEmpty", "No services found.")) +
+      esc(tr("site.ui.servicesEmpty", "Услуги не найдены.")) +
       "</p>";
     mount.innerHTML = empty;
     /* В форме тоже сбросить, чтобы не висели старые option'ы. */
