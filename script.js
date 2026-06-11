@@ -318,30 +318,95 @@
       if (window.innerWidth > 900) restoreCalHome();
     });
 
-    function openSheet() {
-      portalCalToBody();
+    var _bodyLocked = false;
+    function lockBody() {
+      if (_bodyLocked) return;
+      _bodyLocked = true;
       _savedScroll = window.scrollY || window.pageYOffset;
       document.body.style.top = "-" + _savedScroll + "px";
       document.body.style.position = "fixed";
       document.body.style.width = "100%";
       document.body.style.overflowY = "scroll";
-      calEl.classList.add("cal-open");
-      backdrop.classList.add("cal-open");
-      if (dateEl) dateEl.classList.add("cal-date-open");
     }
-    function closeSheet() {
+    function unlockBody() {
+      if (!_bodyLocked) return;
+      _bodyLocked = false;
       document.body.style.position = "";
       document.body.style.top = "";
       document.body.style.width = "";
       document.body.style.overflowY = "";
       window.scrollTo(0, _savedScroll);
+    }
+
+    /* ── Лист выбора времени (тот же стиль, что календарь) ───────────── */
+    var timeSheet = null;
+    var timeSheetLabel = null;
+    var timeSheetTitle = null;
+    var timeSheetGrid = null;
+    function ensureTimeSheet() {
+      if (timeSheet) return;
+      timeSheet = document.createElement("div");
+      timeSheet.className = "time-mobile-sheet";
+      timeSheet.innerHTML =
+        '<div class="time-sheet-head">' +
+        '<p class="time-sheet-label"></p>' +
+        '<h3 class="time-sheet-title"></h3>' +
+        "</div>" +
+        '<div class="time-sheet-grid"></div>';
+      document.body.appendChild(timeSheet);
+      timeSheetLabel = timeSheet.querySelector(".time-sheet-label");
+      timeSheetTitle = timeSheet.querySelector(".time-sheet-title");
+      timeSheetGrid = timeSheet.querySelector(".time-sheet-grid");
+    }
+    function hideTimeSheet() {
+      if (timeSheet) timeSheet.classList.remove("cal-open");
+    }
+
+    function openSheet() {
+      portalCalToBody();
+      hideTimeSheet();
+      lockBody();
+      calEl.classList.add("cal-open");
+      backdrop.classList.add("cal-open");
+      if (dateEl) dateEl.classList.add("cal-date-open");
+    }
+    function closeSheet() {
+      unlockBody();
       calEl.classList.remove("cal-open");
+      hideTimeSheet();
       backdrop.classList.remove("cal-open");
       if (dateEl) dateEl.classList.remove("cal-date-open");
     }
 
+    /* Календарь → лист времени: фон остаётся заблокирован (нет прыжка
+     * скролла), бэкдроп не мигает — меняется только содержимое листа. */
+    function openTimeSheet(opts) {
+      opts = opts || {};
+      ensureTimeSheet();
+      timeSheetLabel.textContent = opts.label || "";
+      timeSheetTitle.textContent = opts.title || "";
+      timeSheetGrid.innerHTML = "";
+      (opts.slots || []).forEach(function (t) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "time-sheet-slot";
+        b.textContent = t;
+        b.addEventListener("click", function () {
+          closeSheet();
+          if (typeof opts.onPick === "function") opts.onPick(t);
+        });
+        timeSheetGrid.appendChild(b);
+      });
+      lockBody();
+      calEl.classList.remove("cal-open");
+      if (dateEl) dateEl.classList.remove("cal-date-open");
+      backdrop.classList.add("cal-open");
+      timeSheet.classList.add("cal-open");
+    }
+
     window.ALESSANNA_OPEN_MOBILE_CAL = openSheet;
     window.ALESSANNA_CLOSE_MOBILE_CAL = closeSheet;
+    window.ALESSANNA_OPEN_TIME_SHEET = openTimeSheet;
 
     backdrop.addEventListener("click", closeSheet);
 
@@ -3322,13 +3387,18 @@
       fillTimeOptions();
       setNotes();
       renderCalendar();
-      if (window.innerWidth <= 900) {
-        if (window.ALESSANNA_CLOSE_MOBILE_CAL) window.ALESSANNA_CLOSE_MOBILE_CAL();
-        if (timeSelect) {
-          setTimeout(function () {
-            timeSelect.scrollIntoView({ behavior: "smooth", block: "center" });
-          }, 360);
-        }
+      if (window.innerWidth <= 900 && window.ALESSANNA_OPEN_TIME_SHEET) {
+        /* Календарь сменяется листом времени в том же стиле; фон остаётся
+         * заблокированным — страница не дёргается. */
+        window.ALESSANNA_OPEN_TIME_SHEET({
+          label: MSGS.pickTime,
+          title: dateInput.value,
+          slots: slots,
+          onPick: function (t) {
+            timeSelect.value = t;
+            timeSelect.dispatchEvent(new Event("change", { bubbles: true }));
+          },
+        });
       }
     }
 

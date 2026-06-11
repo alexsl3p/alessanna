@@ -249,8 +249,7 @@ a:hover {
 }
 .address-maps-link:hover {
   color: var(--gold-bright);
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  text-decoration: none;
 }
 
 /* ---------- Шапка ---------- */
@@ -4225,6 +4224,84 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
   [data-booking-date] {
     cursor: pointer;
     padding-right: 2.25rem;
+  }
+}
+
+/* Лист выбора времени: тот же стиль, что мобильный календарь-лист */
+.time-mobile-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 10002;
+  border-radius: 1.35rem 1.35rem 0 0;
+  background: linear-gradient(165deg, rgba(22, 20, 18, 0.96), rgba(10, 9, 8, 0.98));
+  border: 1px solid rgba(197, 160, 89, 0.22);
+  border-bottom: none;
+  box-shadow: var(--shadow-card), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  padding: 0 1.25rem calc(1.5rem + env(safe-area-inset-bottom, 0px));
+  max-height: 70vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  transform: translateY(100%);
+  transition: transform 0.32s var(--ease-silk);
+}
+.time-mobile-sheet.cal-open {
+  transform: translateY(0);
+}
+.time-mobile-sheet::before {
+  content: "";
+  display: block;
+  width: 2.5rem;
+  height: 3px;
+  background: rgba(197, 160, 89, 0.4);
+  border-radius: 2px;
+  margin: 0.8rem auto 0.9rem;
+}
+.time-sheet-label {
+  margin: 0 0 0.35rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gold-bright);
+}
+.time-sheet-title {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: clamp(1.35rem, 3.5vw, 1.75rem);
+  font-weight: 500;
+  color: var(--gold-bright);
+  line-height: 1.3;
+}
+.time-sheet-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin-top: 1.1rem;
+}
+.time-sheet-slot {
+  min-height: 2.75rem;
+  padding: 0.7rem 0.4rem;
+  border: 1px solid rgba(197, 160, 89, 0.28);
+  border-radius: 0.65rem;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  font: inherit;
+  font-size: 1rem;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.time-sheet-slot:hover,
+.time-sheet-slot:focus-visible {
+  border-color: var(--gold-bright);
+  background: rgba(197, 160, 89, 0.1);
+  outline: none;
+}
+@media (min-width: 901px) {
+  .time-mobile-sheet {
+    display: none;
   }
 }
 
