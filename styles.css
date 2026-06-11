@@ -3258,7 +3258,10 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
 
 .reveal:not(.hero-animate).is-visible {
   opacity: 1;
-  transform: translate3d(0, 0, 0);
+  /* none, а не translate3d(0,0,0): любой transform на родителе превращает
+   * position:fixed потомков в position:absolute относительно себя —
+   * мобильный календарь-лист внутри .booking-shell открывался «мимо экрана». */
+  transform: none;
 }
 
 /* ---------- Футер ---------- */

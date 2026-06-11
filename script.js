@@ -294,8 +294,32 @@
     document.body.appendChild(backdrop);
 
     var _savedScroll = 0;
+    /* Комментарий-якорь: запоминает место календаря в .booking-shell,
+     * чтобы вернуть его при ресайзе на десктоп (grid-раскладка). */
+    var calHome = null;
+
+    /* Переносим календарь прямым ребёнком <body>: предки с transform
+     * (например .reveal.is-visible) делают position:fixed относительным
+     * себя, и лист открывался посреди страницы вместо низа экрана. */
+    function portalCalToBody() {
+      if (calEl.parentElement === document.body) return;
+      if (!calHome) {
+        calHome = document.createComment("cal-home");
+        calEl.parentNode.insertBefore(calHome, calEl);
+      }
+      document.body.appendChild(calEl);
+    }
+    function restoreCalHome() {
+      if (calHome && calHome.parentNode && calEl.parentElement === document.body) {
+        calHome.parentNode.insertBefore(calEl, calHome);
+      }
+    }
+    window.addEventListener("resize", function () {
+      if (window.innerWidth > 900) restoreCalHome();
+    });
 
     function openSheet() {
+      portalCalToBody();
       _savedScroll = window.scrollY || window.pageYOffset;
       document.body.style.top = "-" + _savedScroll + "px";
       document.body.style.position = "fixed";
