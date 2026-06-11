@@ -335,7 +335,10 @@
       document.body.style.top = "";
       document.body.style.width = "";
       document.body.style.overflowY = "";
-      window.scrollTo(0, _savedScroll);
+      /* Use behavior:'instant' to bypass html{scroll-behavior:smooth} — without
+       * it the browser smooth-scrolls from y=0 (where position:fixed lands the
+       * page) back to the saved position, causing the visible scroll jump. */
+      window.scrollTo({ top: _savedScroll, left: 0, behavior: "instant" });
     }
 
     /* ── Лист выбора времени (тот же стиль, что календарь) ───────────── */
