@@ -4224,3 +4224,13 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
     padding-right: 2.25rem;
   }
 }
+
+/* Pulse highlight when user taps date without picking a service first */
+@keyframes pulse-need-pick {
+  0%, 100% { box-shadow: none; }
+  40%       { box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.55), 0 0 12px rgba(197, 160, 89, 0.25); }
+}
+.needs-pick {
+  animation: pulse-need-pick 0.38s ease-in-out 3;
+  border-radius: 0.65rem;
+}

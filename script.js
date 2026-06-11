@@ -330,7 +330,21 @@
       dateEl.addEventListener("click", function (e) {
         if (window.innerWidth <= 900) {
           e.preventDefault();
-          calEl.classList.contains("cal-open") ? closeSheet() : openSheet();
+          if (calEl.classList.contains("cal-open")) { closeSheet(); return; }
+          /* Если услуга не выбрана — не открываем календарь, а скроллируем
+           * к полю выбора услуги и подсвечиваем его золотым пульсом. */
+          var chain = typeof globalThis !== "undefined" ? globalThis.__SITE_BOOKING_CHAIN__ : null;
+          if (chain && typeof chain.count === "function" && chain.count() === 0) {
+            var target = document.querySelector(".csel__trigger--placeholder, select[data-form-category]");
+            if (target) {
+              var wrap = target.closest("label, .csel, .booking-form-group") || target;
+              wrap.scrollIntoView({ behavior: "smooth", block: "center" });
+              wrap.classList.add("needs-pick");
+              setTimeout(function () { wrap.classList.remove("needs-pick"); }, 1200);
+            }
+            return;
+          }
+          openSheet();
         }
       });
     }
