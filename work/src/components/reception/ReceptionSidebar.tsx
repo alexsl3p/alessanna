@@ -179,12 +179,10 @@ export function ReceptionSidebar({
                         : isCurrentMonth
                         ? `${textCls} ${hoverCls}`
                         : `text-fg/30 ${hoverCls}`,
+                      hasBirthday && !isHoliday ? "ring-[1.5px] ring-pink-400 ring-offset-[1.5px] ring-offset-canvas" : "",
                     ].join(" ")}
                   >
                     {format(day, "d")}
-                    {hasBirthday && !isHoliday && (
-                      <span className="absolute -bottom-0.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-pink-400" />
-                    )}
                   </button>
                 );
               })}
