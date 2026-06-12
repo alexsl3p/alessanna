@@ -179,7 +179,7 @@ export function ReceptionSidebar({
                         : isCurrentMonth
                         ? `${textCls} ${hoverCls}`
                         : `text-fg/30 ${hoverCls}`,
-                      hasBirthday && !isHoliday ? "ring-[1.5px] ring-pink-400 ring-offset-[1.5px] ring-offset-canvas" : "",
+                      hasBirthday && !isHoliday ? "border-[1.5px] border-pink-400" : "",
                     ].join(" ")}
                   >
                     {format(day, "d")}
