@@ -579,7 +579,7 @@ export function ReceptionBookingPopup({
       {showDatePicker && createPortal(
         <>
           <div className="fixed inset-0 z-[200] bg-black/50" onClick={() => setShowDatePicker(false)} />
-          <div style={pickerSheetPosition(320)} className="fixed bottom-0 left-0 right-0 z-[201] flex flex-col overflow-hidden rounded-t-2xl border-t border-line/15 bg-panel shadow-2xl sm:bottom-auto sm:right-auto sm:w-[320px] sm:rounded-2xl sm:border">
+          <div className="fixed left-1/2 top-1/2 z-[201] w-[320px] max-w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 flex flex-col overflow-hidden rounded-2xl border border-line/15 bg-panel shadow-2xl">
             {/* Header */}
             <div className="flex shrink-0 items-center justify-between border-b border-line/15 px-4 py-3">
               <button type="button" onClick={() => { const d = new Date(pickerViewYear, pickerViewMonth - 1, 1); setPickerViewYear(d.getFullYear()); setPickerViewMonth(d.getMonth()); }} className="rounded-full p-1 text-muted hover:bg-surface">
