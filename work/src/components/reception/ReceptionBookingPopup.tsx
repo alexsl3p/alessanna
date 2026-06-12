@@ -53,6 +53,21 @@ function applyTimeStr(base: Date, timeStr: string): Date {
   return setMinutes(setHours(startOfDay(base), h), m);
 }
 
+/** Build a 6-row × 7-col calendar matrix for a given year/month (Mon-first). */
+function getMonthMatrix(year: number, month: number): (Date | null)[][] {
+  const first = new Date(year, month, 1);
+  let startDow = first.getDay() - 1;
+  if (startDow < 0) startDow = 6;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const cells: (Date | null)[] = [];
+  for (let i = 0; i < startDow; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, month, d));
+  while (cells.length % 7 !== 0) cells.push(null);
+  const rows: (Date | null)[][] = [];
+  for (let i = 0; i < cells.length; i += 7) rows.push(cells.slice(i, i + 7));
+  return rows;
+}
+
 export function ReceptionBookingPopup({
   anchorX,
   anchorY,
@@ -97,6 +112,11 @@ export function ReceptionBookingPopup({
     const n = editAppt?.note ?? "";
     return n && !["block_time", "block_personal"].includes(n) ? n : "";
   });
+  const [dateBase, setDateBase] = useState<Date>(() => startOfDay(editAppt ? new Date(editAppt.start_time) : initialStart));
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [pickerViewYear, setPickerViewYear] = useState(() => (editAppt ? new Date(editAppt.start_time) : initialStart).getFullYear());
+  const [pickerViewMonth, setPickerViewMonth] = useState(() => (editAppt ? new Date(editAppt.start_time) : initialStart).getMonth());
+
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [showServicePicker, setShowServicePicker] = useState(false);
@@ -171,16 +191,16 @@ export function ReceptionBookingPopup({
 
   useEffect(() => {
     if (endManual) return;
-    if (isBlock) setEndStr(timeToStr(addMinutes(applyTimeStr(initialStart, startStr), blockDuration)));
-    else if (svc) setEndStr(timeToStr(addMinutes(applyTimeStr(initialStart, startStr), svc.duration_min)));
-  }, [svc, startStr, initialStart, endManual, isBlock, blockDuration]);
+    if (isBlock) setEndStr(timeToStr(addMinutes(applyTimeStr(dateBase, startStr), blockDuration)));
+    else if (svc) setEndStr(timeToStr(addMinutes(applyTimeStr(dateBase, startStr), svc.duration_min)));
+  }, [svc, startStr, dateBase, endManual, isBlock, blockDuration]);
 
   function handleStartChange(val: string) {
     setStartStr(val);
     if (isValidTime(val)) lastValidStartRef.current = val;
     if (!endManual) {
       const dur = isBlock ? blockDuration : (svc ? svc.duration_min : 60);
-      setEndStr(timeToStr(addMinutes(applyTimeStr(initialStart, val), dur)));
+      setEndStr(timeToStr(addMinutes(applyTimeStr(dateBase, val), dur)));
     }
   }
 
@@ -201,12 +221,12 @@ export function ReceptionBookingPopup({
 
   // Track picker state via ref so the mousedown handler (registered once) can see the current value
   const pickerOpenRef = useRef(false);
-  useEffect(() => { pickerOpenRef.current = showServicePicker || showStaffPicker; }, [showServicePicker, showStaffPicker]);
+  useEffect(() => { pickerOpenRef.current = showServicePicker || showStaffPicker || showDatePicker; }, [showServicePicker, showStaffPicker, showDatePicker]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") {
-        if (pickerOpenRef.current) { setShowServicePicker(false); setShowStaffPicker(false); return; }
+        if (pickerOpenRef.current) { setShowServicePicker(false); setShowStaffPicker(false); setShowDatePicker(false); return; }
         onClose();
       }
     }
@@ -224,14 +244,15 @@ export function ReceptionBookingPopup({
   }, [onClose]);
 
   const uiLocale = i18n.language === "et" ? "et-EE" : "ru-RU";
-  const dateLabel = initialStart.toLocaleString(uiLocale, { weekday: "long", day: "numeric", month: "long" });
+  const dateLabel = dateBase.toLocaleString(uiLocale, { weekday: "long", day: "numeric", month: "long" });
+  const DOW = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!isBlock && !svc) { setError(t("modal.pickService")); return; }
     if (!staffId) { setError(t("modal.selectStaff")); return; }
-    const start = applyTimeStr(initialStart, startStr);
-    const end = applyTimeStr(initialStart, endStr);
+    const start = applyTimeStr(dateBase, startStr);
+    const end = applyTimeStr(dateBase, endStr);
     if (end <= start) { setError(t("modal.endAfterStart")); return; }
     setSaving(true); setError("");
     const normalizedClientName = clientName.trim() || t("modal.defaultClient");
@@ -370,7 +391,16 @@ export function ReceptionBookingPopup({
             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
           </svg>
           <div className="flex-1">
-            <p className="mb-1.5 text-sm font-medium capitalize text-fg">{dateLabel}</p>
+            <button
+              type="button"
+              onClick={() => { setPickerViewYear(dateBase.getFullYear()); setPickerViewMonth(dateBase.getMonth()); setShowDatePicker(true); }}
+              className={`mb-1.5 flex items-center gap-1.5 rounded-md px-1 py-0.5 -ml-1 text-sm font-medium capitalize text-fg transition-colors hover:bg-surface ${useGold ? "hover:text-gold" : "hover:text-[#1a73e8]"}`}
+            >
+              <span>{dateLabel}</span>
+              <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 shrink-0 text-muted" fill="currentColor">
+                <path d="M5 2a1 1 0 0 0-1 1v1H3a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-1V3a1 1 0 1 0-2 0v1H6V3a1 1 0 0 0-1-1Zm0 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Zm2-1a1 1 0 1 1 2 0 1 1 0 0 1-2 0Zm4 0a1 1 0 1 1 2 0 1 1 0 0 1-2 0ZM5 11a1 1 0 1 1 0-2 1 1 0 0 1 0 2Zm2-1a1 1 0 1 1 2 0 1 1 0 0 1-2 0Zm4 0a1 1 0 1 1 2 0 1 1 0 0 1-2 0Z" />
+              </svg>
+            </button>
             <div className="flex items-center gap-2">
               <div className="flex flex-col gap-0.5">
                 <label className="text-[10px] text-muted">{t("modal.start")}</label>
@@ -539,6 +569,66 @@ export function ReceptionBookingPopup({
                 </div>
               ))}
               <div className="h-4" />
+            </div>
+          </div>
+        </>,
+        document.body,
+      )}
+
+      {/* Date picker overlay */}
+      {showDatePicker && createPortal(
+        <>
+          <div className="fixed inset-0 z-[200] bg-black/50" onClick={() => setShowDatePicker(false)} />
+          <div style={pickerSheetPosition(320)} className="fixed bottom-0 left-0 right-0 z-[201] flex flex-col overflow-hidden rounded-t-2xl border-t border-line/15 bg-panel shadow-2xl sm:bottom-auto sm:right-auto sm:w-[320px] sm:rounded-2xl sm:border">
+            {/* Header */}
+            <div className="flex shrink-0 items-center justify-between border-b border-line/15 px-4 py-3">
+              <button type="button" onClick={() => { const d = new Date(pickerViewYear, pickerViewMonth - 1, 1); setPickerViewYear(d.getFullYear()); setPickerViewMonth(d.getMonth()); }} className="rounded-full p-1 text-muted hover:bg-surface">
+                <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 3L6 8l4 5" /></svg>
+              </button>
+              <span className="text-sm font-semibold capitalize text-fg">
+                {new Date(pickerViewYear, pickerViewMonth, 1).toLocaleString(uiLocale, { month: "long", year: "numeric" })}
+              </span>
+              <button type="button" onClick={() => { const d = new Date(pickerViewYear, pickerViewMonth + 1, 1); setPickerViewYear(d.getFullYear()); setPickerViewMonth(d.getMonth()); }} className="rounded-full p-1 text-muted hover:bg-surface">
+                <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 3l4 5-4 5" /></svg>
+              </button>
+            </div>
+            {/* Day-of-week labels */}
+            <div className="grid grid-cols-7 border-b border-line/10 px-3 py-1.5">
+              {DOW.map((d) => (
+                <span key={d} className="text-center text-[10px] font-semibold uppercase text-muted">{d}</span>
+              ))}
+            </div>
+            {/* Calendar grid */}
+            <div className="p-3 pb-5">
+              {getMonthMatrix(pickerViewYear, pickerViewMonth).map((row, ri) => (
+                <div key={ri} className="grid grid-cols-7 gap-y-1">
+                  {row.map((day, ci) => {
+                    if (!day) return <span key={ci} />;
+                    const isSelected = day.getFullYear() === dateBase.getFullYear() && day.getMonth() === dateBase.getMonth() && day.getDate() === dateBase.getDate();
+                    const isToday = (() => { const n = new Date(); return day.getDate() === n.getDate() && day.getMonth() === n.getMonth() && day.getFullYear() === n.getFullYear(); })();
+                    return (
+                      <button
+                        key={ci}
+                        type="button"
+                        onClick={() => {
+                          setDateBase(day);
+                          setShowDatePicker(false);
+                        }}
+                        className={[
+                          "mx-auto flex h-8 w-8 items-center justify-center rounded-full text-sm transition-colors",
+                          isSelected
+                            ? (useGold ? "bg-gold text-canvas font-semibold" : "bg-[#1a73e8] text-white font-semibold")
+                            : isToday
+                            ? (useGold ? "border border-gold/50 text-gold" : "border border-[#1a73e8]/50 text-[#1a73e8]")
+                            : "text-fg hover:bg-surface",
+                        ].join(" ")}
+                      >
+                        {day.getDate()}
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
             </div>
           </div>
         </>,
