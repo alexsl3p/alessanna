@@ -121,6 +121,7 @@ export function ReceptionBookingPopup({
   const [error, setError] = useState("");
   const [showServicePicker, setShowServicePicker] = useState(false);
   const [showStaffPicker, setShowStaffPicker] = useState(false);
+  const [clientDropdownOpen, setClientDropdownOpen] = useState(false);
 
   const popupWidth = Math.min(POPUP_W, window.innerWidth - 16);
   const maxPopupHeight = Math.max(240, window.innerHeight - 16);
@@ -221,7 +222,7 @@ export function ReceptionBookingPopup({
 
   // Track picker state via ref so the mousedown handler (registered once) can see the current value
   const pickerOpenRef = useRef(false);
-  useEffect(() => { pickerOpenRef.current = showServicePicker || showStaffPicker || showDatePicker; }, [showServicePicker, showStaffPicker, showDatePicker]);
+  useEffect(() => { pickerOpenRef.current = showServicePicker || showStaffPicker || showDatePicker || clientDropdownOpen; }, [showServicePicker, showStaffPicker, showDatePicker, clientDropdownOpen]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -369,6 +370,7 @@ export function ReceptionBookingPopup({
         {!isBlock ? (
           <div className="relative">
             <ClientAutocompleteInput autoFocus value={clientName} onChange={(value) => { setClientName(value); setPickedClientId(null); }}
+              onOpenChange={setClientDropdownOpen}
               onPick={(client: ClientSuggestion) => {
                 setPickedClientId(client.id);
                 setClientName(clientDisplayName(client) || client.name);

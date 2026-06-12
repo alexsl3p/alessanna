@@ -73,6 +73,7 @@ export function ReceptionCalendarPage() {
   const [workDates, setWorkDates] = useState<StaffWorkDateRow[]>([]);
   const [staffServiceLinks, setStaffServiceLinks] = useState<StaffServiceRow[]>([]);
   const [holidays, setHolidays] = useState<SalonHolidayRow[]>([]);
+  const [clientBirthdays, setClientBirthdays] = useState<{ birthday: string }[]>([]);
   const [visibleStaffIds, setVisibleStaffIds] = useState<Set<string>>(new Set());
   const [popup, setPopup] = useState<BookingPopupState | null>(null);
   const [infoPopup, setInfoPopup] = useState<InfoPopupState | null>(null);
@@ -107,7 +108,7 @@ export function ReceptionCalendarPage() {
   }, []);
 
   const load = useCallback(async () => {
-    const [st, to, ap, svCatalog, ss, wd, hol] = await Promise.all([
+    const [st, to, ap, svCatalog, ss, wd, hol, cl] = await Promise.all([
       supabase.from("staff").select("*").eq("is_active", true).order("name"),
       supabase.from("staff_time_off").select("*"),
       supabase.from("appointments").select("*").neq("status", "cancelled"),
@@ -115,6 +116,7 @@ export function ReceptionCalendarPage() {
       supabase.from("staff_services").select("*"),
       supabase.from("staff_work_dates").select("*"),
       supabase.from("salon_holidays").select("*"),
+      supabase.from("clients").select("id, name, last_name, birthday").not("birthday", "is", null),
     ]);
 
     if (st.data) {
@@ -132,6 +134,7 @@ export function ReceptionCalendarPage() {
     if (ap.data) setAppointments(ap.data as AppointmentRow[]);
     if (ss.data) setStaffServiceLinks(ss.data as StaffServiceRow[]);
     if (hol.data) setHolidays(hol.data as SalonHolidayRow[]);
+    if (cl.data) setClientBirthdays(cl.data as { id: string; name: string; last_name: string | null; birthday: string }[]);
     setServices(svCatalog);
     setLoading(false);
   }, []);
@@ -144,6 +147,17 @@ export function ReceptionCalendarPage() {
     const id = setInterval(() => { void load(); }, 60_000);
     return () => clearInterval(id);
   }, [load]);
+
+  const birthdayMap = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const c of clientBirthdays as { name: string; last_name: string | null; birthday: string }[]) {
+      if (!c.birthday) continue;
+      const names = map.get(c.birthday) ?? [];
+      names.push([c.name, c.last_name].filter(Boolean).join(" "));
+      map.set(c.birthday, names);
+    }
+    return map;
+  }, [clientBirthdays]);
 
   const weekStart = useMemo(() => startOfWeek(cursor, { weekStartsOn: 1 }), [cursor]);
   const days = useMemo(() => {
@@ -379,6 +393,7 @@ export function ReceptionCalendarPage() {
             dark={dark}
             desktopMode={desktopMode}
             onToggleDesktopMode={toggleDesktopMode}
+            birthdayMap={birthdayMap}
           />
         </div>
 
@@ -407,6 +422,7 @@ export function ReceptionCalendarPage() {
                 visibleStaffIds={visibleStaffIds}
                 onDayClick={handleDayClick}
                 dark={dark}
+                birthdayMap={birthdayMap}
               />
             ) : (
               <ReceptionWeekGrid
@@ -423,6 +439,7 @@ export function ReceptionCalendarPage() {
                 onApptResize={handleApptResize}
                 onDayHeaderClick={view === "week" && canManage ? handleDayHeaderClick : undefined}
                 dark={dark}
+                birthdayMap={birthdayMap}
               />
             )}
           </div>

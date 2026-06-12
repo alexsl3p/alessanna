@@ -175,6 +175,7 @@ export type ClientRow = {
   phone: string | null;
   email: string | null;
   notes: string | null;
+  birthday?: string | null; // "MM-DD"
   created_at?: string;
 };
 

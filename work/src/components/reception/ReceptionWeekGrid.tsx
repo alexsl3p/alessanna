@@ -88,6 +88,8 @@ type Props = {
   onApptResize?: (appt: AppointmentRow, newStart: Date, newEnd: Date) => void;
   onDayHeaderClick?: (day: Date, x: number, y: number) => void;
   dark?: boolean;
+  /** MM-DD → client names with birthdays on that day */
+  birthdayMap?: Map<string, string[]>;
 };
 
 export function ReceptionWeekGrid({
@@ -104,6 +106,7 @@ export function ReceptionWeekGrid({
   onApptResize,
   onDayHeaderClick,
   dark,
+  birthdayMap,
 }: Props) {
   const { t } = useTranslation();
   const { theme } = useTheme();
@@ -352,6 +355,7 @@ export function ReceptionWeekGrid({
           const birthdayStaff = staff.filter(
             (m) => m.birthday === dayMMDD && visibleStaffIds.has(m.id),
           );
+          const birthdayClients = birthdayMap?.get(dayMMDD) ?? [];
           const ruDay = t(`weekday.${WEEKDAY_KEYS[i] ?? 1}`);
           return (
             <div
@@ -379,14 +383,14 @@ export function ReceptionWeekGrid({
                 >
                   {format(day, "d")}
                 </span>
-                {birthdayStaff.length > 0 && (
+                {(birthdayStaff.length > 0 || birthdayClients.length > 0) && (
                   <button
                     type="button"
                     className="text-base leading-none transition-transform hover:scale-125 active:scale-110"
                     title="День рождения!"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setBirthdayPopup({ x: e.clientX, y: e.clientY, names: birthdayStaff.map((m) => m.name) });
+                      setBirthdayPopup({ x: e.clientX, y: e.clientY, names: [...birthdayStaff.map((m) => m.name), ...birthdayClients] });
                     }}
                   >
                     🎂

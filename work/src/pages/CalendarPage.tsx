@@ -55,6 +55,7 @@ export function CalendarPage() {
   const [services, setServices] = useState<ServiceRow[]>([]);
   const [staffServiceLinks, setStaffServiceLinks] = useState<StaffServiceRow[]>([]);
   const [calendarServiceId, setCalendarServiceId] = useState<string | number | null>(null);
+  const [clientBirthdays, setClientBirthdays] = useState<{ name: string; last_name: string | null; birthday: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState<{ start: Date; staffId: string | null; anchorX: number; anchorY: number; editAppt?: AppointmentRow | null } | null>(null);
   const [infoPopup, setInfoPopup] = useState<{ appt: AppointmentRow; anchorX: number; anchorY: number } | null>(null);
@@ -64,7 +65,7 @@ export function CalendarPage() {
     if (isWorkerOnlyEffective && staffMember) {
       apQuery = apQuery.eq("staff_id", staffMember.id);
     }
-    const [st, sch, to, ap, svCatalog, ss, wd] = await Promise.all([
+    const [st, sch, to, ap, svCatalog, ss, wd, cl] = await Promise.all([
       supabase.from("staff").select("*").order("name"),
       supabase.from("staff_schedule").select("*"),
       supabase.from("staff_time_off").select("*"),
@@ -72,6 +73,7 @@ export function CalendarPage() {
       loadServicesCatalog({ activeOnly: true }),
       supabase.from("staff_services").select("*"),
       supabase.from("staff_work_dates").select("*"),
+      supabase.from("clients").select("id, name, last_name, birthday").not("birthday", "is", null),
     ]);
     if (st.data) {
       const normalized = (st.data as Record<string, unknown>[])
@@ -84,6 +86,7 @@ export function CalendarPage() {
     if (wd.data) setWorkDates(wd.data as StaffWorkDateRow[]);
     if (ap.data) setAppointments(ap.data as AppointmentRow[]);
     if (ss.data) setStaffServiceLinks(ss.data as StaffServiceRow[]);
+    if (cl.data) setClientBirthdays(cl.data as { name: string; last_name: string | null; birthday: string }[]);
     setServices(svCatalog);
     setLoading(false);
   }, [isWorkerOnlyEffective, staffMember]);
@@ -141,6 +144,17 @@ export function CalendarPage() {
   }
 
   const staffHueMap = useMemo(() => buildStaffHueMap(staff.map((m) => m.id)), [staff]);
+
+  const birthdayMap = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const c of clientBirthdays) {
+      if (!c.birthday) continue;
+      const names = map.get(c.birthday) ?? [];
+      names.push([c.name, c.last_name].filter(Boolean).join(" "));
+      map.set(c.birthday, names);
+    }
+    return map;
+  }, [clientBirthdays]);
 
   const monthMasterAvailability = useMemo(() => {
     const out = new Map<string, { free: number; working: number; fullyClosed: boolean }>();
@@ -343,6 +357,7 @@ export function CalendarPage() {
               }}
               onApptResize={canManage ? handleApptResize : undefined}
               onDayHeaderClick={canManage ? (day, x, y) => setDayPopup({ day, x, y }) : undefined}
+              birthdayMap={birthdayMap}
             />
           ) : (
             <div className="flex-1 overflow-auto p-4">
@@ -373,20 +388,31 @@ export function CalendarPage() {
                           inCurrentMonth ? "" : "opacity-40",
                         ].join(" ")}
                       >
-                        <div className="mb-1 flex items-center justify-between">
-                          <span
-                            className={`flex h-6 w-6 items-center justify-center rounded-full text-sm font-semibold ${
-                              isToday ? "bg-[#1a73e8] text-fg" : "text-fg"
-                            }`}
-                          >
-                            {format(day, "d")}
-                          </span>
-                          {availability && availability.working > 0 && (
-                            <span className={`text-[10px] ${availability.fullyClosed ? "text-rose-300" : "text-muted"}`}>
-                              {availability.fullyClosed ? "×" : `${availability.free}/${availability.working}`}
-                            </span>
-                          )}
-                        </div>
+                        {(() => {
+                          const mmdd = format(day, "MM-dd");
+                          const hasBirthday =
+                            activeStaffForCalendar.some((m) => m.birthday === mmdd) ||
+                            (birthdayMap.get(mmdd) ?? []).length > 0;
+                          return (
+                            <div className="mb-1 flex items-center justify-between">
+                              <div className="flex items-center gap-1">
+                                <span
+                                  className={`flex h-6 w-6 items-center justify-center rounded-full text-sm font-semibold ${
+                                    isToday ? "bg-[#1a73e8] text-fg" : "text-fg"
+                                  }`}
+                                >
+                                  {format(day, "d")}
+                                </span>
+                                {hasBirthday && <span className="text-sm leading-none" title="День рождения">🎂</span>}
+                              </div>
+                              {availability && availability.working > 0 && (
+                                <span className={`text-[10px] ${availability.fullyClosed ? "text-rose-300" : "text-muted"}`}>
+                                  {availability.fullyClosed ? "×" : `${availability.free}/${availability.working}`}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
                         {workingStaff.length > 0 && (
                           <div className="mb-1 flex flex-wrap gap-0.5">
                             {workingStaff.map((m) => (

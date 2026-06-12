@@ -32,6 +32,8 @@ type Props = {
   onViewChange?: (v: "day" | "week" | "month") => void;
   desktopMode?: boolean;
   onToggleDesktopMode?: () => void;
+  /** MM-DD → client names with birthdays on that day */
+  birthdayMap?: Map<string, string[]>;
 };
 
 const DAY_KEYS = [1, 2, 3, 4, 5, 6, 0] as const;
@@ -59,6 +61,7 @@ export function ReceptionSidebar({
   onViewChange,
   desktopMode,
   onToggleDesktopMode,
+  birthdayMap,
 }: Props) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -157,12 +160,16 @@ export function ReceptionSidebar({
                 const isSelected = isSameWeek(day, cursor, { weekStartsOn: 1 });
                 const isCurrentMonth = isSameMonth(day, miniCursor);
                 const isHoliday = holidays.includes(format(day, "yyyy-MM-dd"));
+                const mmdd = format(day, "MM-dd");
+                const hasBirthday =
+                  staff.some((m) => m.birthday === mmdd) ||
+                  ((birthdayMap?.get(mmdd) ?? []).length > 0);
                 return (
                   <button
                     key={day.toISOString()}
                     onClick={() => onDateSelect(day)}
                     className={[
-                      "mx-auto flex h-7 w-7 items-center justify-center rounded-full text-[11px] transition-colors",
+                      "relative mx-auto flex h-7 w-7 items-center justify-center rounded-full text-[11px] transition-colors",
                       isHoliday
                         ? "bg-rose-500 font-bold text-white hover:bg-rose-600"
                         : isToday
@@ -175,6 +182,9 @@ export function ReceptionSidebar({
                     ].join(" ")}
                   >
                     {format(day, "d")}
+                    {hasBirthday && !isHoliday && (
+                      <span className="absolute -bottom-0.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-pink-400" />
+                    )}
                   </button>
                 );
               })}

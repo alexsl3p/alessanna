@@ -11,6 +11,7 @@ type Props = {
   value: string;
   onChange: (value: string) => void;
   onPick: (client: ClientSuggestion) => void;
+  onOpenChange?: (open: boolean) => void;
   placeholder?: string;
   className?: string;
   autoFocus?: boolean;
@@ -20,6 +21,7 @@ export function ClientAutocompleteInput({
   value,
   onChange,
   onPick,
+  onOpenChange,
   placeholder,
   className,
   autoFocus,
@@ -78,6 +80,10 @@ export function ClientAutocompleteInput({
       window.clearTimeout(id);
     };
   }, [enabled, value]);
+
+  useEffect(() => {
+    onOpenChange?.(open);
+  }, [open, onOpenChange]);
 
   function pick(client: ClientSuggestion) {
     pickedRef.current = true;

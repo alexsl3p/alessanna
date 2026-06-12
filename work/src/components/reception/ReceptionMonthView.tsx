@@ -24,6 +24,8 @@ type Props = {
   visibleStaffIds: Set<string>;
   onDayClick: (day: Date) => void;
   dark?: boolean;
+  /** MM-DD → client names with birthdays on that day */
+  birthdayMap?: Map<string, string[]>;
 };
 
 export function ReceptionMonthView({
@@ -34,6 +36,7 @@ export function ReceptionMonthView({
   visibleStaffIds,
   onDayClick,
   dark,
+  birthdayMap,
 }: Props) {
   const { t } = useTranslation();
   const { theme } = useTheme();
@@ -92,6 +95,11 @@ export function ReceptionMonthView({
             const isCurrentMonth = isSameMonth(day, cursor);
             const isHoliday = holidays.includes(key);
 
+            const mmdd = format(day, "MM-dd");
+            const hasBirthday =
+              staff.some((m) => m.birthday === mmdd && visibleStaffIds.has(m.id)) ||
+              ((birthdayMap?.get(mmdd) ?? []).length > 0);
+
             return (
               <button
                 key={key}
@@ -102,20 +110,23 @@ export function ReceptionMonthView({
                 ].join(" ")}
                 style={{ minHeight: "4.5rem" }}
               >
-                <span
-                  className={[
-                    "mb-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-medium",
-                    isHoliday
-                      ? "bg-rose-500 text-white"
-                      : isToday
-                      ? todayBubble
-                      : isCurrentMonth
-                      ? "text-fg"
-                      : inactiveDay,
-                  ].join(" ")}
-                >
-                  {format(day, "d")}
-                </span>
+                <div className="mb-0.5 flex items-center gap-1">
+                  <span
+                    className={[
+                      "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-medium",
+                      isHoliday
+                        ? "bg-rose-500 text-white"
+                        : isToday
+                        ? todayBubble
+                        : isCurrentMonth
+                        ? "text-fg"
+                        : inactiveDay,
+                    ].join(" ")}
+                  >
+                    {format(day, "d")}
+                  </span>
+                  {hasBirthday && <span className="text-sm leading-none" title="День рождения">🎂</span>}
+                </div>
 
                 {isHoliday && (
                   <span className="mb-0.5 text-[8px] font-semibold uppercase tracking-wide text-rose-400">
