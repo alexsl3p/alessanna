@@ -549,14 +549,7 @@
       });
     }
 
-    /* Show/hide special promo blocks based on active tab */
-    var activeTabPanel = scope.querySelector(".tab-panel.is-active");
-    if (activeTabPanel) {
-      var activeCatKey = (activeTabPanel.getAttribute("data-pick-category") || "").toLowerCase();
-      var koloristElTab = document.getElementById("kolorist");
-      if (koloristElTab) koloristElTab.hidden = activeCatKey.indexOf("сложные техники окрашивания") === -1;
-      /* Henna block is always visible — never hidden */
-    }
+    /* Promo blocks stay visible; category selection only changes the opened price panel. */
   });
 
   /**
@@ -2229,9 +2222,7 @@
       var catLower = category.toLowerCase();
       var isKoloristPick = catLower.indexOf("сложные техники окрашивания") !== -1;
       var isTattooPick = catLower.indexOf("татуаж") !== -1;
-      var koloristEl = document.getElementById("kolorist");
-      if (koloristEl) koloristEl.hidden = !isKoloristPick;
-      /* Henna block is always visible — never hidden */
+      /* Promo blocks stay visible; special picks only choose the scroll target. */
       if (adding && picked.length > 0) {
         blockScrollRestore(1400);
         requestAnimationFrame(function () {
