@@ -1111,6 +1111,10 @@ body.site-ilusalong #hero.hero {
   scroll-margin-top: calc(var(--header-h) + 2.25rem);
 }
 
+.trust-strip + .section {
+  padding-top: clamp(0.25rem, 1.2vw, 0.75rem);
+}
+
 .price-panel-title,
 .booking-shell {
   scroll-margin-top: calc(var(--header-h) + 2.25rem);
