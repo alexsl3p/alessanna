@@ -85,7 +85,12 @@
 
   <main id="main">
     <section class="hero" id="hero">
-      <div class="hero-bg" aria-hidden="true"><div class="hero-bg-motion"></div></div>
+      <div class="hero-bg" aria-hidden="true">
+        <video class="hero-bg-video" autoplay muted loop playsinline preload="auto" poster="/assets/salon-bg.png">
+          <source src="/assets/hero-plants.mp4" type="video/mp4" />
+        </video>
+        <div class="hero-bg-motion"></div>
+      </div>
       <!-- Hero: текстовый бренд + SVG-декор; язык интерфейса — русский в .hero-lead и кнопках -->
       <div class="hero-inner reveal hero-animate">
         <div class="hero-brand-wrap">
