@@ -4364,6 +4364,7 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
     padding: 2.35rem 1rem;
     align-items: center;
     justify-content: flex-start;
+    background-position: 72% center;
   }
 
   .kolorist-section::before {
@@ -4439,9 +4440,13 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
 
   .henna-section {
     min-height: 31rem;
-    padding: 2.35rem 1rem;
-    justify-content: flex-start;
+    padding: 2.35rem 1rem 2.35rem 0.65rem;
+    justify-content: flex-end;
     align-items: center;
+  }
+
+  .henna-section::before {
+    background-position: 62% center;
   }
 
   .henna-section::after {
