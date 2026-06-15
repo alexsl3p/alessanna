@@ -418,7 +418,7 @@ a:hover {
   width: min(360px, 90vw);
   min-height: 100vh;
   min-height: 100dvh;
-  display: flex;
+  display: none;
   flex-direction: column;
   align-items: stretch;
   gap: 0;
@@ -427,14 +427,23 @@ a:hover {
   background: rgba(6, 6, 6, 0.97);
   border-left: 1px solid var(--line-strong);
   box-shadow: -24px 0 64px rgba(0, 0, 0, 0.55);
-  transform: translateX(100%);
-  transition: transform 0.42s var(--ease-silk);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
 
 .nav.is-open {
-  transform: translateX(0);
+  display: flex;
+  animation: navDrawerIn 0.42s var(--ease-silk) both;
+}
+
+@keyframes navDrawerIn {
+  from {
+    transform: translate3d(100%, 0, 0);
+  }
+
+  to {
+    transform: translate3d(0, 0, 0);
+  }
 }
 
 .nav-drawer-cta {
@@ -4404,6 +4413,7 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
 @media (max-width: 900px) {
   /* Calendar opens as a centered modal */
   .booking-calendar {
+    display: none;
     position: fixed;
     top: 50%;
     left: 50%;
@@ -4420,9 +4430,11 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
     transition: transform 0.28s var(--ease-silk), opacity 0.28s ease;
   }
   .booking-calendar.cal-open {
+    display: block;
     transform: translate(-50%, -50%) scale(1);
     opacity: 1;
     pointer-events: auto;
+    animation: mobileModalIn 0.28s var(--ease-silk) both;
   }
 
   /* No drag handle for centered modal */
@@ -4458,6 +4470,7 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
 
 /* Лист выбора времени: центрированное модальное окно */
 .time-mobile-sheet {
+  display: none;
   position: fixed;
   top: 50%;
   left: 50%;
@@ -4478,12 +4491,26 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
   transition: transform 0.28s var(--ease-silk), opacity 0.28s ease;
 }
 .time-mobile-sheet.cal-open {
+  display: block;
   transform: translate(-50%, -50%) scale(1);
   opacity: 1;
   pointer-events: auto;
+  animation: mobileModalIn 0.28s var(--ease-silk) both;
 }
 .time-mobile-sheet::before {
   display: none;
+}
+
+@keyframes mobileModalIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -46%) scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
 }
 .time-sheet-label {
   margin: 0 0 0.35rem;
