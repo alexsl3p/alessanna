@@ -2034,6 +2034,7 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
 /* ---------- MAVE hero promo ---------- */
 .mave-hero-section {
   padding-top: clamp(4.5rem, 8vw, 6.5rem);
+  padding-bottom: 0;
   overflow-x: clip;
 }
 
@@ -2218,7 +2219,7 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
 
 /* ---------- YODEYMA hero promo ---------- */
 .yodeyma-hero-section {
-  padding-top: clamp(1.5rem, 4vw, 3rem);
+  padding-top: 0;
   overflow-x: clip;
 }
 
@@ -2356,7 +2357,7 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
 
 @media (max-width: 760px) {
   .yodeyma-hero-section {
-    padding-top: clamp(1.25rem, 8vw, 2.4rem);
+    padding-top: 0;
   }
 
   .yodeyma-hero {
