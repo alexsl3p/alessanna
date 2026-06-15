@@ -106,6 +106,9 @@ html {
 
   .hero-wordmark-image {
     animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    filter: drop-shadow(0 0 5px rgba(212, 175, 55, 0.12)) drop-shadow(0 0 14px rgba(212, 175, 55, 0.06)) !important;
   }
 
   .hero-bg-video {
@@ -706,8 +709,8 @@ body.site-ilusalong #hero.hero {
   height: 100%;
   object-fit: cover;
   object-position: center top;
-  opacity: 0.62;
-  filter: saturate(0.9) contrast(1.08) brightness(0.56);
+  opacity: 0.74;
+  filter: saturate(0.95) contrast(1.05) brightness(0.72);
 }
 
 .hero-bg::before,
@@ -721,13 +724,13 @@ body.site-ilusalong #hero.hero {
 .hero-bg::before {
   z-index: 1;
   background:
-    radial-gradient(ellipse at 50% 45%, rgba(0, 0, 0, 0.08) 0%, rgba(0, 0, 0, 0.34) 54%, rgba(0, 0, 0, 0.74) 100%),
-    linear-gradient(180deg, rgba(0, 0, 0, 0.26) 0%, rgba(0, 0, 0, 0.42) 52%, rgba(0, 0, 0, 0.84) 100%);
+    radial-gradient(ellipse at 50% 45%, rgba(0, 0, 0, 0.04) 0%, rgba(0, 0, 0, 0.24) 54%, rgba(0, 0, 0, 0.62) 100%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.18) 0%, rgba(0, 0, 0, 0.3) 52%, rgba(0, 0, 0, 0.72) 100%);
 }
 
 .hero-bg::after {
   z-index: 2;
-  background: linear-gradient(90deg, rgba(3, 3, 3, 0.72), rgba(3, 3, 3, 0.08) 48%, rgba(3, 3, 3, 0.66));
+  background: linear-gradient(90deg, rgba(3, 3, 3, 0.56), rgba(3, 3, 3, 0.04) 48%, rgba(3, 3, 3, 0.48));
 }
 
 .hero-bg-motion {
@@ -817,7 +820,11 @@ body.site-ilusalong #hero.hero {
   aspect-ratio: 1200 / 430;
   object-fit: contain;
   filter: drop-shadow(0 0 4px rgba(212, 175, 55, 0.1)) drop-shadow(0 0 12px rgba(212, 175, 55, 0.05));
-  animation: logoImageGlowPulse 18s ease-in-out infinite;
+  opacity: 0;
+  transform: translate3d(0, 0.35rem, 0) scale(0.986);
+  animation:
+    logoImageReveal 1.8s var(--ease-silk) 0.18s both,
+    logoImageGlowPulse 18s ease-in-out 1.98s infinite;
 }
 
 /* Логотип: полированное золото без оверлеев по тексту — только тихое «дыхание» свечения */
@@ -871,6 +878,24 @@ body.site-ilusalong #hero.hero {
 }
 
 /* Крупный редакционный подзаголовок */
+@keyframes logoImageReveal {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0.35rem, 0) scale(0.986);
+    filter: brightness(0.56) drop-shadow(0 0 2px rgba(212, 175, 55, 0.04)) drop-shadow(0 0 8px rgba(212, 175, 55, 0.02));
+  }
+
+  68% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: brightness(1) drop-shadow(0 0 4px rgba(212, 175, 55, 0.1)) drop-shadow(0 0 12px rgba(212, 175, 55, 0.05));
+  }
+}
+
 .hero-display {
   margin: 1.65rem auto 0;
   max-width: 21ch;
