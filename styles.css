@@ -3002,6 +3002,14 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
   color: rgba(154, 149, 140, 0.65);
 }
 
+.booking-form select:has(option:checked[value=""]) {
+  color: rgba(154, 149, 140, 0.65);
+}
+
+.booking-form select option {
+  color: var(--text);
+}
+
 .booking-form input:focus-visible,
 .booking-form select:focus-visible,
 .booking-form textarea:focus-visible {
