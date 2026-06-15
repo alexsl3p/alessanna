@@ -623,7 +623,6 @@ body.lang-picker-open .mobile-book-bar {
 body.site-ilusalong #hero.hero {
   background:
     linear-gradient(180deg, rgba(0, 0, 0, 0.38) 0%, rgba(0, 0, 0, 0.58) 48%, rgba(0, 0, 0, 0.86) 100%),
-    url("/assets/salon-bg.png") center top / cover no-repeat,
     #030303;
 }
 
@@ -697,7 +696,7 @@ body.site-ilusalong #hero.hero {
   display: block;
   overflow: hidden;
   pointer-events: none;
-  background: #030303 url("/assets/salon-bg.png") center top / cover no-repeat;
+  background: #030303;
 }
 
 .hero-bg-video {
