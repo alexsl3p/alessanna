@@ -96,6 +96,7 @@ html {
   .reveal {
     opacity: 1 !important;
     transform: none !important;
+    filter: none !important;
   }
 
   .hero-wordmark {
@@ -139,6 +140,14 @@ html {
   .btn:hover,
   .menu-list li.menu-pick-row:hover,
   .gift-card:hover,
+  .mave-hero:hover .mave-hero__image,
+  .mave-hero:hover .mave-hero__content,
+  .yodeyma-hero:hover .yodeyma-hero__image,
+  .yodeyma-hero:hover .yodeyma-hero__content,
+  .kolorist-card:hover,
+  .henna-card:hover,
+  .booking-calendar:hover,
+  .contact-map:hover,
   .team-names li.is-master-picked {
     transform: none;
   }
@@ -2066,6 +2075,10 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
   object-fit: contain;
   object-position: 74% center;
   filter: brightness(1.24) contrast(1.04);
+  transition:
+    transform 1.1s var(--ease-silk),
+    filter 0.9s var(--ease-silk);
+  will-change: transform;
 }
 
 .mave-hero::before,
@@ -2121,6 +2134,7 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
   padding: clamp(1.6rem, 4.4vw, 3.2rem);
   text-align: center;
   text-shadow: 0 2px 16px rgba(0, 0, 0, 0.72);
+  transition: transform 0.7s var(--ease-silk);
 }
 
 .mave-hero__label {
@@ -2169,6 +2183,17 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
 
 .mave-hero__text-link:hover {
   color: var(--text);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .mave-hero:hover .mave-hero__image {
+    transform: translate3d(-0.35%, 0, 0) scale(1.025);
+    filter: brightness(1.3) contrast(1.05);
+  }
+
+  .mave-hero:hover .mave-hero__content {
+    transform: translate3d(0, -4px, 0);
+  }
 }
 
 @media (max-width: 760px) {
@@ -2251,6 +2276,10 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
   object-fit: cover;
   object-position: center center;
   filter: brightness(1.06) contrast(1.04);
+  transition:
+    transform 1.1s var(--ease-silk),
+    filter 0.9s var(--ease-silk);
+  will-change: transform;
 }
 
 .yodeyma-hero::before,
@@ -2305,6 +2334,7 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
   padding: clamp(1.6rem, 4.4vw, 3.2rem);
   text-align: center;
   text-shadow: 0 2px 16px rgba(0, 0, 0, 0.76);
+  transition: transform 0.7s var(--ease-silk);
 }
 
 .yodeyma-hero__label {
@@ -2353,6 +2383,17 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
 
 .yodeyma-hero__text-link:hover {
   color: var(--text);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .yodeyma-hero:hover .yodeyma-hero__image {
+    transform: translate3d(0.35%, 0, 0) scale(1.025);
+    filter: brightness(1.12) contrast(1.06);
+  }
+
+  .yodeyma-hero:hover .yodeyma-hero__content {
+    transform: translate3d(0, -4px, 0);
+  }
 }
 
 @media (max-width: 760px) {
@@ -3261,22 +3302,161 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
 
 /* ---------- Reveal ---------- */
 .reveal:not(.hero-animate) {
+  --reveal-delay: 0s;
   opacity: 0;
-  transform: translate3d(0, 12px, 0);
+  filter: blur(8px);
+  transform: translate3d(0, 16px, 0) scale(0.985);
+  transform-origin: top center;
   transition:
-    opacity 0.9s var(--ease-silk),
-    transform 0.9s var(--ease-silk);
+    opacity 0.85s var(--ease-silk) var(--reveal-delay),
+    transform 0.85s var(--ease-silk) var(--reveal-delay),
+    filter 0.85s var(--ease-silk) var(--reveal-delay);
+  will-change: opacity, transform, filter;
 }
 
 .reveal:not(.hero-animate).is-visible {
   opacity: 1;
+  filter: blur(0);
   /* none, а не translate3d(0,0,0): любой transform на родителе превращает
    * position:fixed потомков в position:absolute относительно себя —
    * мобильный календарь-лист внутри .booking-shell открывался «мимо экрана». */
   transform: none;
+  will-change: auto;
+}
+
+.section-head.reveal:not(.hero-animate) {
+  --reveal-delay: 0.04s;
+}
+
+.booking-shell.reveal:not(.hero-animate),
+.contact-grid.reveal:not(.hero-animate),
+.gift-card.reveal:not(.hero-animate),
+.kolorist-card.reveal:not(.hero-animate),
+.henna-card.reveal:not(.hero-animate) {
+  --reveal-delay: 0.1s;
+}
+
+.booking-shell.reveal .booking-calendar,
+.booking-shell.reveal .booking-form,
+.contact-grid.reveal .contact-info,
+.contact-grid.reveal .contact-map,
+.kolorist-card.reveal .kolorist-card__icon,
+.kolorist-card.reveal .kolorist-card__title,
+.kolorist-card.reveal .kolorist-card__lead,
+.kolorist-card.reveal .kolorist-card__info,
+.kolorist-card.reveal .kolorist-card__actions,
+.henna-card.reveal .henna-card__badge,
+.henna-card.reveal .henna-card__title,
+.henna-card.reveal .henna-card__subtitle,
+.henna-card.reveal .henna-card__lead,
+.henna-card.reveal .henna-card__info,
+.henna-card.reveal .henna-card__actions {
+  opacity: 0;
+  transform: translate3d(0, 10px, 0);
+  transition:
+    opacity 0.55s var(--ease-silk),
+    transform 0.55s var(--ease-silk);
+}
+
+.booking-shell.reveal .booking-form,
+.contact-grid.reveal .contact-map,
+.kolorist-card.reveal .kolorist-card__title,
+.henna-card.reveal .henna-card__title {
+  transition-delay: 0.08s;
+}
+
+.kolorist-card.reveal .kolorist-card__lead,
+.henna-card.reveal .henna-card__subtitle {
+  transition-delay: 0.14s;
+}
+
+.kolorist-card.reveal .kolorist-card__info,
+.henna-card.reveal .henna-card__lead {
+  transition-delay: 0.2s;
+}
+
+.kolorist-card.reveal .kolorist-card__actions,
+.henna-card.reveal .henna-card__info {
+  transition-delay: 0.26s;
+}
+
+.henna-card.reveal .henna-card__actions {
+  transition-delay: 0.32s;
+}
+
+.booking-shell.reveal.is-visible .booking-calendar,
+.booking-shell.reveal.is-visible .booking-form,
+.contact-grid.reveal.is-visible .contact-info,
+.contact-grid.reveal.is-visible .contact-map,
+.kolorist-card.reveal.is-visible .kolorist-card__icon,
+.kolorist-card.reveal.is-visible .kolorist-card__title,
+.kolorist-card.reveal.is-visible .kolorist-card__lead,
+.kolorist-card.reveal.is-visible .kolorist-card__info,
+.kolorist-card.reveal.is-visible .kolorist-card__actions,
+.henna-card.reveal.is-visible .henna-card__badge,
+.henna-card.reveal.is-visible .henna-card__title,
+.henna-card.reveal.is-visible .henna-card__subtitle,
+.henna-card.reveal.is-visible .henna-card__lead,
+.henna-card.reveal.is-visible .henna-card__info,
+.henna-card.reveal.is-visible .henna-card__actions {
+  opacity: 1;
+  transform: none;
+}
+
+.kolorist-card,
+.henna-card,
+.booking-calendar,
+.contact-map {
+  transition:
+    transform 0.45s var(--ease-silk),
+    border-color 0.45s var(--ease-silk),
+    box-shadow 0.45s var(--ease-silk);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .kolorist-card.reveal.is-visible:hover,
+  .henna-card.reveal.is-visible:hover,
+  .booking-shell.reveal.is-visible .booking-calendar:hover,
+  .contact-grid.reveal.is-visible .contact-map:hover {
+    transform: translate3d(0, -4px, 0);
+    border-color: rgba(197, 160, 89, 0.38);
+    box-shadow: 0 30px 70px rgba(0, 0, 0, 0.5);
+  }
 }
 
 /* ---------- Футер ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .mave-hero:hover .mave-hero__image,
+  .mave-hero:hover .mave-hero__content,
+  .yodeyma-hero:hover .yodeyma-hero__image,
+  .yodeyma-hero:hover .yodeyma-hero__content,
+  .kolorist-card.reveal.is-visible:hover,
+  .henna-card.reveal.is-visible:hover,
+  .booking-shell.reveal.is-visible .booking-calendar:hover,
+  .contact-grid.reveal.is-visible .contact-map:hover {
+    transform: none !important;
+  }
+
+  .booking-shell.reveal .booking-calendar,
+  .booking-shell.reveal .booking-form,
+  .contact-grid.reveal .contact-info,
+  .contact-grid.reveal .contact-map,
+  .kolorist-card.reveal .kolorist-card__icon,
+  .kolorist-card.reveal .kolorist-card__title,
+  .kolorist-card.reveal .kolorist-card__lead,
+  .kolorist-card.reveal .kolorist-card__info,
+  .kolorist-card.reveal .kolorist-card__actions,
+  .henna-card.reveal .henna-card__badge,
+  .henna-card.reveal .henna-card__title,
+  .henna-card.reveal .henna-card__subtitle,
+  .henna-card.reveal .henna-card__lead,
+  .henna-card.reveal .henna-card__info,
+  .henna-card.reveal .henna-card__actions {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
 .site-footer {
   padding: 2.75rem 0 calc(2.75rem + var(--safe-bottom));
   border-top: 1px solid var(--line);
