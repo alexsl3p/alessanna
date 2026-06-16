@@ -2154,39 +2154,6 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
     0 0 5rem rgba(212, 184, 150, 0.16);
 }
 
-.gift-card-phone-fix {
-  position: absolute;
-  left: 52.9%;
-  bottom: 15.1%;
-  z-index: 3;
-  display: flex;
-  align-items: center;
-  width: 44.4%;
-  height: 5.2%;
-  padding-left: 1.05%;
-  background: #13110f;
-  color: #d9ae62;
-  font-family: var(--font-sans, "Montserrat", Arial, sans-serif);
-  font-size: clamp(0.33rem, 0.76vw, 0.72rem);
-  font-weight: 700;
-  letter-spacing: 0;
-  line-height: 1;
-  text-align: left;
-  white-space: nowrap;
-  pointer-events: none;
-  transform:
-    rotateX(var(--gift-rotate-x))
-    rotateY(var(--gift-rotate-y))
-    translateZ(0.12rem);
-  transform-origin: center;
-  transition: transform 0.18s ease-out, filter 0.26s ease-out;
-  will-change: transform;
-}
-
-.gift-card-stage.is-tilting .gift-card-phone-fix {
-  filter: brightness(1.08) contrast(1.04);
-}
-
 .gift-note {
   max-width: 35rem;
   margin: 0 auto clamp(1.25rem, 3vw, 1.75rem);
