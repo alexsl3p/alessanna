@@ -73,6 +73,7 @@ fs.mkdirSync(dist, { recursive: true });
 for (const f of [
   "index.html", "404.html", "cookies.html", "privacy.html",
   "en.html", "et.html", "ru.html",
+  "kinkekaart.jpg",
 ]) cp(f);
 
 // Styles & scripts
