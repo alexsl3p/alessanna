@@ -146,7 +146,7 @@ html {
   .tab-btn:hover,
   .btn:hover,
   .menu-list li.menu-pick-row:hover,
-  .gift-card:hover,
+  .gift-card-stage:hover .gift-card-img,
   .mave-hero:hover .mave-hero__image,
   .mave-hero:hover .mave-hero__content,
   .yodeyma-hero:hover .yodeyma-hero__image,
@@ -2063,36 +2063,140 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
 }
 
 /* ---------- Подарочные карты / отзывы ---------- */
-.gift-card {
-  max-width: 36rem;
+.gift-showcase {
+  max-width: 52rem;
   margin: 0 auto;
+  padding: clamp(1rem, 3vw, 2rem) 0;
   text-align: center;
-  padding: 2.25rem 1.75rem;
-  border: 1px solid var(--line-strong);
-  border-radius: 1rem;
-  background: linear-gradient(168deg, rgba(22, 22, 22, 0.96), rgba(10, 10, 10, 0.99));
-  box-shadow: var(--shadow-card), inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 0 0 1px rgba(0, 0, 0, 0.35) inset;
-  transition: transform 0.45s var(--ease-out), box-shadow 0.45s var(--ease-out), border-color 0.35s var(--ease-out);
 }
 
-.gift-card:hover {
-  transform: translateY(-4px);
-  border-color: var(--stroke);
-  box-shadow: var(--shadow-card), 0 24px 56px rgba(0, 0, 0, 0.5), 0 0 36px var(--gold-glow), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+.gift-card-stage {
+  --gift-rotate-x: 0deg;
+  --gift-rotate-y: 0deg;
+  --gift-glare-x: 50%;
+  --gift-glare-y: 50%;
+  position: relative;
+  width: min(46rem, 92vw);
+  margin: clamp(1.4rem, 4vw, 2.6rem) auto clamp(1.35rem, 4vw, 2.2rem);
+  perspective: 1100px;
+  transform-style: preserve-3d;
+  isolation: isolate;
+}
+
+.gift-card-stage::after {
+  content: "";
+  position: absolute;
+  left: 9%;
+  right: 9%;
+  bottom: -1.2rem;
+  height: 2.8rem;
+  border-radius: 999px;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.72), transparent 70%);
+  filter: blur(0.35rem);
+  opacity: 0.78;
+  transform: translateZ(-4rem) rotateX(72deg);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.gift-card-stage::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: clamp(0.75rem, 1.8vw, 1.25rem);
+  background: radial-gradient(
+    circle at var(--gift-glare-x) var(--gift-glare-y),
+    rgba(255, 238, 194, 0.24),
+    rgba(255, 238, 194, 0.08) 20%,
+    transparent 48%
+  );
+  mix-blend-mode: screen;
+  opacity: 0;
+  pointer-events: none;
+  transform:
+    rotateX(var(--gift-rotate-x))
+    rotateY(var(--gift-rotate-y))
+    translateZ(0.4rem);
+  transition: opacity 0.22s ease-out, transform 0.18s ease-out;
+}
+
+.gift-card-stage.is-tilting::before {
+  opacity: 1;
 }
 
 .gift-card-img {
   display: block;
   width: 100%;
-  border-radius: 0.75rem;
-  margin: 0 0 1.5rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55);
+  height: auto;
+  border: 1px solid rgba(212, 184, 150, 0.36);
+  border-radius: clamp(0.75rem, 1.8vw, 1.25rem);
+  backface-visibility: hidden;
+  box-shadow:
+    0 2.2rem 5.5rem rgba(0, 0, 0, 0.58),
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+    0 0 4.5rem rgba(212, 184, 150, 0.08);
+  transform:
+    rotateX(var(--gift-rotate-x))
+    rotateY(var(--gift-rotate-y))
+    translateZ(0);
+  transform-origin: center;
+  transform-style: preserve-3d;
+  transition: transform 0.18s ease-out, box-shadow 0.26s ease-out, filter 0.26s ease-out;
+  will-change: transform;
 }
 
-.gift-card p {
-  margin: 0 0 1.25rem;
-  color: var(--text-muted);
-  line-height: 1.75;
+.gift-card-stage.is-tilting .gift-card-img {
+  filter: brightness(1.08) contrast(1.04);
+  box-shadow:
+    0 2.8rem 6.5rem rgba(0, 0, 0, 0.68),
+    0 0 0 1px rgba(255, 255, 255, 0.06) inset,
+    0 0 5rem rgba(212, 184, 150, 0.16);
+}
+
+.gift-note {
+  max-width: 35rem;
+  margin: 0 auto clamp(1.25rem, 3vw, 1.75rem);
+  color: rgba(245, 240, 232, 0.78);
+  font-family: var(--font-display, "Cormorant Garamond", serif);
+  font-size: clamp(1.45rem, 3.4vw, 2.3rem);
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.35;
+}
+
+.gift-phone-btn {
+  min-width: min(22rem, 90vw);
+  gap: 0.65rem;
+  border-color: rgba(218, 184, 126, 0.72);
+  background:
+    linear-gradient(135deg, rgba(229, 199, 143, 0.98), rgba(191, 151, 83, 0.98));
+  color: #14100c;
+  box-shadow:
+    0 1rem 2.8rem rgba(0, 0, 0, 0.34),
+    0 0 2.6rem rgba(212, 184, 150, 0.12);
+}
+
+.gift-phone-btn span:last-child {
+  color: inherit;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+@media (max-width: 640px) {
+  .gift-showcase {
+    padding-block: 0.5rem;
+  }
+
+  .gift-card-stage {
+    width: min(23rem, 91vw);
+  }
+
+  .gift-note {
+    max-width: 18rem;
+    font-size: clamp(1.32rem, 7vw, 1.75rem);
+  }
 }
 
 /* ---------- MAVE hero promo ---------- */
@@ -3385,7 +3489,7 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
 
 .booking-shell.reveal:not(.hero-animate),
 .contact-grid.reveal:not(.hero-animate),
-.gift-card.reveal:not(.hero-animate),
+.gift-showcase.reveal:not(.hero-animate),
 .kolorist-card.reveal:not(.hero-animate),
 .henna-card.reveal:not(.hero-animate) {
   --reveal-delay: 0.1s;

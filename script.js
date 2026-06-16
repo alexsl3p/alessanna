@@ -135,6 +135,62 @@
     yearEl.textContent = String(new Date().getFullYear());
   }
 
+  function initGiftCardTilt() {
+    var stages = document.querySelectorAll("[data-gift-tilt]");
+    if (!stages.length || reduceMotionMq.matches) return;
+    var canHover = window.matchMedia("(hover: hover) and (pointer: fine)");
+    if (!canHover.matches) return;
+
+    stages.forEach(function (stage) {
+      var raf = 0;
+      var lastEvent = null;
+
+      function applyTilt(e) {
+        var rect = stage.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+        var x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        var y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+        var rotateY = (x - 0.5) * 16;
+        var rotateX = (0.5 - y) * 10;
+        stage.style.setProperty("--gift-rotate-x", rotateX.toFixed(2) + "deg");
+        stage.style.setProperty("--gift-rotate-y", rotateY.toFixed(2) + "deg");
+        stage.style.setProperty("--gift-glare-x", (x * 100).toFixed(1) + "%");
+        stage.style.setProperty("--gift-glare-y", (y * 100).toFixed(1) + "%");
+        stage.classList.add("is-tilting");
+      }
+
+      function onPointerMove(e) {
+        if (e.pointerType && e.pointerType !== "mouse" && e.pointerType !== "pen") return;
+        lastEvent = e;
+        if (raf) return;
+        raf = window.requestAnimationFrame(function () {
+          raf = 0;
+          if (lastEvent) applyTilt(lastEvent);
+        });
+      }
+
+      function resetTilt() {
+        if (raf) {
+          window.cancelAnimationFrame(raf);
+          raf = 0;
+        }
+        lastEvent = null;
+        stage.classList.remove("is-tilting");
+        stage.style.setProperty("--gift-rotate-x", "0deg");
+        stage.style.setProperty("--gift-rotate-y", "0deg");
+        stage.style.setProperty("--gift-glare-x", "50%");
+        stage.style.setProperty("--gift-glare-y", "50%");
+      }
+
+      stage.addEventListener("pointermove", onPointerMove);
+      stage.addEventListener("pointerleave", resetTilt);
+      stage.addEventListener("pointercancel", resetTilt);
+      window.addEventListener("blur", resetTilt);
+    });
+  }
+
+  initGiftCardTilt();
+
   /** Отступ снизу для закреплённой корзины «Ваш выбор» + учёт моб. полосы «Запись» */
   function updateSelectionDockOffset() {
     if (!document.body.classList.contains("selection-dock-active")) {
