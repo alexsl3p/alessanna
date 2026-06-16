@@ -2081,6 +2081,14 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
   box-shadow: var(--shadow-card), 0 24px 56px rgba(0, 0, 0, 0.5), 0 0 36px var(--gold-glow), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
+.gift-card-img {
+  display: block;
+  width: 100%;
+  border-radius: 0.75rem;
+  margin: 0 0 1.5rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55);
+}
+
 .gift-card p {
   margin: 0 0 1.25rem;
   color: var(--text-muted);
