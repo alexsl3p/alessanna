@@ -1,5 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import {
+  DndContext,
+  PointerSensor,
+  closestCenter,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
 import i18n from "../i18n";
 import { supabase } from "../lib/supabase";
 import { useEffectiveRole } from "../context/EffectiveRoleContext";
@@ -51,6 +61,79 @@ function rowFromServiceListings(s: ServiceRow): boolean {
   const id = String(s.id ?? "").trim();
   if (!id) return false;
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+}
+
+function reorderById<T extends { id: string | number }>(items: T[], activeId: string, overId: string): T[] {
+  const from = items.findIndex((item) => String(item.id) === activeId);
+  const to = items.findIndex((item) => String(item.id) === overId);
+  if (from < 0 || to < 0 || from === to) return items;
+  const next = [...items];
+  const [moved] = next.splice(from, 1);
+  next.splice(to, 0, moved);
+  return next;
+}
+
+function serviceDragId(id: string | number): string {
+  return `service:${String(id)}`;
+}
+
+type ServiceDragHandleProps = Pick<ReturnType<typeof useDraggable>, "attributes" | "listeners"> & {
+  canDrag: boolean;
+  isDragging: boolean;
+};
+
+function DraggableServiceArticle({
+  service,
+  categoryName,
+  canDrag,
+  children,
+}: {
+  service: ServiceRow;
+  categoryName: string;
+  canDrag: boolean;
+  children: (props: ServiceDragHandleProps) => ReactNode;
+}) {
+  const serviceId = String(service.id);
+  const { setNodeRef: setDropNodeRef, isOver } = useDroppable({
+    id: serviceId,
+    data: { serviceId, categoryName },
+    disabled: !canDrag,
+  });
+  const {
+    attributes,
+    listeners,
+    setNodeRef: setDragNodeRef,
+    transform,
+    isDragging,
+  } = useDraggable({
+    id: serviceDragId(serviceId),
+    data: { serviceId, categoryName },
+    disabled: !canDrag,
+  });
+  const setNodeRef = useCallback(
+    (node: HTMLElement | null) => {
+      setDropNodeRef(node);
+      setDragNodeRef(node);
+    },
+    [setDropNodeRef, setDragNodeRef],
+  );
+  const style: CSSProperties | undefined = transform
+    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
+    : undefined;
+
+  return (
+    <article
+      ref={setNodeRef}
+      style={style}
+      className={
+        "group relative overflow-hidden rounded-xl border border-gold/10 bg-line/[0.02] transition hover:border-gold/20 " +
+        (isDragging ? "z-20 cursor-grabbing opacity-70 shadow-2xl ring-1 ring-gold/40" : "") +
+        (isOver && !isDragging ? " border-gold/45 bg-gold/[0.04]" : "")
+      }
+    >
+      {children({ attributes, listeners, canDrag, isDragging })}
+    </article>
+  );
 }
 
 type ListingCatalogRow = {
@@ -217,6 +300,11 @@ export function ServicesPage() {
   const [filterCategoryIds, setFilterCategoryIds] = useState<Set<string>>(() => new Set(initialPrefs.filterCategoryIds));
   const [sortBy, setSortBy] = useState<SortBy>(initialPrefs.sortBy);
   const [showToolbar, setShowToolbar] = useState<boolean>(initialPrefs.showToolbar);
+  const serviceDragSensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    }),
+  );
   useEffect(() => {
     if (typeof window === "undefined") return;
     const payload: ServicesPrefs = {
@@ -258,6 +346,14 @@ export function ServicesPage() {
   }
   const filtersActive =
     filterActive !== "all" || filterNoMasters || filterNotOnMain || filterCategoryIds.size > 0 || sortBy !== "name";
+  const serviceReorderEnabled =
+    canManage &&
+    sortBy === "name" &&
+    serviceSearch.trim() === "" &&
+    filterActive === "all" &&
+    !filterNoMasters &&
+    !filterNotOnMain &&
+    filterCategoryIds.size === 0;
   function resetFilters() {
     setFilterActive("all");
     setFilterNoMasters(false);
@@ -336,6 +432,7 @@ export function ServicesPage() {
         buffer_after_min: 0,
         category_id: publicCategoryId,
         is_active: service.active !== false,
+        sort_order: service.sort_order,
       };
       const payloadNoBuffer = {
         name: serviceName,
@@ -344,6 +441,7 @@ export function ServicesPage() {
         duration: Number(service.duration_min || 0),
         category_id: publicCategoryId,
         is_active: service.active !== false,
+        sort_order: service.sort_order,
       };
       const payloadMinimal = {
         name: serviceName,
@@ -351,6 +449,7 @@ export function ServicesPage() {
         price_max: syncPriceMax,
         duration: Number(service.duration_min || 0),
         category_id: publicCategoryId,
+        sort_order: service.sort_order,
       };
 
       const existingListing = await supabase.from("service_listings").select("id").eq("name", serviceName).maybeSingle();
@@ -847,34 +946,67 @@ export function ServicesPage() {
     void load();
   }
 
-  async function moveServiceUp(svc: ServiceRow, catName: string) {
-    const catServices = groupedServices.find(([c]) => c === catName)?.[1] ?? [];
-    const idx = catServices.findIndex(s => String(s.id) === String(svc.id));
-    if (idx <= 0) return;
-    const a = catServices[idx - 1], b = catServices[idx];
-    /* If both sort_orders are identical (e.g. both null-derived), assign distinct
-     * position-based values so the swap actually changes the DB order. */
-    const soA = a.sort_order !== b.sort_order ? (a.sort_order ?? (idx - 1) * 10) : (idx - 1) * 10;
-    const soB = a.sort_order !== b.sort_order ? (b.sort_order ?? idx * 10) : idx * 10;
-    await Promise.all([
-      supabase.from("service_listings").update({ sort_order: soB }).eq("id", String(a.id)),
-      supabase.from("service_listings").update({ sort_order: soA }).eq("id", String(b.id)),
-    ]);
+  async function persistServiceOrder(categoryName: string, orderedServices: ServiceRow[]) {
+    if (!canManage || orderedServices.length === 0) return;
+    const normalized = orderedServices.map((service, index) => ({
+      ...service,
+      sort_order: (index + 1) * 10,
+    }));
+    const nextOrderById = new Map(normalized.map((service) => [String(service.id), service.sort_order]));
+    setServices((prev) =>
+      prev.map((service) => {
+        if (categoryNameFromService(service) !== categoryName) return service;
+        const sortOrder = nextOrderById.get(String(service.id));
+        return sortOrder == null ? service : { ...service, sort_order: sortOrder };
+      }),
+    );
+
+    const updates = normalized.map((service) => {
+      const table = rowFromServiceListings(service) ? "service_listings" : "services";
+      return supabase.from(table).update({ sort_order: service.sort_order }).eq("id", String(service.id));
+    });
+    const results = await Promise.all(updates);
+    const failed = results.find((result) => result.error);
+    if (failed?.error) {
+      console.error("[services] reorder failed", failed.error);
+      window.alert(`Не удалось сохранить порядок услуг: ${failed.error.message}`);
+    }
     void load();
   }
 
+  async function moveServiceUp(svc: ServiceRow, catName: string) {
+    if (!serviceReorderEnabled) return;
+    const catServices = groupedServices.find(([c]) => c === catName)?.[1] ?? [];
+    const idx = catServices.findIndex(s => String(s.id) === String(svc.id));
+    if (idx <= 0) return;
+    const next = [...catServices];
+    const [moved] = next.splice(idx, 1);
+    next.splice(idx - 1, 0, moved);
+    await persistServiceOrder(catName, next);
+  }
+
   async function moveServiceDown(svc: ServiceRow, catName: string) {
+    if (!serviceReorderEnabled) return;
     const catServices = groupedServices.find(([c]) => c === catName)?.[1] ?? [];
     const idx = catServices.findIndex(s => String(s.id) === String(svc.id));
     if (idx < 0 || idx >= catServices.length - 1) return;
-    const a = catServices[idx], b = catServices[idx + 1];
-    const soA = a.sort_order !== b.sort_order ? (a.sort_order ?? idx * 10) : idx * 10;
-    const soB = a.sort_order !== b.sort_order ? (b.sort_order ?? (idx + 1) * 10) : (idx + 1) * 10;
-    await Promise.all([
-      supabase.from("service_listings").update({ sort_order: soB }).eq("id", String(a.id)),
-      supabase.from("service_listings").update({ sort_order: soA }).eq("id", String(b.id)),
-    ]);
-    void load();
+    const next = [...catServices];
+    const [moved] = next.splice(idx, 1);
+    next.splice(idx + 1, 0, moved);
+    await persistServiceOrder(catName, next);
+  }
+
+  async function handleServiceDragEnd(event: DragEndEvent, categoryName: string, list: ServiceRow[]) {
+    if (!serviceReorderEnabled) return;
+    const activeServiceId = String(event.active.data.current?.serviceId ?? "");
+    const overServiceId = String(event.over?.data.current?.serviceId ?? event.over?.id ?? "");
+    const activeCategory = String(event.active.data.current?.categoryName ?? "");
+    const overCategory = String(event.over?.data.current?.categoryName ?? "");
+    if (!activeServiceId || !overServiceId || activeServiceId === overServiceId) return;
+    if (activeCategory !== categoryName || overCategory !== categoryName) return;
+    const next = reorderById(list, activeServiceId, overServiceId);
+    if (next === list) return;
+    await persistServiceOrder(categoryName, next);
   }
 
   function openQuickCreate(categoryName: string) {
@@ -1661,6 +1793,11 @@ export function ServicesPage() {
             </header>
 
             {!isCatCollapsed && (
+            <DndContext
+              sensors={serviceDragSensors}
+              collisionDetection={closestCenter}
+              onDragEnd={(event) => void handleServiceDragEnd(event, categoryName, list)}
+            >
             <div className="space-y-2 p-3">
               {list.map((s) => {
                 const existsOnMain = publicListingNames.has(String(s.name_et || "").trim().toLowerCase());
@@ -1671,12 +1808,36 @@ export function ServicesPage() {
                 const noMasters = s.active && masterLinksCount === 0;
                 const isExpanded = expandedIds.has(String(s.id));
                 return (
-                <article
+                <DraggableServiceArticle
                   key={s.id}
-                  className="group relative overflow-hidden rounded-xl border border-gold/10 bg-line/[0.02] transition hover:border-gold/20"
+                  service={s}
+                  categoryName={categoryName}
+                  canDrag={serviceReorderEnabled}
                 >
+                  {({ attributes, listeners, canDrag: canDragService }) => (
+                  <>
                   {/* === Compact summary row (always visible) === */}
                   <div className="flex items-center gap-2 px-3 py-2 pl-4">
+                    {canManage && (
+                      <button
+                        type="button"
+                        {...(canDragService ? attributes : {})}
+                        {...(canDragService ? listeners : {})}
+                        disabled={!canDragService}
+                        className="flex h-7 w-7 shrink-0 touch-none items-center justify-center rounded text-muted transition hover:bg-line/[0.08] hover:text-fg disabled:cursor-not-allowed disabled:opacity-25"
+                        title={canDragService ? "Перетащить услугу внутри категории" : "Перетаскивание доступно только без поиска, фильтров и сортировки"}
+                        aria-label={`Перетащить услугу ${String(s.name_et || "").trim() || s.id}`}
+                      >
+                        <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor" aria-hidden="true">
+                          <circle cx="7" cy="5" r="1.2" />
+                          <circle cx="13" cy="5" r="1.2" />
+                          <circle cx="7" cy="10" r="1.2" />
+                          <circle cx="13" cy="10" r="1.2" />
+                          <circle cx="7" cy="15" r="1.2" />
+                          <circle cx="13" cy="15" r="1.2" />
+                        </svg>
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => toggleExpanded(String(s.id))}
@@ -1722,13 +1883,13 @@ export function ServicesPage() {
                       {canManage && (
                         <div className="flex flex-col">
                           <button type="button" onClick={() => void moveServiceUp(s, categoryName)}
-                            disabled={list.findIndex((x) => String(x.id) === String(s.id)) === 0}
+                            disabled={!serviceReorderEnabled || list.findIndex((x) => String(x.id) === String(s.id)) === 0}
                             className="flex h-5 w-5 items-center justify-center rounded text-muted hover:text-fg disabled:opacity-20"
                             title="Выше">
                             <svg viewBox="0 0 20 20" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="4 13 10 7 16 13" /></svg>
                           </button>
                           <button type="button" onClick={() => void moveServiceDown(s, categoryName)}
-                            disabled={list.findIndex((x) => String(x.id) === String(s.id)) === list.length - 1}
+                            disabled={!serviceReorderEnabled || list.findIndex((x) => String(x.id) === String(s.id)) === list.length - 1}
                             className="flex h-5 w-5 items-center justify-center rounded text-muted hover:text-fg disabled:opacity-20"
                             title="Ниже">
                             <svg viewBox="0 0 20 20" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="4 7 10 13 16 7" /></svg>
@@ -1965,7 +2126,9 @@ export function ServicesPage() {
                   )}
                   </div>
                   )}
-                </article>
+                  </>
+                  )}
+                </DraggableServiceArticle>
                 );
               })}
               {list.length === 0 && canManage && (
@@ -1981,6 +2144,7 @@ export function ServicesPage() {
                 </div>
               )}
             </div>
+            </DndContext>
             )}
           </section>
           );
