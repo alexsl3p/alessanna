@@ -95,6 +95,9 @@ export function ClientsPage() {
   const [customFrom, setCustomFrom] = useState(() => ymd(new Date()));
   const [customTo, setCustomTo] = useState(() => ymd(new Date()));
 
+  const [editingBirthdayId, setEditingBirthdayId] = useState<string | null>(null);
+  const [editingBirthdayValue, setEditingBirthdayValue] = useState("");
+
   const metricSummary = useMemo(() => {
     const visitsCount = metricLines.length;
     const spent = metricLines.reduce(
@@ -272,6 +275,35 @@ export function ClientsPage() {
     setAutocompleteEnabled(nextEnabled);
   }
 
+  function openBirthdayEdit(client: ClientRow) {
+    const current = client.birthday ?? "";
+    // stored as MM-DD, display as DD.MM for input
+    const display = current.length === 5 ? `${current.slice(3)}.${current.slice(0, 2)}` : "";
+    setEditingBirthdayValue(display);
+    setEditingBirthdayId(client.id);
+  }
+
+  async function saveBirthday(clientId: string, rawInput: string) {
+    const digits = rawInput.replace(/\D/g, "");
+    let mmdd: string | null = null;
+    if (digits.length === 4) {
+      // user typed DDMM → store as MM-DD
+      const dd = digits.slice(0, 2);
+      const mm = digits.slice(2, 4);
+      const dNum = parseInt(dd, 10);
+      const mNum = parseInt(mm, 10);
+      if (mNum >= 1 && mNum <= 12 && dNum >= 1 && dNum <= 31) {
+        mmdd = `${mm}-${dd}`;
+      }
+    } else if (rawInput.trim() === "") {
+      mmdd = null;
+    }
+    if (rawInput.trim() !== "" && mmdd === null) return; // invalid, don't save
+    await supabase.from("clients").update({ birthday: mmdd }).eq("id", clientId);
+    setClients((prev) => prev.map((c) => (c.id === clientId ? { ...c, birthday: mmdd } : c)));
+    setEditingBirthdayId(null);
+  }
+
   function openMetric(client: ClientRow, mode: MetricMode) {
     setMetricClient(client);
     setMetricMode(mode);
@@ -324,7 +356,7 @@ export function ClientsPage() {
               </span>
               <span className="font-mono text-xs text-muted">{client.phone ?? "—"}</span>
             </button>
-            <div className="flex flex-wrap gap-2 border-t border-line/10 px-4 py-3">
+            <div className="flex flex-wrap items-center gap-2 border-t border-line/10 px-4 py-3">
               <button
                 type="button"
                 onClick={() => openMetric(client, "visits")}
@@ -339,6 +371,52 @@ export function ClientsPage() {
               >
                 Потраченная сумма
               </button>
+              {editingBirthdayId === client.id ? (
+                <div className="flex items-center gap-1.5">
+                  <input
+                    autoFocus
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={5}
+                    value={editingBirthdayValue}
+                    onChange={(e) => setEditingBirthdayValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") void saveBirthday(client.id, editingBirthdayValue);
+                      if (e.key === "Escape") setEditingBirthdayId(null);
+                    }}
+                    placeholder="ДД.ММ"
+                    className="w-20 rounded-lg border border-pink-400/50 bg-canvas px-2 py-1.5 text-center text-sm text-fg focus:border-pink-400 focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void saveBirthday(client.id, editingBirthdayValue)}
+                    className="rounded-lg bg-pink-500/15 px-2 py-1.5 text-sm text-pink-400 hover:bg-pink-500/25"
+                  >
+                    ✓
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingBirthdayId(null)}
+                    className="rounded-lg px-2 py-1.5 text-sm text-muted hover:bg-surface"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => openBirthdayEdit(client)}
+                  className="flex items-center gap-1.5 rounded-lg border border-line/20 bg-canvas/40 px-3 py-2 text-sm hover:bg-surface"
+                  title="День рождения"
+                >
+                  <span>🎂</span>
+                  <span className="text-muted">
+                    {client.birthday
+                      ? `${client.birthday.slice(3)}.${client.birthday.slice(0, 2)}`
+                      : "Д/р"}
+                  </span>
+                </button>
+              )}
             </div>
             {expanded === client.id && (
               <div className="border-t border-line/15 bg-canvas/40 px-4 py-3">
