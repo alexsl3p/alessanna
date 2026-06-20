@@ -1863,7 +1863,7 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
 
 .selection-summary-cta {
   width: 100%;
-  max-width: 18rem;
+  max-width: 16.5rem;
 }
 
 .selection-summary--dock .selection-summary-hint {
@@ -2064,7 +2064,7 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
 
 /* ---------- Подарочные карты / отзывы ---------- */
 .gift-showcase {
-  max-width: 52rem;
+  max-width: 44rem;
   margin: 0 auto;
   padding: clamp(1rem, 3vw, 2rem) 0;
   text-align: center;
@@ -2076,8 +2076,8 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
   --gift-glare-x: 50%;
   --gift-glare-y: 50%;
   position: relative;
-  width: min(46rem, 92vw);
-  margin: clamp(1.4rem, 4vw, 2.6rem) auto clamp(1.35rem, 4vw, 2.2rem);
+  width: min(38rem, 86vw);
+  margin: clamp(1.1rem, 3vw, 2rem) auto clamp(1rem, 3vw, 1.65rem);
   perspective: 1100px;
   transform-style: preserve-3d;
   isolation: isolate;
@@ -2155,11 +2155,11 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
 }
 
 .gift-note {
-  max-width: 35rem;
-  margin: 0 auto clamp(1.25rem, 3vw, 1.75rem);
+  max-width: 28rem;
+  margin: 0 auto clamp(1rem, 2.4vw, 1.45rem);
   color: rgba(245, 240, 232, 0.78);
   font-family: var(--font-display, "Cormorant Garamond", serif);
-  font-size: clamp(1.45rem, 3.4vw, 2.3rem);
+  font-size: clamp(1.18rem, 2.5vw, 1.75rem);
   font-style: italic;
   font-weight: 400;
   letter-spacing: 0;
@@ -2190,12 +2190,12 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
   }
 
   .gift-card-stage {
-    width: min(23rem, 91vw);
+    width: min(20rem, 86vw);
   }
 
   .gift-note {
-    max-width: 18rem;
-    font-size: clamp(1.32rem, 7vw, 1.75rem);
+    max-width: 16.5rem;
+    font-size: clamp(1.08rem, 5.7vw, 1.42rem);
   }
 }
 
