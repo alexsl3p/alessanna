@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { format, parseISO } from "date-fns";
 import { supabase } from "../lib/supabase";
 import { useBookingsRealtime } from "../hooks/useSalonRealtime";
@@ -28,6 +28,43 @@ type MetricLine = {
   services: Array<{ name: string; price: number | null }>;
 };
 
+type ClientFormState = {
+  name: string;
+  lastName: string;
+  phone: string;
+  email: string;
+  birthday: string;
+  notes: string;
+};
+
+const EMPTY_CLIENT_FORM: ClientFormState = {
+  name: "",
+  lastName: "",
+  phone: "",
+  email: "",
+  birthday: "",
+  notes: "",
+};
+
+const CLIENT_UI = {
+  addTitle: "\u0414\u043E\u0431\u0430\u0432\u0438\u0442\u044C \u043A\u043B\u0438\u0435\u043D\u0442\u0430",
+  name: "\u0418\u043C\u044F",
+  lastName: "\u0424\u0430\u043C\u0438\u043B\u0438\u044F",
+  phone: "\u0422\u0435\u043B\u0435\u0444\u043E\u043D",
+  email: "E-mail",
+  birthday: "\u0414\u0435\u043D\u044C \u0440\u043E\u0436\u0434\u0435\u043D\u0438\u044F",
+  notes: "\u0417\u0430\u043C\u0435\u0442\u043A\u0430",
+  birthdayPlaceholder: "\u0414\u0414.\u041C\u041C",
+  notesPlaceholder: "\u041D\u0430\u043F\u0440\u0438\u043C\u0435\u0440, \u043F\u0440\u0435\u0434\u043F\u043E\u0447\u0442\u0435\u043D\u0438\u044F \u0438\u043B\u0438 \u0432\u0430\u0436\u043D\u044B\u0435 \u0434\u0435\u0442\u0430\u043B\u0438",
+  create: "\u0421\u043E\u0437\u0434\u0430\u0442\u044C",
+  creating: "\u0421\u043E\u0437\u0434\u0430\u044E...",
+  delete: "\u0423\u0434\u0430\u043B\u0438\u0442\u044C",
+  deleting: "\u0423\u0434\u0430\u043B\u044F\u044E...",
+  deleteConfirm: "\u0423\u0434\u0430\u043B\u0438\u0442\u044C \u043A\u043B\u0438\u0435\u043D\u0442\u0430 {name}? \u0417\u0430\u043F\u0438\u0441\u0438 \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u0435 \u043E\u0441\u0442\u0430\u043D\u0443\u0442\u0441\u044F, \u0441\u0432\u044F\u0437\u044C \u0441 \u043A\u043B\u0438\u0435\u043D\u0442\u043E\u043C \u0431\u0443\u0434\u0435\u0442 \u043E\u0447\u0438\u0449\u0435\u043D\u0430.",
+  requiredName: "\u0423\u043A\u0430\u0436\u0438\u0442\u0435 \u0438\u043C\u044F \u043A\u043B\u0438\u0435\u043D\u0442\u0430.",
+  invalidBirthday: "\u0414\u0435\u043D\u044C \u0440\u043E\u0436\u0434\u0435\u043D\u0438\u044F \u0432\u0432\u0435\u0434\u0438\u0442\u0435 \u0432 \u0444\u043E\u0440\u043C\u0430\u0442\u0435 \u0414\u0414.\u041C\u041C.",
+};
+
 function digitsOnly(phone: string | null | undefined): string {
   return String(phone ?? "").replace(/\D/g, "");
 }
@@ -51,6 +88,21 @@ function eur(value: number): string {
     currency: "EUR",
     maximumFractionDigits: 2,
   }).format(value);
+}
+
+function normalizeBirthdayInput(rawInput: string): string | null | undefined {
+  const raw = rawInput.trim();
+  if (!raw) return null;
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length !== 4) return undefined;
+  const dd = digits.slice(0, 2);
+  const mm = digits.slice(2, 4);
+  const day = Number.parseInt(dd, 10);
+  const month = Number.parseInt(mm, 10);
+  if (!Number.isInteger(day) || !Number.isInteger(month) || month < 1 || month > 12 || day < 1 || day > 31) {
+    return undefined;
+  }
+  return mm + "-" + dd;
 }
 
 function periodBounds(period: PeriodKey, customFrom: string, customTo: string) {
@@ -85,6 +137,9 @@ export function ClientsPage() {
   const [listErr, setListErr] = useState<string | null>(null);
   const [autocompleteEnabled, setAutocompleteEnabled] = useState(true);
   const [savingSetting, setSavingSetting] = useState(false);
+  const [newClient, setNewClient] = useState<ClientFormState>(EMPTY_CLIENT_FORM);
+  const [creatingClient, setCreatingClient] = useState(false);
+  const [deletingClientId, setDeletingClientId] = useState<string | null>(null);
 
   const [metricClient, setMetricClient] = useState<ClientRow | null>(null);
   const [metricMode, setMetricMode] = useState<MetricMode>("visits");
@@ -259,6 +314,72 @@ export function ClientsPage() {
     void loadVisits(client.id, client.phone);
   }
 
+  async function createManualClient(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const name = newClient.name.trim();
+    const lastName = newClient.lastName.trim();
+    const phoneDigits = digitsOnly(newClient.phone);
+    const email = newClient.email.trim().toLowerCase();
+    const notes = newClient.notes.trim();
+    const birthday = normalizeBirthdayInput(newClient.birthday);
+    if (!name) {
+      setListErr(CLIENT_UI.requiredName);
+      return;
+    }
+    if (birthday === undefined) {
+      setListErr(CLIENT_UI.invalidBirthday);
+      return;
+    }
+    setCreatingClient(true);
+    setListErr(null);
+    const payload: Partial<ClientRow> = {
+      name,
+      last_name: lastName || null,
+      phone: phoneDigits.length >= 5 ? phoneDigits : null,
+      email: email || null,
+      notes: notes || null,
+      birthday,
+    };
+    const { data, error } = await supabase.from("clients").insert(payload).select("*").single();
+    setCreatingClient(false);
+    if (error) {
+      setListErr(error.message);
+      return;
+    }
+    if (data) {
+      setClients((prev) => [data as ClientRow, ...prev]);
+      setNewClient(EMPTY_CLIENT_FORM);
+    } else {
+      await loadClients();
+    }
+  }
+
+  async function deleteClient(client: ClientRow) {
+    const displayName = clientDisplayName(client) || client.name || client.phone || client.id;
+    const ok = window.confirm(CLIENT_UI.deleteConfirm.replace("{name}", displayName));
+    if (!ok) return;
+    setDeletingClientId(client.id);
+    setListErr(null);
+    const unlink = await supabase.from("appointments").update({ client_id: null }).eq("client_id", client.id);
+    if (unlink.error) {
+      setDeletingClientId(null);
+      setListErr(unlink.error.message);
+      return;
+    }
+    const { error } = await supabase.from("clients").delete().eq("id", client.id);
+    setDeletingClientId(null);
+    if (error) {
+      setListErr(error.message);
+      return;
+    }
+    setClients((prev) => prev.filter((item) => item.id !== client.id));
+    if (expanded === client.id) {
+      setExpanded(null);
+      setVisits([]);
+    }
+    if (metricClient?.id === client.id) setMetricClient(null);
+  }
+
   async function saveAutocompleteEnabled(nextEnabled: boolean) {
     setSavingSetting(true);
     const { error } = await supabase
@@ -337,6 +458,79 @@ export function ClientsPage() {
         </label>
       </header>
 
+      <form onSubmit={(event) => void createManualClient(event)} className="rounded-xl border border-line/15 bg-panel/50 p-4">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-base font-semibold text-fg">{CLIENT_UI.addTitle}</h2>
+          <button
+            type="submit"
+            disabled={creatingClient}
+            className="rounded-lg border border-gold/40 bg-gold/15 px-4 py-2 text-sm font-medium text-gold hover:bg-gold/25 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {creatingClient ? CLIENT_UI.creating : CLIENT_UI.create}
+          </button>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <label className="text-xs uppercase tracking-wide text-muted">
+            {CLIENT_UI.name} *
+            <input
+              type="text"
+              value={newClient.name}
+              onChange={(e) => setNewClient((prev) => ({ ...prev, name: e.target.value }))}
+              className="mt-1 w-full rounded-lg border border-line/15 bg-canvas px-3 py-2 text-sm normal-case tracking-normal text-fg outline-none focus:border-gold/50"
+            />
+          </label>
+          <label className="text-xs uppercase tracking-wide text-muted">
+            {CLIENT_UI.lastName}
+            <input
+              type="text"
+              value={newClient.lastName}
+              onChange={(e) => setNewClient((prev) => ({ ...prev, lastName: e.target.value }))}
+              className="mt-1 w-full rounded-lg border border-line/15 bg-canvas px-3 py-2 text-sm normal-case tracking-normal text-fg outline-none focus:border-gold/50"
+            />
+          </label>
+          <label className="text-xs uppercase tracking-wide text-muted">
+            {CLIENT_UI.phone}
+            <input
+              type="tel"
+              value={newClient.phone}
+              onChange={(e) => setNewClient((prev) => ({ ...prev, phone: e.target.value }))}
+              className="mt-1 w-full rounded-lg border border-line/15 bg-canvas px-3 py-2 text-sm normal-case tracking-normal text-fg outline-none focus:border-gold/50"
+            />
+          </label>
+          <label className="text-xs uppercase tracking-wide text-muted">
+            {CLIENT_UI.email}
+            <input
+              type="email"
+              value={newClient.email}
+              onChange={(e) => setNewClient((prev) => ({ ...prev, email: e.target.value }))}
+              className="mt-1 w-full rounded-lg border border-line/15 bg-canvas px-3 py-2 text-sm normal-case tracking-normal text-fg outline-none focus:border-gold/50"
+            />
+          </label>
+          <label className="text-xs uppercase tracking-wide text-muted">
+            {CLIENT_UI.birthday}
+            <input
+              type="text"
+              inputMode="numeric"
+              maxLength={5}
+              placeholder={CLIENT_UI.birthdayPlaceholder}
+              value={newClient.birthday}
+              onChange={(e) => setNewClient((prev) => ({ ...prev, birthday: e.target.value }))}
+              className="mt-1 w-full rounded-lg border border-line/15 bg-canvas px-3 py-2 text-sm normal-case tracking-normal text-fg outline-none focus:border-gold/50"
+            />
+          </label>
+          <label className="text-xs uppercase tracking-wide text-muted md:col-span-2 xl:col-span-3">
+            {CLIENT_UI.notes}
+            <input
+              type="text"
+              value={newClient.notes}
+              placeholder={CLIENT_UI.notesPlaceholder}
+              onChange={(e) => setNewClient((prev) => ({ ...prev, notes: e.target.value }))}
+              className="mt-1 w-full rounded-lg border border-line/15 bg-canvas px-3 py-2 text-sm normal-case tracking-normal text-fg outline-none focus:border-gold/50"
+            />
+          </label>
+        </div>
+      </form>
+
       {listErr && (
         <p className="rounded border border-red-900/50 bg-red-950/40 px-3 py-2 text-sm text-red-200">{listErr}</p>
       )}
@@ -370,6 +564,14 @@ export function ClientsPage() {
                 className="rounded-lg border border-line/20 bg-canvas/40 px-3 py-2 text-sm text-fg hover:bg-surface"
               >
                 Потраченная сумма
+              </button>
+              <button
+                type="button"
+                onClick={() => void deleteClient(client)}
+                disabled={deletingClientId === client.id}
+                className="rounded-lg border border-red-500/30 bg-red-950/20 px-3 py-2 text-sm text-red-200 hover:bg-red-950/40 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {deletingClientId === client.id ? CLIENT_UI.deleting : CLIENT_UI.delete}
               </button>
               {editingBirthdayId === client.id ? (
                 <div className="flex items-center gap-1.5">
