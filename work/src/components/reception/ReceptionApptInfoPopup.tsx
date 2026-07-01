@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { format, parseISO } from "date-fns";
 import { supabase } from "../../lib/supabase";
 import { useTheme } from "../../context/ThemeContext";
+import { receptionBlockTitle } from "../../lib/receptionAppointmentLabels";
 import type { AppointmentRow, ServiceRow, StaffMember } from "../../types/database";
 
 type Props = {
@@ -35,7 +36,6 @@ export function ReceptionApptInfoPopup({
   const [cancelling, setCancelling] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const isBlock = !appt.service_id || appt.note === "block_time" || appt.note === "block_personal";
-  const isPersonal = appt.note === "block_personal";
   const noteText = appt.note && !["block_time", "block_personal"].includes(appt.note) ? appt.note : null;
 
   const member = staff.find((s) => s.id === appt.staff_id);
@@ -115,7 +115,7 @@ export function ReceptionApptInfoPopup({
             <p className={`text-[10px] font-semibold uppercase tracking-widest ${labelCls}`}>Клиент</p>
             <p className="mt-0.5 text-base font-semibold leading-tight text-fg">
               {isBlock
-                ? (isPersonal ? "Личные дела" : "— Закрыто —")
+                ? receptionBlockTitle(appt)
                 : (appt.client_name || "—")}
             </p>
           </div>

@@ -17,6 +17,7 @@ import type {
 } from "../../types/database";
 import { buildStaffHueMap } from "../../lib/staffHue";
 import { appointmentInterval, intervalsOverlap } from "../../lib/slots";
+import { receptionBlockTitle } from "../../lib/receptionAppointmentLabels";
 import { googleStaffColor } from "./receptionColors";
 import { useTheme } from "../../context/ThemeContext";
 
@@ -642,14 +643,14 @@ export function ReceptionWeekGrid({
                             <svg viewBox="0 0 16 16" className="h-2.5 w-2.5 shrink-0" fill="currentColor">
                               <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm-5 6s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1H3Z"/>
                             </svg>
-                            {appt.client_name && appt.client_name !== "— Закрыто —" ? appt.client_name : "Личные дела"}
+                            {receptionBlockTitle(appt)}
                           </span>
                         ) : isBlockTime ? (
                           <span className="inline-flex items-center gap-0.5">
                             <svg viewBox="0 0 16 16" className="h-2.5 w-2.5 shrink-0" fill="currentColor">
                               <path d="M11 7V5a3 3 0 1 0-6 0v2H4a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1h-1ZM6 5a2 2 0 1 1 4 0v2H6V5Z"/>
                             </svg>
-                            {appt.client_name && appt.client_name !== "— Закрыто —" ? appt.client_name : "Закрыто"}
+                            {receptionBlockTitle(appt)}
                           </span>
                         ) : appt.client_name}
                       </p>
