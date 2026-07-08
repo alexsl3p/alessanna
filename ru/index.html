@@ -17,9 +17,30 @@
     if(p!=="/")return;
     var seg="";
     try{seg=localStorage.getItem("alessanna_lang")||localStorage.getItem("lang")||"";}catch(e){}
-    if(S.indexOf(seg)>=0)location.replace("/"+seg+"/"+location.search+location.hash);
+    if(S.indexOf(seg)>=0){location.replace("/"+seg+"/"+location.search+location.hash);return;}
+    /* Первый визит без сохранённого языка: показываем выбор языка, а не русский по умолчанию. */
+    document.documentElement.className+=" lang-gate";
   })();
   </script>
+  <style>
+    #lang-gate{display:none}
+    html.lang-gate{overflow:hidden}
+    html.lang-gate #lang-gate{display:flex!important}
+    #lang-gate{position:fixed;inset:0;z-index:100000;background:#0a0a0a;
+      align-items:center;justify-content:center;padding:24px;
+      font-family:"Inter",system-ui,sans-serif}
+    .lang-gate__card{display:flex;flex-direction:column;align-items:center;
+      gap:28px;max-width:420px;width:100%;text-align:center}
+    .lang-gate__logo{width:220px;max-width:70%;height:auto;opacity:.95}
+    .lang-gate__hint{margin:0;color:#b9b3a7;font-size:14px;letter-spacing:.04em}
+    .lang-gate__options{display:flex;flex-direction:column;gap:12px;width:100%}
+    .lang-gate__btn{display:block;width:100%;padding:15px 20px;cursor:pointer;
+      font:500 17px/1 "Inter",system-ui,sans-serif;color:#f4efe6;
+      background:rgba(255,255,255,.03);border:1px solid rgba(197,168,116,.4);
+      border-radius:14px;transition:background .2s,border-color .2s,transform .1s}
+    .lang-gate__btn:hover{background:rgba(197,168,116,.14);border-color:#c5a874}
+    .lang-gate__btn:active{transform:scale(.98)}
+  </style>
   <link rel="canonical" href="https://alessannailu.com/ru/" />
   <link rel="icon" href="/assets/alessanna-logo-transparent.png" type="image/png" />
   <link rel="apple-touch-icon" href="/assets/alessanna-logo-transparent.png" />
@@ -43,6 +64,30 @@
   <script src="/catalog-i18n.js?v=20260517" defer></script>
 </head>
 <body class="site-ilusalong">
+  <div id="lang-gate" role="dialog" aria-modal="true" aria-label="Choose language / Выберите язык / Vali keel">
+    <div class="lang-gate__card">
+      <img class="lang-gate__logo" src="/assets/alessanna-logo-transparent.png" alt="AlesSanna Ilusalong" />
+      <p class="lang-gate__hint">Vali keel · Выберите язык · Choose language</p>
+      <div class="lang-gate__options">
+        <button type="button" class="lang-gate__btn" data-gate-lang="et">Eesti</button>
+        <button type="button" class="lang-gate__btn" data-gate-lang="ru">Русский</button>
+        <button type="button" class="lang-gate__btn" data-gate-lang="en">English</button>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function(){
+    var g=document.getElementById("lang-gate");
+    if(!g)return;
+    g.addEventListener("click",function(e){
+      var b=e.target.closest?e.target.closest("[data-gate-lang]"):null;
+      if(!b)return;
+      var lang=b.getAttribute("data-gate-lang");
+      try{localStorage.setItem("alessanna_lang",lang);}catch(_){}
+      location.replace("/"+lang+"/"+location.search+location.hash);
+    });
+  })();
+  </script>
   <a class="skip-link" href="#main" data-i18n="site.skip">К основному содержимому</a>
 
   <header class="site-header" id="header">
