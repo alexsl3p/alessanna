@@ -10,9 +10,9 @@ SMS-подтверждение записи, оформленной на пуб�
    В `payload` — язык брони (`lang`: `ru|et|en`), телефон, имя, локальное время
    (`start_local`, зона Europe/Tallinn), услуги и мастера.
 2. Эта Edge Function под `service_role` забирает pending-строки, рендерит
-   локализованный текст и отправляет через **Telnyx** (pay-as-you-go, без
-   месячной платы и без минимума; SMS в Эстонию ~€0.073/part, буквенный sender
-   ID `AlesSanna` в EE бесплатный). Русский шаблон укорочен до 1 сегмента
+   локализованный текст и отправляет через **Twilio** (pay-as-you-go, без
+   месячной платы и без минимума; аккаунт должен быть НЕ trial). Буквенный
+   sender `AlesSanna` в EE — без предрегистрации. Русский шаблон укорочен до 1 сегмента
    (≤70 символов кириллицы), чтобы не платить за два part.
 3. Помечает `sent` / `error`, растит `attempts`. После 5 неудач — `error`.
 
@@ -23,16 +23,16 @@ SMS-подтверждение записи, оформленной на пуб�
 ```bash
 supabase functions deploy send-booking-sms --no-verify-jwt
 
-# Секреты Telnyx (Portal → API Keys / Messaging):
-supabase secrets set TELNYX_API_KEY=KEYxxxxxxxx
-supabase secrets set TELNYX_MESSAGING_PROFILE_ID=xxxxxxxx   # ID Messaging Profile
-supabase secrets set SMS_SENDER='AlesSanna'      # буквенный sender ID (в EE бесплатно)
-                                                 # или купленный Telnyx-номер +372...
+# Секреты Twilio (Console → Account Info):
+supabase secrets set TWILIO_ACCOUNT_SID=ACxxxxxxxx
+supabase secrets set TWILIO_AUTH_TOKEN=xxxxxxxx
+supabase secrets set SMS_SENDER='AlesSanna'      # буквенный sender ID (в EE)
+                                                 # или купленный Twilio-номер
 ```
 
-В Telnyx Portal создать **Messaging Profile**, включить в нём Alphanumeric
-Sender ID (для Эстонии бесплатно), взять его `id` → в `TELNYX_MESSAGING_PROFILE_ID`.
-На буквенного отправителя клиент ответить не может — для подтверждений это норм.
+Аккаунт Twilio должен быть выведен из trial (привязать карту/пополнить), иначе
+можно слать только на подтверждённые номера. На буквенного отправителя клиент
+ответить не может — для подтверждений это норм.
 
 `SUPABASE_URL` и `SUPABASE_SERVICE_ROLE_KEY` доступны в Edge-функциях
 автоматически — задавать не нужно.
@@ -72,7 +72,7 @@ curl -X POST 'https://<project-ref>.functions.supabase.co/send-booking-sms'
 ## Смена провайдера
 
 Провайдер-специфична только функция `sendSms()` (endpoint, авторизация, тело
-запроса). Для Twilio / Vonage / smsapi поправить только её. Все — тоже
+запроса). Для Telnyx / Vonage / smsapi поправить только её. Все — тоже
 pay-as-you-go без месячной платы; Twilio дороже за штуку, но проще и с лучшей
 докой.
 

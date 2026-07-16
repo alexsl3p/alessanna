@@ -6,19 +6,20 @@
 //   1. Берёт до BATCH_SIZE строк notifications_outbox где kind='sms',
 //      status='pending'.
 //   2. Рендерит локализованный текст (payload.lang: ru | et | en).
-//   3. Отправляет через Telnyx Messages API.
+//   3. Отправляет через Twilio Messages API.
 //   4. Помечает sent / error (с last_error и attempts++).
 //   5. После MAX_ATTEMPTS неудач строка уходит в status='error' навсегда.
 //
-// Провайдер: Telnyx (pay-as-you-go, без месячной платы и без минимума;
-// SMS в Эстонию ~€0.073/part, буквенный sender ID 'AlesSanna' в EE бесплатный).
+// Провайдер: Twilio (pay-as-you-go, без месячной платы и без минимума).
+// Alphanumeric sender 'AlesSanna' в Эстонию — без предрегистрации, но аккаунт
+// должен быть НЕ trial (привязать карту / пополнить).
 //
 // Деплой:
 //   supabase functions deploy send-booking-sms --no-verify-jwt
-//   supabase secrets set TELNYX_API_KEY=KEYxxxxxxxx
-//   supabase secrets set TELNYX_MESSAGING_PROFILE_ID=xxxxxxxx  # нужен для буквенного sender
-//   supabase secrets set SMS_SENDER='AlesSanna'   # буквенный sender ID (в EE бесплатно)
-//                                                 # или купленный Telnyx-номер +372...
+//   supabase secrets set TWILIO_ACCOUNT_SID=ACxxxxxxxx
+//   supabase secrets set TWILIO_AUTH_TOKEN=xxxxxxxx
+//   supabase secrets set SMS_SENDER='AlesSanna'   # буквенный sender ID (в EE)
+//                                                 # или купленный Twilio-номер +1.../+372...
 //
 // Расписание (pg_cron, каждую минуту):
 //   select cron.schedule('send-booking-sms-tick', '* * * * *', $$
@@ -28,7 +29,7 @@
 //     );
 //   $$);
 //
-// Сменить провайдера (Twilio, Vonage, smsapi) — правьте только sendSms().
+// Сменить провайдера (Telnyx, Vonage, smsapi) — правьте только sendSms().
 // ----------------------------------------------------------------------------
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
@@ -55,8 +56,8 @@ const MAX_ATTEMPTS = 5;
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const TELNYX_API_KEY = Deno.env.get("TELNYX_API_KEY") ?? "";
-const TELNYX_MESSAGING_PROFILE_ID = Deno.env.get("TELNYX_MESSAGING_PROFILE_ID") ?? "";
+const TWILIO_ACCOUNT_SID = Deno.env.get("TWILIO_ACCOUNT_SID") ?? "";
+const TWILIO_AUTH_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN") ?? "";
 const SMS_SENDER = Deno.env.get("SMS_SENDER") ?? "AlesSanna";
 
 const sb = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
@@ -110,7 +111,7 @@ function renderSms(payload: NonNullable<OutboxRow["payload"]>): string {
   return lines.filter(Boolean).join("\n");
 }
 
-// Normalize to E.164 for Telnyx. Estonian numbers are 8 digits; the site
+// Normalize to E.164 for Twilio. Estonian numbers are 8 digits; the site
 // stores them variously (with/without +372). Best-effort only.
 function toE164(raw: string): string {
   let s = String(raw ?? "").replace(/[^\d+]/g, "");
@@ -124,32 +125,33 @@ function toE164(raw: string): string {
 }
 
 async function sendSms(to: string, text: string): Promise<{ ok: boolean; ref?: string; error?: string }> {
-  if (!TELNYX_API_KEY) {
-    return { ok: false, error: "TELNYX_API_KEY not set" };
+  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN) {
+    return { ok: false, error: "TWILIO_ACCOUNT_SID/AUTH_TOKEN not set" };
   }
   const e164 = toE164(to);
   if (!e164) return { ok: false, error: "empty phone" };
 
-  const body: Record<string, unknown> = { from: SMS_SENDER, to: e164, text };
-  // An alphanumeric sender ("AlesSanna") requires the messaging profile id.
-  if (TELNYX_MESSAGING_PROFILE_ID) body.messaging_profile_id = TELNYX_MESSAGING_PROFILE_ID;
-
-  const res = await fetch("https://api.telnyx.com/v2/messages", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${TELNYX_API_KEY}`,
-      "Content-Type": "application/json",
+  const auth = btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`);
+  const form = new URLSearchParams({ To: e164, From: SMS_SENDER, Body: text });
+  const res = await fetch(
+    `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${auth}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: form.toString(),
     },
-    body: JSON.stringify(body),
-  });
+  );
 
   const bodyText = await res.text();
   if (!res.ok) {
-    return { ok: false, error: `Telnyx ${res.status}: ${bodyText.slice(0, 500)}` };
+    return { ok: false, error: `Twilio ${res.status}: ${bodyText.slice(0, 500)}` };
   }
   let ref: string | undefined;
   try {
-    ref = JSON.parse(bodyText)?.data?.id;
+    ref = JSON.parse(bodyText)?.sid;
   } catch {
     ref = undefined;
   }
