@@ -4430,6 +4430,19 @@
       return marker;
     }
 
+    /** Язык страницы, на котором клиент оформляет запись — уходит в бронь,
+     *  чтобы SMS-подтверждение пришло на этом же языке (ru | et | en). */
+    function currentBookingLang() {
+      var lang = String(
+        window.ALESSANNA_PUBLIC_LOCALE ||
+          document.documentElement.getAttribute("lang") ||
+          "et"
+      )
+        .toLowerCase()
+        .slice(0, 2);
+      return lang === "ru" || lang === "en" ? lang : "et";
+    }
+
     function chainBookingPayload(items, startIso, nameVal, phoneVal, noteVal, emailVal) {
       return {
         p_client_name: nameVal || "",
@@ -4439,6 +4452,7 @@
         p_start_at: startIso,
         p_source: "public_site",
         p_created_by_staff_id: null,
+        p_lang: currentBookingLang(),
         p_items: items.map(function (it) {
           return {
             service_id: it.serviceId,
