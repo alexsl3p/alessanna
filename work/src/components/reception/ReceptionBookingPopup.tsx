@@ -266,8 +266,38 @@ export function ReceptionBookingPopup({
     const { error: writeErr } = isEdit
       ? await supabase.from("appointments").update(payload).eq("id", editAppt!.id)
       : await supabase.from("appointments").insert(payload);
+    if (writeErr) { setSaving(false); setError(writeErr.message); return; }
+
+    // Website ("chain") bookings also write per-service rows into
+    // appointment_services, and the availability guard (public_staff_busy_during)
+    // reads those first. If we only update appointments.staff_id, the master move
+    // never takes effect — the old master stays "busy" and the new one looks free.
+    // Keep the service rows in sync so a manual master/time change actually sticks.
+    if (isEdit && !isBlock) {
+      const { data: svcRows } = await supabase
+        .from("appointment_services")
+        .select("id")
+        .eq("appointment_id", editAppt!.id);
+      if (svcRows && svcRows.length === 1) {
+        await supabase
+          .from("appointment_services")
+          .update({
+            staff_id: staffId,
+            service_id: svc!.id,
+            start_time: start.toISOString(),
+            end_time: end.toISOString(),
+          })
+          .eq("appointment_id", editAppt!.id);
+      } else if (svcRows && svcRows.length > 1) {
+        // Multi-service chain: only reassign the master, leave each row's own
+        // service and time untouched so the chain isn't collapsed.
+        await supabase
+          .from("appointment_services")
+          .update({ staff_id: staffId })
+          .eq("appointment_id", editAppt!.id);
+      }
+    }
     setSaving(false);
-    if (writeErr) { setError(writeErr.message); return; }
     onSave();
   }
 
