@@ -683,7 +683,22 @@ export function ReceptionBookingPopup({
             <div className="overflow-y-auto">
               {staff.filter((s) => s.active).map((s) => (
                 <button key={s.id} type="button"
-                  onClick={() => { setStaffId(s.id); setServiceId(""); setEndManual(false); setShowStaffPicker(false); }}
+                  onClick={() => {
+                    // Keep the current service if the new master also does it —
+                    // otherwise reassigning a booking's master wiped the service
+                    // and looked like "can't edit the master". Only clear when the
+                    // new master can't perform the already-selected service.
+                    const keepsService =
+                      !!serviceId &&
+                      servicesEligibleForStaff(services, links, s.id, s, {
+                        implicitAll: false,
+                        privilegedCanDoAll: false,
+                      }).some((sv) => String(sv.id) === String(serviceId));
+                    setStaffId(s.id);
+                    if (!keepsService) setServiceId("");
+                    setEndManual(false);
+                    setShowStaffPicker(false);
+                  }}
                   className={`w-full px-4 py-3 text-left text-sm transition-colors ${s.id === staffId ? (useGold ? "bg-gold/10 text-gold" : "bg-[#e8f0fe] text-[#1a73e8]") : "text-fg hover:bg-surface"}`}>
                   {s.name}
                 </button>
