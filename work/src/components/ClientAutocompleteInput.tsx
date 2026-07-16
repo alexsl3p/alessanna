@@ -31,6 +31,9 @@ export function ClientAutocompleteInput({
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const pickedRef = useRef(false);
+  // Only search after the user actually types. Otherwise opening an existing
+  // booking (name pre-filled) would immediately pop the suggestions dropdown.
+  const userTypedRef = useRef(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const [dropPos, setDropPos] = useState<{ top: number; left: number; width: number } | null>(null);
 
@@ -47,6 +50,12 @@ export function ClientAutocompleteInput({
   useEffect(() => {
     if (!enabled || pickedRef.current) {
       pickedRef.current = false;
+      setItems([]);
+      setOpen(false);
+      return;
+    }
+    if (!userTypedRef.current) {
+      // Pre-filled value on open — don't search until the user edits the name.
       setItems([]);
       setOpen(false);
       return;
@@ -103,9 +112,9 @@ export function ClientAutocompleteInput({
       <input
         autoFocus={autoFocus}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => { userTypedRef.current = true; onChange(e.target.value); }}
         onFocus={() => {
-          if (items.length > 0) { updateDropPos(); setOpen(true); }
+          if (userTypedRef.current && items.length > 0) { updateDropPos(); setOpen(true); }
         }}
         onKeyDown={updateDropPos}
         placeholder={placeholder}
