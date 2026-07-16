@@ -6,15 +6,18 @@
 //   1. Берёт до BATCH_SIZE строк notifications_outbox где kind='sms',
 //      status='pending'.
 //   2. Рендерит локализованный текст (payload.lang: ru | et | en).
-//   3. Отправляет через Messente Omnichannel API.
+//   3. Отправляет через Twilio Messages API.
 //   4. Помечает sent / error (с last_error и attempts++).
 //   5. После MAX_ATTEMPTS неудач строка уходит в status='error' навсегда.
 //
+// Провайдер: Twilio (pay-as-you-go, без месячной платы и без минимума).
+//
 // Деплой:
 //   supabase functions deploy send-booking-sms --no-verify-jwt
-//   supabase secrets set MESSENTE_API_USERNAME=xxxxxxxx
-//   supabase secrets set MESSENTE_API_PASSWORD=xxxxxxxx
-//   supabase secrets set SMS_SENDER='AlesSanna'     # одобренный sender ID
+//   supabase secrets set TWILIO_ACCOUNT_SID=ACxxxxxxxx
+//   supabase secrets set TWILIO_AUTH_TOKEN=xxxxxxxx
+//   supabase secrets set SMS_SENDER='AlesSanna'   # буквенный sender ID (в EE бесплатно)
+//                                                 # или купленный Twilio-номер +372...
 //
 // Расписание (pg_cron, каждую минуту):
 //   select cron.schedule('send-booking-sms-tick', '* * * * *', $$
@@ -24,7 +27,7 @@
 //     );
 //   $$);
 //
-// Сменить провайдера (Twilio, Vonage, smsapi) — правьте только sendSms().
+// Сменить провайдера (Vonage, Telnyx, smsapi) — правьте только sendSms().
 // ----------------------------------------------------------------------------
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
@@ -51,8 +54,8 @@ const MAX_ATTEMPTS = 5;
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const MESSENTE_API_USERNAME = Deno.env.get("MESSENTE_API_USERNAME") ?? "";
-const MESSENTE_API_PASSWORD = Deno.env.get("MESSENTE_API_PASSWORD") ?? "";
+const TWILIO_ACCOUNT_SID = Deno.env.get("TWILIO_ACCOUNT_SID") ?? "";
+const TWILIO_AUTH_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN") ?? "";
 const SMS_SENDER = Deno.env.get("SMS_SENDER") ?? "AlesSanna";
 
 const sb = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
@@ -108,7 +111,7 @@ function renderSms(payload: NonNullable<OutboxRow["payload"]>): string {
   return lines.filter(Boolean).join("\n");
 }
 
-// Normalize to E.164 for Messente. Estonian numbers are 8 digits; the site
+// Normalize to E.164 for Twilio. Estonian numbers are 8 digits; the site
 // stores them variously (with/without +372). Best-effort only.
 function toE164(raw: string): string {
   let s = String(raw ?? "").replace(/[^\d+]/g, "");
@@ -122,32 +125,33 @@ function toE164(raw: string): string {
 }
 
 async function sendSms(to: string, text: string): Promise<{ ok: boolean; ref?: string; error?: string }> {
-  if (!MESSENTE_API_USERNAME || !MESSENTE_API_PASSWORD) {
-    return { ok: false, error: "MESSENTE_API_USERNAME/PASSWORD not set" };
+  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN) {
+    return { ok: false, error: "TWILIO_ACCOUNT_SID/AUTH_TOKEN not set" };
   }
   const e164 = toE164(to);
   if (!e164) return { ok: false, error: "empty phone" };
 
-  const auth = btoa(`${MESSENTE_API_USERNAME}:${MESSENTE_API_PASSWORD}`);
-  const res = await fetch("https://api.messente.com/v1/omnimessage", {
-    method: "POST",
-    headers: {
-      Authorization: `Basic ${auth}`,
-      "Content-Type": "application/json",
+  const auth = btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`);
+  const form = new URLSearchParams({ To: e164, From: SMS_SENDER, Body: text });
+  const res = await fetch(
+    `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${auth}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: form.toString(),
     },
-    body: JSON.stringify({
-      to: e164,
-      messages: [{ channel: "sms", sender: SMS_SENDER, text }],
-    }),
-  });
+  );
 
   const bodyText = await res.text();
   if (!res.ok) {
-    return { ok: false, error: `Messente ${res.status}: ${bodyText.slice(0, 500)}` };
+    return { ok: false, error: `Twilio ${res.status}: ${bodyText.slice(0, 500)}` };
   }
   let ref: string | undefined;
   try {
-    ref = JSON.parse(bodyText)?.omnimessage_id;
+    ref = JSON.parse(bodyText)?.sid;
   } catch {
     ref = undefined;
   }

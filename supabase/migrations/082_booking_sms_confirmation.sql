@@ -4,7 +4,7 @@
 -- При успешной публичной брони кладём задачу в notifications_outbox
 -- (kind='sms', status='pending'). Edge Function `send-booking-sms` под
 -- service_role забирает pending-строки, рендерит локализованный текст и
--- отправляет через провайдера (Messente). Язык SMS = язык страницы, на
+-- отправляет через провайдера (Twilio). Язык SMS = язык страницы, на
 -- котором клиент оформил запись (p_lang: ru | et | en, по умолчанию et).
 --
 -- Signature public_book_chain расширяется параметром p_lang (последним, со

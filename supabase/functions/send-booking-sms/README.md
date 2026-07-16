@@ -10,7 +10,9 @@ SMS-подтверждение записи, оформленной на пуб�
    В `payload` — язык брони (`lang`: `ru|et|en`), телефон, имя, локальное время
    (`start_local`, зона Europe/Tallinn), услуги и мастера.
 2. Эта Edge Function под `service_role` забирает pending-строки, рендерит
-   локализованный текст и отправляет через **Messente** (Omnichannel API).
+   локализованный текст и отправляет через **Twilio** (pay-as-you-go, без
+   месячной платы и без минимума; SMS в Эстонию ~$0.096, буквенный sender ID
+   `AlesSanna` в EE бесплатный).
 3. Помечает `sent` / `error`, растит `attempts`. После 5 неудач — `error`.
 
 Язык SMS = язык страницы, на котором клиент оформил запись.
@@ -20,11 +22,16 @@ SMS-подтверждение записи, оформленной на пуб�
 ```bash
 supabase functions deploy send-booking-sms --no-verify-jwt
 
-# Секреты Messente (Dashboard → API settings):
-supabase secrets set MESSENTE_API_USERNAME=xxxxxxxx
-supabase secrets set MESSENTE_API_PASSWORD=xxxxxxxx
-supabase secrets set SMS_SENDER='AlesSanna'      # одобренный alphanumeric sender ID
+# Секреты Twilio (Console → Account Info):
+supabase secrets set TWILIO_ACCOUNT_SID=ACxxxxxxxx
+supabase secrets set TWILIO_AUTH_TOKEN=xxxxxxxx
+supabase secrets set SMS_SENDER='AlesSanna'      # буквенный sender ID (в EE бесплатно)
+                                                 # или купленный Twilio-номер +372...
 ```
+
+Буквенный sender ID `AlesSanna` включается в Twilio Console → Messaging →
+Sender IDs (для Эстонии бесплатно; на такие SMS клиент не может ответить —
+для подтверждений это нормально).
 
 `SUPABASE_URL` и `SUPABASE_SERVICE_ROLE_KEY` доступны в Edge-функциях
 автоматически — задавать не нужно.
@@ -64,7 +71,9 @@ curl -X POST 'https://<project-ref>.functions.supabase.co/send-booking-sms'
 ## Смена провайдера
 
 Провайдер-специфична только функция `sendSms()` (endpoint, авторизация, тело
-запроса). Для Twilio / Vonage / smsapi поправить только её.
+запроса). Для Vonage / Telnyx / smsapi поправить только её. Все — тоже
+pay-as-you-go без месячной платы; Telnyx обычно дешевле за штуку, Twilio —
+проще и надёжнее.
 
 ## Текст SMS
 
