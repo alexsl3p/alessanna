@@ -464,6 +464,7 @@ export function CalendarPage() {
           staff={staff}
           services={services}
           links={staffServiceLinks}
+          workDates={workDates}
           editAppt={modal.editAppt ?? null}
           onSave={() => { setModal(null); void load(); }}
           onClose={() => setModal(null)}

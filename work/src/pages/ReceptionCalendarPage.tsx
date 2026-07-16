@@ -469,6 +469,7 @@ export function ReceptionCalendarPage() {
           staff={staff}
           services={services}
           links={staffServiceLinks}
+          workDates={workDates}
           editAppt={popup.editAppt ?? null}
           onSave={() => { setPopup(null); void load(); }}
           onClose={() => setPopup(null)}

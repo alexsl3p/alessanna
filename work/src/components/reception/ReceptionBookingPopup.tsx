@@ -3,9 +3,15 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { addMinutes, format, setHours, setMinutes, startOfDay } from "date-fns";
 import { supabase } from "../../lib/supabase";
-import { servicesEligibleForStaff } from "../../lib/roles";
+import { servicesEligibleForStaff, hasStaffRole } from "../../lib/roles";
 import { useTheme } from "../../context/ThemeContext";
-import type { AppointmentRow, ServiceRow, StaffMember, StaffServiceRow } from "../../types/database";
+import type {
+  AppointmentRow,
+  ServiceRow,
+  StaffMember,
+  StaffServiceRow,
+  StaffWorkDateRow,
+} from "../../types/database";
 import { ClientAutocompleteInput } from "../ClientAutocompleteInput";
 import { clientDisplayName, resolveClientIdForVisit, type ClientSuggestion } from "../../lib/clientLink";
 import { useAuth } from "../../context/AuthContext";
@@ -18,6 +24,7 @@ type Props = {
   staff: StaffMember[];
   services: ServiceRow[];
   links: StaffServiceRow[];
+  workDates: StaffWorkDateRow[];
   onSave: () => void;
   onClose: () => void;
   editAppt?: AppointmentRow | null;
@@ -76,12 +83,17 @@ export function ReceptionBookingPopup({
   staff,
   services,
   links,
+  workDates,
   onSave,
   onClose,
   editAppt = null,
 }: Props) {
   const { t, i18n } = useTranslation();
   const { staffMember } = useAuth();
+  // Only a manager (Aljona) or an admin may reassign the master of an existing
+  // booking. Uses the real account role, not the "view as" effective role.
+  const canEditMaster =
+    hasStaffRole(staffMember, "admin") || hasStaffRole(staffMember, "manager");
   const { theme } = useTheme();
   const useGold = theme !== "white";
   const popupRef = useRef<HTMLDivElement>(null);
@@ -113,6 +125,15 @@ export function ReceptionBookingPopup({
     return n && !["block_time", "block_personal"].includes(n) ? n : "";
   });
   const [dateBase, setDateBase] = useState<Date>(() => startOfDay(editAppt ? new Date(editAppt.start_time) : initialStart));
+  // Reassigning the master of an existing booking is manager/admin-only.
+  const masterLocked = isEdit && !canEditMaster;
+  // Masters actually scheduled to work on the chosen day — the picker offers
+  // only these, so a booking can't be assigned to someone who's off that day.
+  const dateKey = format(dateBase, "yyyy-MM-dd");
+  const workingStaffIds = useMemo(
+    () => new Set(workDates.filter((w) => w.work_date === dateKey).map((w) => w.staff_id)),
+    [workDates, dateKey],
+  );
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [pickerViewYear, setPickerViewYear] = useState(() => (editAppt ? new Date(editAppt.start_time) : initialStart).getFullYear());
   const [pickerViewMonth, setPickerViewMonth] = useState(() => (editAppt ? new Date(editAppt.start_time) : initialStart).getMonth());
@@ -460,16 +481,26 @@ export function ReceptionBookingPopup({
           </svg>
           <button
             type="button"
-            onClick={() => setShowStaffPicker(true)}
-            className={`${inputCls} flex items-center justify-between gap-1`}
+            disabled={masterLocked}
+            title={masterLocked ? t("modal.masterEditManagerOnly", { defaultValue: "Менять мастера может только менеджер или админ" }) : undefined}
+            onClick={() => { if (!masterLocked) setShowStaffPicker(true); }}
+            className={`${inputCls} flex items-center justify-between gap-1 ${masterLocked ? "cursor-not-allowed opacity-60" : ""}`}
           >
             <span className={`truncate ${staffId ? "text-fg" : "text-muted/60"}`}>
               {selectedStaff ? selectedStaff.name : "— мастер —"}
             </span>
-            <span className={`ml-auto shrink-0 text-sm font-semibold ${requiredMarkCls}`}>*</span>
-            <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0 text-muted" fill="currentColor">
-              <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-            </svg>
+            {masterLocked ? (
+              <svg viewBox="0 0 20 20" className="ml-auto h-4 w-4 shrink-0 text-muted" fill="currentColor">
+                <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+              </svg>
+            ) : (
+              <>
+                <span className={`ml-auto shrink-0 text-sm font-semibold ${requiredMarkCls}`}>*</span>
+                <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0 text-muted" fill="currentColor">
+                  <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </>
+            )}
           </button>
         </div>
 
@@ -681,28 +712,48 @@ export function ReceptionBookingPopup({
               </button>
             </div>
             <div className="overflow-y-auto">
-              {staff.filter((s) => s.active).map((s) => (
-                <button key={s.id} type="button"
-                  onClick={() => {
-                    // Keep the current service if the new master also does it —
-                    // otherwise reassigning a booking's master wiped the service
-                    // and looked like "can't edit the master". Only clear when the
-                    // new master can't perform the already-selected service.
-                    const keepsService =
-                      !!serviceId &&
-                      servicesEligibleForStaff(services, links, s.id, s, {
-                        implicitAll: false,
-                        privilegedCanDoAll: false,
-                      }).some((sv) => String(sv.id) === String(serviceId));
-                    setStaffId(s.id);
-                    if (!keepsService) setServiceId("");
-                    setEndManual(false);
-                    setShowStaffPicker(false);
-                  }}
-                  className={`w-full px-4 py-3 text-left text-sm transition-colors ${s.id === staffId ? (useGold ? "bg-gold/10 text-gold" : "bg-[#e8f0fe] text-[#1a73e8]") : "text-fg hover:bg-surface"}`}>
-                  {s.name}
-                </button>
-              ))}
+              {staff.filter((s) => s.active).map((s) => {
+                const working = workingStaffIds.has(s.id);
+                const isCurrent = s.id === staffId;
+                // Off that day → not selectable (unless it's the booking's current
+                // master, kept visible so you can see who to move it off of).
+                const selectable = working || isCurrent;
+                return (
+                  <button key={s.id} type="button"
+                    disabled={!selectable}
+                    onClick={() => {
+                      if (!selectable) return;
+                      // Keep the current service if the new master also does it —
+                      // otherwise reassigning a booking's master wiped the service
+                      // and looked like "can't edit the master". Only clear when the
+                      // new master can't perform the already-selected service.
+                      const keepsService =
+                        !!serviceId &&
+                        servicesEligibleForStaff(services, links, s.id, s, {
+                          implicitAll: false,
+                          privilegedCanDoAll: false,
+                        }).some((sv) => String(sv.id) === String(serviceId));
+                      setStaffId(s.id);
+                      if (!keepsService) setServiceId("");
+                      setEndManual(false);
+                      setShowStaffPicker(false);
+                    }}
+                    className={`flex w-full items-center justify-between gap-2 px-4 py-3 text-left text-sm transition-colors ${
+                      !selectable
+                        ? "cursor-not-allowed text-muted/40"
+                        : isCurrent
+                          ? (useGold ? "bg-gold/10 text-gold" : "bg-[#e8f0fe] text-[#1a73e8]")
+                          : "text-fg hover:bg-surface"
+                    }`}>
+                    <span className="truncate">{s.name}</span>
+                    {!working && (
+                      <span className="shrink-0 rounded-full bg-muted/15 px-2 py-0.5 text-[10px] text-muted">
+                        {t("modal.dayOff", { defaultValue: "выходной" })}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
               <div className="h-4" />
             </div>
           </div>
