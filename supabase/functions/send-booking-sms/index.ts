@@ -64,11 +64,12 @@ const sb = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
   auth: { persistSession: false },
 });
 
-type Lang = "ru" | "et" | "en";
+type Lang = "et" | "en";
 
+// Salon policy: RU and ET pages → Estonian SMS; EN page → English SMS.
 function normLang(raw: string | undefined): Lang {
   const l = String(raw ?? "et").toLowerCase().slice(0, 2);
-  return l === "ru" || l === "en" ? l : "et";
+  return l === "en" ? "en" : "et";
 }
 
 // RU → et/en service names (mirror of catalog-i18n.js). CRM stores names in
@@ -146,7 +147,7 @@ const SERVICE_I18N: Record<string, { et: string; en: string }> = {
 
 function localizeService(ruName: string | undefined, lang: Lang): string {
   const ru = String(ruName ?? "").trim();
-  if (!ru || lang === "ru") return ru;
+  if (!ru) return ru;
   const row = SERVICE_I18N[ru];
   return row && row[lang] ? row[lang] : ru;
 }
@@ -162,15 +163,6 @@ function renderSms(payload: NonNullable<OutboxRow["payload"]>): string {
   const master = items.map((i) => i?.staff_name).filter(Boolean).filter((v, idx, a) => a.indexOf(v) === idx).join(", ");
   const phone = payload.salon_phone ?? "+372 529 8225";
 
-  if (lang === "ru") {
-    return [
-      name ? `Здравствуйте, ${name}!` : "Здравствуйте!",
-      `Ждём вас в Alessanna Ilusalong ${date}, в ${time}.`,
-      `Услуга: ${service}`,
-      `Мастер: ${master}`,
-      `Тел: ${phone}`,
-    ].join("\n");
-  }
   if (lang === "en") {
     return [
       name ? `Hello, ${name}!` : "Hello!",
