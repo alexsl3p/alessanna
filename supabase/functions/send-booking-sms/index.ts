@@ -53,6 +53,9 @@ type OutboxRow = {
 
 const BATCH_SIZE = 25;
 const MAX_ATTEMPTS = 5;
+// Circuit breaker: never send more than this many SMS per rolling 24h,
+// so a booking-spam attack can't drain the Twilio balance.
+const DAILY_LIMIT = 30;
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -241,13 +244,28 @@ async function sendSms(to: string, text: string): Promise<{ ok: boolean; ref?: s
 }
 
 async function processOnce(): Promise<{ processed: number; sent: number; failed: number }> {
+  // Circuit breaker: how many SMS already sent in the last rolling 24h.
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { count: sentDay } = await sb
+    .from("notifications_outbox")
+    .select("id", { count: "exact", head: true })
+    .eq("kind", "sms")
+    .eq("status", "sent")
+    .gte("sent_at", since);
+  const already = sentDay ?? 0;
+  if (already >= DAILY_LIMIT) {
+    console.warn(`[send-booking-sms] daily limit ${DAILY_LIMIT} reached (${already}) — pausing`);
+    return { processed: 0, sent: 0, failed: 0 };
+  }
+  const budget = DAILY_LIMIT - already;
+
   const { data: jobs, error } = await sb
     .from("notifications_outbox")
     .select("id, appointment_id, kind, payload, status, attempts")
     .eq("kind", "sms")
     .eq("status", "pending")
     .order("created_at", { ascending: true })
-    .limit(BATCH_SIZE);
+    .limit(Math.min(BATCH_SIZE, budget));
 
   if (error) {
     console.error("[send-booking-sms] load jobs failed", error);

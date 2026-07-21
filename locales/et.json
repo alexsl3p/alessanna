@@ -944,6 +944,7 @@
       "reviewAlertEmail": "Kontrollige e-posti vormingut või jätke väli tühjaks.",
       "errStaffBusy": "Meister on sel ajal hõivatud. Valige teine aeg või meister.",
       "errNoFreeMaster": "Sel ajal pole vaba meistrit. Valige teine aeg.",
+      "errRateLimited": "Liiga palju päringuid sellelt numbrilt. Proovige 5 minuti pärast.",
       "errSalonClosed": "Salong on sel päeval suletud. Valige teine kuupäev.",
       "errStaffNotService": "See meister ei tee valitud teenust.",
       "errStaffUnavailable": "Meister pole saadaval. Valige teine.",
