@@ -71,44 +71,123 @@ function normLang(raw: string | undefined): Lang {
   return l === "ru" || l === "en" ? l : "et";
 }
 
-// Localized confirmation text. Kept short — SMS is billed per 160 chars
-// (70 for non-GSM/Cyrillic), so the Russian variant is deliberately compact.
+// RU → et/en service names (mirror of catalog-i18n.js). CRM stores names in
+// Russian; the SMS localizes them to the booking language.
+const SERVICE_I18N: Record<string, { et: string; en: string }> = {
+  "Коррекция бровей": { et: "Kulmude korrigeerimine", en: "Eyebrow shaping" },
+  "Окрашивание бровей": { et: "Kulmude värvimine", en: "Eyebrow tinting" },
+  "Окрашивание ресниц": { et: "Ripsmete värvimine", en: "Eyelash tinting" },
+  "Окрашивание бровей и ресниц + коррекция": { et: "Kulmude ja ripsmete värvimine + korrigeerimine", en: "Brow & lash tinting + shaping" },
+  "Классический маникюр": { et: "Klassikaline maniküür", en: "Classic manicure" },
+  "Маникюр + гель-лак": { et: "Maniküür geellakiga", en: "Manicure + gel polish" },
+  "Покрытие лаком": { et: "Küünte lakkimine", en: "Nail polish application" },
+  "Снятие гель-лака (с классическим маникюром)": { et: "Geellaki eemaldus (koos klassikalise manikuuriga)", en: "Gel polish removal (with classic manicure)" },
+  "Снятие гель-лака": { et: "Geellaki eemaldus", en: "Gel polish removal" },
+  "Наращивание ногтей (гель)": { et: "Geelküünte paigaldus", en: "Gel nail extensions" },
+  "Коррекция гель-ногтей": { et: "Geelküünte hooldus", en: "Gel nail infill" },
+  "Снятие наращенных ногтей": { et: "Kunstküünte eemaldamine", en: "Extension removal" },
+  "Ремонт одного ногтя": { et: "Ühe küüne parandus", en: "Single nail repair" },
+  "Классический педикюр": { et: "Klassikaline pediküür", en: "Classic pedicure" },
+  "Педикюр + гель-лак": { et: "Pediküür geellakiga", en: "Pedicure + gel polish" },
+  "Снятие гель-лака (с классическим педикюром)": { et: "Geellaki eemaldus (koos klassikalise pediküüriga)", en: "Gel polish removal (with classic pedicure)" },
+  "Мужской педикюр": { et: "Meeste pediküür", en: "Men's pedicure" },
+  "Педикюр": { et: "Pediküür", en: "Pedicure" },
+  "Детская стрижка": { et: "Laste juukselõikus (kuni 12 a.)", en: "Children's haircut (up to 12)" },
+  "Детская стрижка (девочки)": { et: "Laste juukselõikus (tüdrukud)", en: "Children's haircut (girls)" },
+  "Детская стрижка (мальчики)": { et: "Laste juukselõikus (poisid)", en: "Children's haircut (boys)" },
+  "Мужская стрижка": { et: "Meeste juukselõikus", en: "Men's haircut" },
+  "Женская стрижка": { et: "Naiste juukselõikus", en: "Women's haircut" },
+  "Мужская стрижка машинкой": { et: "Masinalõikus", en: "Men's clipper cut" },
+  "Стрижка бороды и усов": { et: "Habeme, vuntside piiramine", en: "Beard & moustache trim" },
+  "Мытьё головы": { et: "Pesu", en: "Hair wash" },
+  "Подравнивание кончиков": { et: "Juuste otste tasandamine", en: "Trim ends" },
+  "Стрижка чёлки": { et: "Tuka lõikus", en: "Bangs trim" },
+  "Мужская стрижка + мытьё": { et: "Meeste juukselõikus + pesu", en: "Men's haircut + wash" },
+  "Мужская стрижка + мытьё головы": { et: "Meeste juukselõikus + pesu", en: "Men's haircut + hair wash" },
+  "Мужская стрижка машинкой + мытьё головы": { et: "Masinalõikus + pesu", en: "Men's clipper cut + hair wash" },
+  "Мытьё + дневная укладка": { et: "Pesu + päeva soeng", en: "Wash + day styling" },
+  "Дневная укладка": { et: "Päeva soeng", en: "Day styling" },
+  "Выпрямление волос": { et: "Sirgendamine", en: "Hair straightening" },
+  "Укладка локонами": { et: "Loki soeng", en: "Curls styling" },
+  "Праздничная укладка": { et: "Pidulik soeng", en: "Party styling" },
+  "Свадебная укладка": { et: "Pruudi soeng", en: "Wedding styling" },
+  "Окрашивание корней": { et: "Juurte värvimine", en: "Root touch-up" },
+  "Полное окрашивание": { et: "Täisvärvimine", en: "Full color" },
+  "Тонирование": { et: "Toonimine", en: "Toning" },
+  "Окрашивание (короткие волосы)": { et: "Värvimine (lühikesed juuksed)", en: "Color (short hair)" },
+  "Окрашивание (средние волосы)": { et: "Värvimine (keskmised juuksed)", en: "Color (medium hair)" },
+  "Окрашивание (длинные волосы)": { et: "Värvimine (pikad juuksed)", en: "Color (long hair)" },
+  "Окрашивание (очень длинные волосы)": { et: "Värvimine (väga pikad juuksed)", en: "Color (very long hair)" },
+  "Окрашивание своим красителем": { et: "Juuste värvimine oma värviga", en: "Color with client's dye" },
+  "Мелирование (короткие волосы)": { et: "Triibutamine (lühikesed)", en: "Highlights (short)" },
+  "Мелирование (средние волосы)": { et: "Triibutamine (keskmised)", en: "Highlights (medium)" },
+  "Мелирование (длинные волосы)": { et: "Triibutamine (pikad)", en: "Highlights (long)" },
+  "Мелирование (очень длинные волосы)": { et: "Triibutamine (väga pikad)", en: "Highlights (very long)" },
+  "Хим. завивка (короткие)": { et: "Keemiline lokk (lühikesed)", en: "Perm (short)" },
+  "Хим. завивка (длинные)": { et: "Keemiline lokk (pikad)", en: "Perm (long)" },
+  "Химическая завивка (средние)": { et: "Keemiline lokk (poolpikad)", en: "Perm (medium)" },
+  "Химическая завивка (длинные)": { et: "Keemiline lokk (pikad)", en: "Perm (long)" },
+  "Химическая завивка (короткие)": { et: "Keemiline lokk (lühikesed)", en: "Perm (short)" },
+  "Консультация + тест прядь": { et: "Konsultatsioon + testlokk", en: "Consultation + test strand" },
+  "Консультация + тест-прядь": { et: "Konsultatsioon + testlokk", en: "Consultation + test strand" },
+  "Снятие гелевых ногтей с маникюром": { et: "Geelküünte eemaldamine maniküüriga", en: "Gel nail removal with manicure" },
+  "Снятие гель-лака с маникюром": { et: "Geellaki eemaldus maniküüriga", en: "Gel polish removal with manicure" },
+  "Тату хной": { et: "Hennamaaling", en: "Henna tattoo" },
+  "Блонд ( Осветление пудрой + тонирования+ уход )": { et: "Blond (pulbriga valgendamine + toonimine + hooldus)", en: "Blonde (powder bleach + toning + care)" },
+  "Выход из темного": { et: "Väljumine tumedast", en: "Dark-to-light transformation" },
+  "Техники ( Мелирование, шатуш, омбре, airtouch, балаяж, комбинация техник )": { et: "Tehnikad (triibutamine, shatush, ombre, airtouch, balayage, kombinatsioon)", en: "Techniques (highlights, shatush, ombre, airtouch, balayage, combo)" },
+  "Холодное восстановление": { et: "Külm taastamine", en: "Cold restoration treatment" },
+  "Снятие гелевых ногтей (без маникюра)": { et: "Geelküünte eemaldamine (ilma maniküürita)", en: "Gel nail removal (without manicure)" },
+  "Снятие гелевых ногтей (с маникюром)": { et: "Geelküünte eemaldamine maniküüriga", en: "Gel nail removal with manicure" },
+  "Снятие гель-лака (без маникюра)": { et: "Geellaki eemaldus (ilma maniküürita)", en: "Gel polish removal (without manicure)" },
+  "Снятие гель-лака (с маникюром)": { et: "Geellaki eemaldus maniküüriga", en: "Gel polish removal with manicure" },
+  "Снятие гель-лака (с педикюром)": { et: "Geellaki eemaldus pediküüriga", en: "Gel polish removal with pedicure" },
+};
+
+function localizeService(ruName: string | undefined, lang: Lang): string {
+  const ru = String(ruName ?? "").trim();
+  if (!ru || lang === "ru") return ru;
+  const row = SERVICE_I18N[ru];
+  return row && row[lang] ? row[lang] : ru;
+}
+
+// Localized confirmation text.
 function renderSms(payload: NonNullable<OutboxRow["payload"]>): string {
   const lang = normLang(payload.lang);
   const name = (payload.client_name ?? "").trim();
-  const when = payload.start_local ?? "";
+  const when = payload.start_local ?? "";       // "DD.MM.YYYY HH:MM"
+  const [date, time] = when.split(" ");
   const items = Array.isArray(payload.items) ? payload.items : [];
-  const service = items.map((i) => i?.service_name).filter(Boolean).join(", ");
+  const service = items.map((i) => localizeService(i?.service_name, lang)).filter(Boolean).join(", ");
   const master = items.map((i) => i?.staff_name).filter(Boolean).filter((v, idx, a) => a.indexOf(v) === idx).join(", ");
   const phone = payload.salon_phone ?? "+372 529 8225";
-  // Short date without the year, e.g. "21.07.2026 12:00" -> "21.07 12:00".
-  const shortWhen = when.replace(/\.\d{4}/, "");
 
   if (lang === "ru") {
-    // Cyrillic is UCS-2: one SMS segment = 70 chars. Keep the whole message
-    // within one segment (all chars are BMP, so .length == UCS-2 units).
-    const full = `AlesSanna: запись ${shortWhen}${master ? ", " + master : ""} подтверждена`;
-    return full.length <= 70 ? full : `AlesSanna: запись ${shortWhen} подтверждена`;
+    return [
+      name ? `Здравствуйте, ${name}!` : "Здравствуйте!",
+      `Ждём вас в Alessanna Ilusalong ${date}, в ${time}.`,
+      `Услуга: ${service}`,
+      `Мастер: ${master}`,
+      `Тел: ${phone}`,
+    ].join("\n");
   }
   if (lang === "en") {
-    const lines = [
-      `${name ? name + ", y" : "Y"}our AlesSanna booking is confirmed.`,
-      when ? `When: ${when}` : "",
-      service ? `Service: ${service}` : "",
-      master ? `Master: ${master}` : "",
+    return [
+      name ? `Hello, ${name}!` : "Hello!",
+      `Welcome to Alessanna Ilusalong on ${date}, at ${time}.`,
+      `Service: ${service}`,
+      `Master: ${master}`,
       `Tel: ${phone}`,
-    ];
-    return lines.filter(Boolean).join("\n");
+    ].join("\n");
   }
   // et (default)
-  const lines = [
-    `${name ? name + ", s" : "S"}inu broneering AlesSannas on kinnitatud.`,
-    when ? `Millal: ${when}` : "",
-    service ? `Teenus: ${service}` : "",
-    master ? `Meister: ${master}` : "",
+  return [
+    name ? `Tere, ${name}!` : "Tere!",
+    `Olete oodatud Alessanna Ilusalongi ${date}, kell ${time}.`,
+    `Teenus: ${service}`,
+    `Meister: ${master}`,
     `Tel: ${phone}`,
-  ];
-  return lines.filter(Boolean).join("\n");
+  ].join("\n");
 }
 
 // Normalize to E.164 for Twilio. Estonian numbers are 8 digits; the site
