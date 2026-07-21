@@ -170,6 +170,8 @@ function renderSms(payload: NonNullable<OutboxRow["payload"]>): string {
       `Service: ${service}`,
       `Master: ${master}`,
       `Tel: ${phone}`,
+      "",
+      "See you soon!",
     ].join("\n");
   }
   // et (default)
@@ -179,6 +181,8 @@ function renderSms(payload: NonNullable<OutboxRow["payload"]>): string {
     `Teenus: ${service}`,
     `Meister: ${master}`,
     `Tel: ${phone}`,
+    "",
+    "Kohtumiseni!",
   ].join("\n");
 }
 
