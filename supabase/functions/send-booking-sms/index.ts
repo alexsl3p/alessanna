@@ -152,6 +152,13 @@ function localizeService(ruName: string | undefined, lang: Lang): string {
   return row && row[lang] ? row[lang] : ru;
 }
 
+// SMS only: Estonian "õ" is not in GSM-7 and would force the whole message
+// into UCS-2 (70 chars/segment ≈ 3× the cost). "ö" IS in GSM-7, so swapping
+// õ→ö keeps every SMS to one cheap segment. The site and CRM keep the correct õ.
+function smsSafe(s: string): string {
+  return s.replace(/õ/g, "ö").replace(/Õ/g, "Ö");
+}
+
 // Localized confirmation text.
 function renderSms(payload: NonNullable<OutboxRow["payload"]>): string {
   const lang = normLang(payload.lang);
@@ -164,7 +171,7 @@ function renderSms(payload: NonNullable<OutboxRow["payload"]>): string {
   const phone = payload.salon_phone ?? "+372 529 8225";
 
   if (lang === "en") {
-    return [
+    return smsSafe([
       name ? `Hello, ${name}!` : "Hello!",
       `Welcome to Alessanna Ilusalong on ${date}, at ${time}.`,
       `Service: ${service}`,
@@ -172,10 +179,10 @@ function renderSms(payload: NonNullable<OutboxRow["payload"]>): string {
       `Tel: ${phone}`,
       "",
       "See you soon!",
-    ].join("\n");
+    ].join("\n"));
   }
   // et (default)
-  return [
+  return smsSafe([
     name ? `Tere, ${name}!` : "Tere!",
     `Olete oodatud Alessanna Ilusalongi ${date}, kell ${time}.`,
     `Teenus: ${service}`,
@@ -183,7 +190,7 @@ function renderSms(payload: NonNullable<OutboxRow["payload"]>): string {
     `Tel: ${phone}`,
     "",
     "Kohtumiseni!",
-  ].join("\n");
+  ].join("\n"));
 }
 
 // Normalize to E.164 for Twilio. Estonian numbers are 8 digits; the site
