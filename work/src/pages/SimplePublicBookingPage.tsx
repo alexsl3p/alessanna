@@ -15,6 +15,7 @@ import { generateAvailableSlots, type Slot } from "../lib/slots";
 import {
   applyPublicStaffVisibility,
   isStaffRowAdmin,
+  isReceptionRow,
   normalizeStaffMember,
   staffEligibleForService,
 } from "../lib/roles";
@@ -113,7 +114,7 @@ export function SimplePublicBookingPage() {
     }
     if (st.data) {
       const directory = (st.data as Record<string, unknown>[])
-        .filter((row) => !isStaffRowAdmin(row))
+        .filter((row) => !isStaffRowAdmin(row) && !isReceptionRow(row))
         .map((r) => normalizeStaffMember(r as StaffMember));
       setStaffDirectory(directory);
     }

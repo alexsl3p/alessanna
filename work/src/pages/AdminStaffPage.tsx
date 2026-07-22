@@ -354,6 +354,7 @@ export function AdminStaffPage() {
     const bits: string[] = [];
     if (cur.includes("admin")) bits.push(t("role.admin"));
     if (cur.includes("manager")) bits.push(t("role.manager"));
+    if (cur.includes("reception")) bits.push(t("role.reception"));
     if (cur.includes("worker")) bits.push(t("role.worker"));
     return bits.length ? bits.join(" · ") : "—";
   }
@@ -1206,10 +1207,10 @@ export function AdminStaffPage() {
             placeholder="имя мастера"
           />
           <div className="flex h-9 items-center gap-1">
-            {(["admin", "manager", "worker"] as UiRole[]).map((r) => {
+            {(["admin", "manager", "worker", "reception"] as UiRole[]).map((r) => {
               const on = newRoles.includes(r);
               const lbl =
-                r === "admin" ? t("role.admin") : r === "manager" ? t("role.manager") : t("role.worker");
+                r === "admin" ? t("role.admin") : r === "manager" ? t("role.manager") : r === "reception" ? t("role.reception") : t("role.worker");
               return (
                 <button
                   key={r}
@@ -1423,7 +1424,7 @@ export function AdminStaffPage() {
                               {t("role.label")}
                             </p>
                   <div className="flex flex-wrap gap-2">
-                    {(["admin", "manager", "worker"] as UiRole[]).map((roleToken) => {
+                    {(["admin", "manager", "worker", "reception"] as UiRole[]).map((roleToken) => {
                       const current = rowRoles(r);
                       return (
                         <label key={roleToken} className="inline-flex items-center gap-1 text-xs text-fg">
@@ -1443,7 +1444,9 @@ export function AdminStaffPage() {
                             ? t("role.admin")
                             : roleToken === "manager"
                               ? t("role.manager")
-                              : t("role.worker")}
+                              : roleToken === "reception"
+                                ? t("role.reception")
+                                : t("role.worker")}
                         </label>
                       );
                     })}

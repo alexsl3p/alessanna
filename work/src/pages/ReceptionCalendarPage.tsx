@@ -4,7 +4,7 @@ import { addDays, addMonths, addWeeks, subDays, startOfWeek, subMonths, subWeeks
 import { supabase } from "../lib/supabase";
 import { useCalendarDataRealtime } from "../hooks/useSalonRealtime";
 import { loadServicesCatalog } from "../lib/loadServicesCatalog";
-import { isStaffRowAdmin, normalizeStaffMember } from "../lib/roles";
+import { isStaffRowAdmin, isReceptionRow, hasStaffRole, normalizeStaffMember } from "../lib/roles";
 import { useTheme } from "../context/ThemeContext";
 import { useEffectiveRole } from "../context/EffectiveRoleContext";
 import { useAuth } from "../context/AuthContext";
@@ -47,6 +47,11 @@ export function ReceptionCalendarPage() {
   const dark = theme === "onyx" || theme === "stone";
   const { canManage } = useEffectiveRole();
   const { staffMember } = useAuth();
+  const isReception = hasStaffRole(staffMember, "reception");
+  // Who may add ANY master to the schedule: managers/admin + the reception account.
+  // Who may REMOVE a work day: only managers/admin (reception & workers are add-only).
+  const canScheduleAll = canManage || isReception;
+  const canScheduleDelete = canManage;
   const [view, setView] = useState<View>("week");
 
   useEffect(() => {
@@ -123,7 +128,7 @@ export function ReceptionCalendarPage() {
 
     if (st.data) {
       const normalized = (st.data as Record<string, unknown>[])
-        .filter((row) => !isStaffRowAdmin(row) && row.show_on_marketing_site !== false)
+        .filter((row) => !isStaffRowAdmin(row) && !isReceptionRow(row) && row.show_on_marketing_site !== false)
         .map((r) => normalizeStaffMember(r as StaffMember));
       setStaff(normalized);
       setVisibleStaffIds((prev) => {
@@ -486,7 +491,8 @@ export function ReceptionCalendarPage() {
           allStaff={staff}
           workDates={workDates}
           holidays={holidays.map((h) => h.holiday_date)}
-          canManageAll={canManage}
+          canManageAll={canScheduleAll}
+          canDelete={canScheduleDelete}
           selfStaffId={staffMember?.id ?? null}
           onClose={() => setDayPopup(null)}
           onSaved={() => { void load(); }}

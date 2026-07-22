@@ -28,7 +28,7 @@ import type {
   StaffTimeOffRow,
   StaffWorkDateRow,
 } from "../types/database";
-import { isStaffRowAdmin, normalizeStaffMember } from "../lib/roles";
+import { isStaffRowAdmin, isReceptionRow, normalizeStaffMember } from "../lib/roles";
 import { effectiveCanWorkCalendar } from "../lib/effectiveRole";
 import { loadServicesCatalog } from "../lib/loadServicesCatalog";
 import { ReceptionWeekGrid } from "../components/reception/ReceptionWeekGrid";
@@ -77,7 +77,7 @@ export function CalendarPage() {
     ]);
     if (st.data) {
       const normalized = (st.data as Record<string, unknown>[])
-        .filter((row) => !isStaffRowAdmin(row) && row.show_on_marketing_site !== false)
+        .filter((row) => !isStaffRowAdmin(row) && !isReceptionRow(row) && row.show_on_marketing_site !== false)
         .map((r) => normalizeStaffMember(r as StaffMember));
       setStaff(normalized);
     }

@@ -1,6 +1,6 @@
 /** Types aligned with supabase/migrations (staff, appointments, staff_services, …). */
 
-export type Role = "admin" | "manager" | "worker";
+export type Role = "admin" | "manager" | "worker" | "reception";
 /** Same as Role; kept for clarity in staff-member shapes. */
 export type StaffRole = Role;
 

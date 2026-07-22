@@ -7,7 +7,7 @@ function mapRoleToken(x: unknown): StaffRole | null {
   const l = x.toLowerCase().trim();
   if (l === "viewer") return null;
   if (l === "employee" || l === "staff") return "worker";
-  if (l === "admin" || l === "manager" || l === "worker") return l;
+  if (l === "admin" || l === "manager" || l === "worker" || l === "reception") return l;
   return null;
 }
 
@@ -62,6 +62,14 @@ export function isStaffRowAdmin(row: unknown): boolean {
   if (!row || typeof row !== "object") return false;
   const r = row as { roles?: unknown; role?: unknown };
   return normalizeRoles(r.roles ?? r.role).includes("admin");
+}
+
+/** Reception is a shared front-desk account, not a bookable master — exclude it
+ *  from calendars, schedule pickers, analytics and public team/booking lists. */
+export function isReceptionRow(row: unknown): boolean {
+  if (!row || typeof row !== "object") return false;
+  const r = row as { roles?: unknown; role?: unknown };
+  return normalizeRoles(r.roles ?? r.role).includes("reception");
 }
 
 /** Marketing site + public booking: row hidden when explicitly false (DB flag). */

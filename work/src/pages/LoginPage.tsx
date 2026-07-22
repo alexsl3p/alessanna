@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useAuth, type LoginResult } from "../context/AuthContext";
 import { isSupabaseConfigured } from "../lib/supabase";
 import { LanguageSwitcher } from "../components/LanguageSwitcher";
-import { isWorkerOnlyView } from "../lib/roles";
+import { isWorkerOnlyView, hasStaffRole } from "../lib/roles";
 
 type Step = "phone" | "pin";
 type EmailMode = "login" | "register" | "forgot";
@@ -54,7 +54,8 @@ export function LoginPage() {
   const [forgotSent, setForgotSent] = useState(false);
 
   if (staffMember) {
-    const dest = isWorkerOnlyView(staffMember.roles) ? "/reception" : redirectAfterLogin;
+    const toReception = isWorkerOnlyView(staffMember.roles) || hasStaffRole(staffMember, "reception");
+    const dest = toReception ? "/reception" : redirectAfterLogin;
     return <Navigate to={dest} replace />;
   }
   /* Пока AuthContext пробует автологин по device_token — не показываем форму,

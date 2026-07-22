@@ -15,13 +15,16 @@ type Props = {
   holidays: string[]; // "YYYY-MM-DD"
   /** Manager/admin/reception may add ANY master; a worker may add only themselves. */
   canManageAll?: boolean;
+  /** Removing a work day (and the holiday switch) is manager/admin only. Reception
+   *  and workers are add-only. */
+  canDelete?: boolean;
   /** Logged-in staff id — used to restrict a worker to their own schedule. */
   selfStaffId?: string | null;
   onClose: () => void;
   onSaved: () => void;
 };
 
-export function AdminDaySchedulePopup({ day, anchorX, anchorY, allStaff, workDates, holidays, canManageAll = true, selfStaffId = null, onClose, onSaved }: Props) {
+export function AdminDaySchedulePopup({ day, anchorX, anchorY, allStaff, workDates, holidays, canManageAll = true, canDelete = true, selfStaffId = null, onClose, onSaved }: Props) {
   const { t, i18n } = useTranslation();
   // Workers see and toggle only their own row; no salon-wide holiday switch.
   const visibleStaff = canManageAll ? allStaff : allStaff.filter((m) => m.id === selfStaffId);
@@ -77,6 +80,8 @@ export function AdminDaySchedulePopup({ day, anchorX, anchorY, allStaff, workDat
   async function toggle(staffId: string, isWorking: boolean) {
     // Defensive: a worker can only ever toggle their own row.
     if (!canManageAll && staffId !== selfStaffId) return;
+    // Add-only for reception & workers: removing a work day is manager/admin only.
+    if (isWorking && !canDelete) return;
     setSaving(staffId);
     if (isWorking) {
       const row = workDates.find((r) => r.staff_id === staffId && r.work_date === dateStr);
@@ -110,8 +115,8 @@ export function AdminDaySchedulePopup({ day, anchorX, anchorY, allStaff, workDat
           </button>
         </div>
 
-        {/* Holiday toggle — only for managers/admin/reception, not line staff */}
-        {canManageAll && (
+        {/* Holiday toggle — only managers/admin (not reception, not line staff) */}
+        {canDelete && (
         <div className={`border-b border-line/15 px-4 py-3 ${isHoliday ? "bg-rose-500/10" : ""}`}>
           <button
             type="button"
@@ -167,7 +172,8 @@ export function AdminDaySchedulePopup({ day, anchorX, anchorY, allStaff, workDat
                 <input
                   type="checkbox"
                   checked={isWorking}
-                  disabled={isLoading}
+                  disabled={isLoading || (isWorking && !canDelete)}
+                  title={isWorking && !canDelete ? "Убрать день может только менеджер" : undefined}
                   onChange={() => { void toggle(m.id, isWorking); }}
                   className="h-4 w-4 accent-[#1a73e8]"
                 />

@@ -13,7 +13,7 @@ import {
   subMonths,
 } from "date-fns";
 import { supabase } from "../lib/supabase";
-import { isStaffRowAdmin, normalizeStaffMember } from "../lib/roles";
+import { isStaffRowAdmin, isReceptionRow, normalizeStaffMember } from "../lib/roles";
 import type { SalonHolidayRow, StaffMember, StaffWorkDateRow } from "../types/database";
 import { AdminDaySchedulePopup } from "../components/reception/AdminDaySchedulePopup";
 import { googleStaffColor } from "../components/reception/receptionColors";
@@ -89,7 +89,7 @@ export function AdminSchedulePage() {
     if (staffRes.data) {
       setStaff(
         (staffRes.data as Record<string, unknown>[])
-          .filter((r) => !isStaffRowAdmin(r))
+          .filter((r) => !isStaffRowAdmin(r) && !isReceptionRow(r))
           .map((r) => normalizeStaffMember(r as StaffMember)),
       );
     }
