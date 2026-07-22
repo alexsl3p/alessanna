@@ -7,6 +7,7 @@ import { loadServicesCatalog } from "../lib/loadServicesCatalog";
 import { isStaffRowAdmin, normalizeStaffMember } from "../lib/roles";
 import { useTheme } from "../context/ThemeContext";
 import { useEffectiveRole } from "../context/EffectiveRoleContext";
+import { useAuth } from "../context/AuthContext";
 import { ReceptionSidebar } from "../components/reception/ReceptionSidebar";
 import { ReceptionWeekGrid } from "../components/reception/ReceptionWeekGrid";
 import { ReceptionMonthView } from "../components/reception/ReceptionMonthView";
@@ -45,6 +46,7 @@ export function ReceptionCalendarPage() {
   const { theme } = useTheme();
   const dark = theme === "onyx" || theme === "stone";
   const { canManage } = useEffectiveRole();
+  const { staffMember } = useAuth();
   const [view, setView] = useState<View>("week");
 
   useEffect(() => {
@@ -437,7 +439,7 @@ export function ReceptionCalendarPage() {
                 onSlotClick={handleSlotClick}
                 onApptClick={handleApptClick}
                 onApptResize={handleApptResize}
-                onDayHeaderClick={view === "week" && canManage ? handleDayHeaderClick : undefined}
+                onDayHeaderClick={view === "week" ? handleDayHeaderClick : undefined}
                 dark={dark}
                 birthdayMap={birthdayMap}
               />
@@ -484,6 +486,8 @@ export function ReceptionCalendarPage() {
           allStaff={staff}
           workDates={workDates}
           holidays={holidays.map((h) => h.holiday_date)}
+          canManageAll={canManage}
+          selfStaffId={staffMember?.id ?? null}
           onClose={() => setDayPopup(null)}
           onSaved={() => { void load(); }}
         />

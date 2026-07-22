@@ -13,12 +13,18 @@ type Props = {
   allStaff: StaffMember[];
   workDates: StaffWorkDateRow[];
   holidays: string[]; // "YYYY-MM-DD"
+  /** Manager/admin/reception may add ANY master; a worker may add only themselves. */
+  canManageAll?: boolean;
+  /** Logged-in staff id — used to restrict a worker to their own schedule. */
+  selfStaffId?: string | null;
   onClose: () => void;
   onSaved: () => void;
 };
 
-export function AdminDaySchedulePopup({ day, anchorX, anchorY, allStaff, workDates, holidays, onClose, onSaved }: Props) {
+export function AdminDaySchedulePopup({ day, anchorX, anchorY, allStaff, workDates, holidays, canManageAll = true, selfStaffId = null, onClose, onSaved }: Props) {
   const { t, i18n } = useTranslation();
+  // Workers see and toggle only their own row; no salon-wide holiday switch.
+  const visibleStaff = canManageAll ? allStaff : allStaff.filter((m) => m.id === selfStaffId);
   const [saving, setSaving] = useState<string | null>(null);
   const [savingHoliday, setSavingHoliday] = useState(false);
   // Optimistic state: null = use server value, true/false = pending DB write
@@ -69,6 +75,8 @@ export function AdminDaySchedulePopup({ day, anchorX, anchorY, allStaff, workDat
   }
 
   async function toggle(staffId: string, isWorking: boolean) {
+    // Defensive: a worker can only ever toggle their own row.
+    if (!canManageAll && staffId !== selfStaffId) return;
     setSaving(staffId);
     if (isWorking) {
       const row = workDates.find((r) => r.staff_id === staffId && r.work_date === dateStr);
@@ -102,7 +110,8 @@ export function AdminDaySchedulePopup({ day, anchorX, anchorY, allStaff, workDat
           </button>
         </div>
 
-        {/* Holiday toggle */}
+        {/* Holiday toggle — only for managers/admin/reception, not line staff */}
+        {canManageAll && (
         <div className={`border-b border-line/15 px-4 py-3 ${isHoliday ? "bg-rose-500/10" : ""}`}>
           <button
             type="button"
@@ -136,13 +145,17 @@ export function AdminDaySchedulePopup({ day, anchorX, anchorY, allStaff, workDat
             {savingHoliday && <span className="text-[10px] text-muted">…</span>}
           </button>
         </div>
+        )}
 
         {/* Staff list */}
         <div className="px-1 py-2">
           <p className="px-3 pb-1 text-[11px] font-medium uppercase tracking-wide text-muted">
             {t("reception.worksOn")} {day.toLocaleString(uiLocale, { day: "numeric", month: "long" })}
           </p>
-          {allStaff.map((m) => {
+          {visibleStaff.length === 0 && (
+            <p className="px-3 py-2 text-sm text-muted">—</p>
+          )}
+          {visibleStaff.map((m) => {
             const isWorking = workDates.some((r) => r.staff_id === m.id && r.work_date === dateStr);
             const isLoading = saving === m.id;
             const c = googleStaffColor(m, hueMap);
