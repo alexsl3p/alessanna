@@ -13,22 +13,24 @@ type Props = {
   allStaff: StaffMember[];
   workDates: StaffWorkDateRow[];
   holidays: string[]; // "YYYY-MM-DD"
-  /** Manager/admin/reception may add ANY master; a worker may add only themselves. */
+  /** Manager/admin/reception manage ANY master; a worker manages only themselves. */
   canManageAll?: boolean;
-  /** Removing a work day (and the holiday switch) is manager/admin only. Reception
-   *  and workers are add-only. */
+  /** Removing a work day within the allowed staff scope. */
   canDelete?: boolean;
+  /** Salon-wide holidays remain a separate manager/admin permission. */
+  canManageHolidays?: boolean;
   /** Logged-in staff id — used to restrict a worker to their own schedule. */
   selfStaffId?: string | null;
   onClose: () => void;
   onSaved: () => void;
 };
 
-export function AdminDaySchedulePopup({ day, anchorX, anchorY, allStaff, workDates, holidays, canManageAll = true, canDelete = true, selfStaffId = null, onClose, onSaved }: Props) {
+export function AdminDaySchedulePopup({ day, anchorX, anchorY, allStaff, workDates, holidays, canManageAll = true, canDelete = true, canManageHolidays = false, selfStaffId = null, onClose, onSaved }: Props) {
   const { t, i18n } = useTranslation();
   // Workers see and toggle only their own row; no salon-wide holiday switch.
   const visibleStaff = canManageAll ? allStaff : allStaff.filter((m) => m.id === selfStaffId);
   const [saving, setSaving] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState(false);
   const [savingHoliday, setSavingHoliday] = useState(false);
   // Optimistic state: null = use server value, true/false = pending DB write
   const [optimisticHoliday, setOptimisticHoliday] = useState<boolean | null>(null);
@@ -61,6 +63,7 @@ export function AdminDaySchedulePopup({ day, anchorX, anchorY, allStaff, workDat
   }, [onClose]);
 
   async function toggleHoliday() {
+    if (!canManageHolidays) return;
     const next = !isHoliday;
     setOptimisticHoliday(next); // instant visual feedback — no flicker on refresh
     setSavingHoliday(true);
@@ -80,17 +83,21 @@ export function AdminDaySchedulePopup({ day, anchorX, anchorY, allStaff, workDat
   async function toggle(staffId: string, isWorking: boolean) {
     // Defensive: a worker can only ever toggle their own row.
     if (!canManageAll && staffId !== selfStaffId) return;
-    // Add-only for reception & workers: removing a work day is manager/admin only.
     if (isWorking && !canDelete) return;
+    if (saving !== null) return;
     setSaving(staffId);
-    if (isWorking) {
-      const row = workDates.find((r) => r.staff_id === staffId && r.work_date === dateStr);
-      if (row) await supabase.from("staff_work_dates").delete().eq("id", row.id);
-    } else {
-      await supabase.from("staff_work_dates").insert({ staff_id: staffId, work_date: dateStr });
+    setSaveError(false);
+    try {
+      const { error } = isWorking
+        ? await supabase.from("staff_work_dates").delete().eq("staff_id", staffId).eq("work_date", dateStr)
+        : await supabase.from("staff_work_dates").insert({ staff_id: staffId, work_date: dateStr });
+      if (error) throw error;
+      onSaved();
+    } catch {
+      setSaveError(true);
+    } finally {
+      setSaving(null);
     }
-    setSaving(null);
-    onSaved();
   }
 
   return (
@@ -116,7 +123,7 @@ export function AdminDaySchedulePopup({ day, anchorX, anchorY, allStaff, workDat
         </div>
 
         {/* Holiday toggle — only managers/admin (not reception, not line staff) */}
-        {canDelete && (
+        {canManageHolidays && (
         <div className={`border-b border-line/15 px-4 py-3 ${isHoliday ? "bg-rose-500/10" : ""}`}>
           <button
             type="button"
@@ -154,6 +161,11 @@ export function AdminDaySchedulePopup({ day, anchorX, anchorY, allStaff, workDat
 
         {/* Staff list */}
         <div className="px-1 py-2">
+          {saveError && (
+            <p role="alert" className="px-3 pb-2 text-sm text-rose-500">
+              {t("reception.scheduleSaveError")}
+            </p>
+          )}
           <p className="px-3 pb-1 text-[11px] font-medium uppercase tracking-wide text-muted">
             {t("reception.worksOn")} {day.toLocaleString(uiLocale, { day: "numeric", month: "long" })}
           </p>
@@ -172,7 +184,7 @@ export function AdminDaySchedulePopup({ day, anchorX, anchorY, allStaff, workDat
                 <input
                   type="checkbox"
                   checked={isWorking}
-                  disabled={isLoading || (isWorking && !canDelete)}
+                  disabled={saving !== null || (isWorking && !canDelete)}
                   title={isWorking && !canDelete ? "Убрать день может только менеджер" : undefined}
                   onChange={() => { void toggle(m.id, isWorking); }}
                   className="h-4 w-4 accent-[#1a73e8]"

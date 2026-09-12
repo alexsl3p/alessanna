@@ -73,7 +73,7 @@ function staffTableRowToMember(raw: Record<string, unknown>): StaffMember {
     name: String(raw.name ?? ""),
     phone: raw.phone != null ? String(raw.phone) : null,
     is_active: raw.is_active,
-    role: raw.role ?? raw.roles,
+    roles: raw.roles ?? raw.role,
   } as unknown as StaffMember);
 }
 

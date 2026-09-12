@@ -467,6 +467,7 @@
     "groupOther": "Muu"
   },
   "reception": {
+    "scheduleSaveError": "Graafiku muutmine ebaõnnestus. Proovi uuesti.",
     "loginTitle": "Töötaja sisselogimine",
     "sessionRole": "Seanss",
     "quickStaff": "Meister vahetuses",

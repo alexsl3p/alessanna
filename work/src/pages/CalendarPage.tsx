@@ -493,6 +493,7 @@ export function CalendarPage() {
           allStaff={activeStaffForCalendar}
           workDates={workDates}
           holidays={[]}
+          canManageHolidays={canManage}
           onClose={() => setDayPopup(null)}
           onSaved={() => { void load(); }}
         />

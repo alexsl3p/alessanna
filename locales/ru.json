@@ -466,6 +466,7 @@
     "groupOther": "Прочее"
   },
   "reception": {
+    "scheduleSaveError": "Не удалось изменить график. Попробуйте ещё раз.",
     "loginTitle": "Вход сотрудника",
     "sessionRole": "Сессия",
     "quickStaff": "Мастер на смене",

@@ -48,10 +48,9 @@ export function ReceptionCalendarPage() {
   const { canManage } = useEffectiveRole();
   const { staffMember } = useAuth();
   const isReception = hasStaffRole(staffMember, "reception");
-  // Who may add ANY master to the schedule: managers/admin + the reception account.
-  // Who may REMOVE a work day: only managers/admin (reception & workers are add-only).
+  // Reception and managers manage all masters; workers manage their own days.
   const canScheduleAll = canManage || isReception;
-  const canScheduleDelete = canManage;
+  const canScheduleDelete = canScheduleAll || hasStaffRole(staffMember, "worker");
   const [view, setView] = useState<View>("week");
 
   useEffect(() => {
@@ -444,7 +443,7 @@ export function ReceptionCalendarPage() {
                 onSlotClick={handleSlotClick}
                 onApptClick={handleApptClick}
                 onApptResize={handleApptResize}
-                onDayHeaderClick={view === "week" ? handleDayHeaderClick : undefined}
+                onDayHeaderClick={handleDayHeaderClick}
                 dark={dark}
                 birthdayMap={birthdayMap}
               />
@@ -493,6 +492,7 @@ export function ReceptionCalendarPage() {
           holidays={holidays.map((h) => h.holiday_date)}
           canManageAll={canScheduleAll}
           canDelete={canScheduleDelete}
+          canManageHolidays={canManage}
           selfStaffId={staffMember?.id ?? null}
           onClose={() => setDayPopup(null)}
           onSaved={() => { void load(); }}
