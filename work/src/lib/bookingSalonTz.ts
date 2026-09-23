@@ -2,6 +2,11 @@
 
 export const SALON_TIME_ZONE = "Europe/Tallinn";
 
+/** Рабочие часы салона по местному календарному дню (воскресенье = 0). */
+export function salonOpeningHours(weekdaySun0: number): { start: string; end: string } {
+  return { start: "10:00", end: weekdaySun0 === 6 ? "16:00" : "18:00" };
+}
+
 function isLeapYear(y: number): boolean {
   return (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
 }
