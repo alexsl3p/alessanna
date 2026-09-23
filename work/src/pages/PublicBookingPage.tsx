@@ -25,6 +25,7 @@ import {
   salonCalendarYmd,
   salonDayStartUtc,
   salonFirstBookableYmd,
+  salonOpeningHours,
   salonWeekdaySun0,
   salonYmdFromAnyDate,
   SALON_TIME_ZONE,
@@ -520,7 +521,8 @@ export function PublicBookingPage() {
         out.set(member.id, []);
         continue;
       }
-      const syntheticSchedule: WeeklyScheduleLike[] = [{ day_of_week: wd, start_time: "10:00", end_time: "18:00" }];
+      const hours = salonOpeningHours(wd);
+      const syntheticSchedule: WeeklyScheduleLike[] = [{ day_of_week: wd, start_time: hours.start, end_time: hours.end }];
       const rawSlots = generateAvailableSlots({
         schedule: syntheticSchedule,
         appointments,
@@ -631,7 +633,8 @@ export function PublicBookingPage() {
         const worksThisDay = workDates.some((d) => d.staff_id === m.id && d.work_date === key);
         if (!worksThisDay) continue;
         working++;
-        const syntheticSchedule: WeeklyScheduleLike[] = [{ day_of_week: weekday, start_time: "10:00", end_time: "18:00" }];
+        const hours = salonOpeningHours(weekday);
+        const syntheticSchedule: WeeklyScheduleLike[] = [{ day_of_week: weekday, start_time: hours.start, end_time: hours.end }];
         const rawSlotsForDay = generateAvailableSlots({
           schedule: syntheticSchedule,
           appointments: calendarRangeAppointments,
@@ -778,7 +781,8 @@ export function PublicBookingPage() {
   const mastersByColumn = useMemo(() => {
     const mapRow = (m: StaffMember): MasterDayRow => {
       const worksToday = workDates.some((d) => d.staff_id === m.id && d.work_date === bookYmd);
-      const workTime = worksToday ? "10:00–18:00" : "выходной";
+      const hours = salonOpeningHours(salonWeekdaySun0(bookYmd));
+      const workTime = worksToday ? `${hours.start}–${hours.end}` : "выходной";
       const staffSlots = slotsByStaff.get(m.id) ?? [];
       const freeSlots = staffSlots.length;
       const freeMinutesUnion = quickBookMergedFreeMinutes(staffSlots, nowTick);

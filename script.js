@@ -3720,7 +3720,7 @@
       });
       var out = [];
       var openMin = 600;  // 10:00
-      var closeMin = 1080; // 18:00
+      var closeMin = supaWeekdaySun0(ymd) === 6 ? 960 : 1080; // суббота 16:00, остальные дни 18:00
       for (var min = openMin; min + ctx.duration <= closeMin; min += 30) {
         if (ymd === now.dateKey && min <= now.minutes) continue;
         var sMs = dayStart + min * 60000;
