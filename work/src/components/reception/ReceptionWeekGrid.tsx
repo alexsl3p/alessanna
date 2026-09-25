@@ -45,7 +45,12 @@ type ApptLayout = {
 
 function computeOverlapLayout(appts: AppointmentRow[]): ApptLayout[] {
   const sorted = [...appts].sort(
-    (a, b) => parseISO(a.start_time).getTime() - parseISO(b.start_time).getTime(),
+    (a, b) =>
+      parseISO(a.start_time).getTime() - parseISO(b.start_time).getTime() ||
+      // Equal start times must not inherit the database response order: a
+      // refresh after saving another day can otherwise swap their columns.
+      parseISO(b.end_time).getTime() - parseISO(a.end_time).getTime() ||
+      a.id.localeCompare(b.id),
   );
   const colEnds: Date[] = [];
   const colAssignments: number[] = [];
