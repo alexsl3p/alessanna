@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { addDays, addMonths, addWeeks, subDays, startOfWeek, subMonths, subWeeks } from "date-fns";
+import { addDays, addMonths, addWeeks, subDays, startOfWeek, startOfMonth, subMonths, subWeeks } from "date-fns";
 import { supabase } from "../lib/supabase";
 import { useCalendarDataRealtime } from "../hooks/useSalonRealtime";
 import { loadServicesCatalog } from "../lib/loadServicesCatalog";
@@ -114,10 +114,19 @@ export function ReceptionCalendarPage() {
   }, []);
 
   const load = useCallback(async () => {
+    // PostgREST caps an unbounded SELECT at 1000 rows. Once the salon has more
+    // bookings than that, newly saved appointments disappear from the calendar.
+    // Fetch the displayed period (with one day of padding for time zones).
+    const periodStart = view === "month" ? startOfMonth(cursor) : startOfWeek(cursor, { weekStartsOn: 1 });
+    const periodEnd = view === "month" ? startOfMonth(addMonths(cursor, 1)) : addDays(periodStart, 7);
     const [st, to, ap, svCatalog, ss, wd, hol, cl] = await Promise.all([
       supabase.from("staff").select("*").eq("is_active", true).order("name"),
       supabase.from("staff_time_off").select("*"),
-      supabase.from("appointments").select("*").neq("status", "cancelled"),
+      supabase.from("appointments").select("*")
+        .neq("status", "cancelled")
+        .gte("start_time", subDays(periodStart, 1).toISOString())
+        .lt("start_time", addDays(periodEnd, 1).toISOString())
+        .order("start_time"),
       loadServicesCatalog({ activeOnly: true }),
       supabase.from("staff_services").select("*"),
       supabase.from("staff_work_dates").select("*"),
@@ -143,7 +152,7 @@ export function ReceptionCalendarPage() {
     if (cl.data) setClientBirthdays(cl.data as { id: string; name: string; last_name: string | null; birthday: string }[]);
     setServices(svCatalog);
     setLoading(false);
-  }, []);
+  }, [cursor, view]);
 
   useEffect(() => { void load(); }, [load]);
   useCalendarDataRealtime(load);
@@ -477,7 +486,13 @@ export function ReceptionCalendarPage() {
           links={staffServiceLinks}
           workDates={workDates}
           editAppt={popup.editAppt ?? null}
-          onSave={() => { setPopup(null); void load(); }}
+          onSave={(start, staffId) => {
+            setPopup(null);
+            setVisibleStaffIds((prev) => new Set(prev).add(staffId));
+            setCursor(start);
+            if (view === "month") setView("day");
+            else if (cursor.getTime() === start.getTime()) void load();
+          }}
           onClose={() => setPopup(null)}
         />
       )}

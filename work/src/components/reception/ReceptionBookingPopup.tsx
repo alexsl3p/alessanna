@@ -25,7 +25,7 @@ type Props = {
   services: ServiceRow[];
   links: StaffServiceRow[];
   workDates: StaffWorkDateRow[];
-  onSave: () => void;
+  onSave: (start: Date, staffId: string) => void;
   onClose: () => void;
   editAppt?: AppointmentRow | null;
 };
@@ -284,10 +284,11 @@ export function ReceptionBookingPopup({
     const payload = isBlock
       ? { client_name: clientName.trim() || "— Закрыто —", client_phone: null as null, note: blockType, source: "reception" as const, created_by_staff_id: staffMember?.id ?? null, staff_id: staffId, service_id: null as null, start_time: start.toISOString(), end_time: end.toISOString(), status: "confirmed" as const }
       : { client_id: resolvedClientId, client_name: normalizedClientName, client_phone: clientPhone.trim() || null, client_email: clientEmail.trim() || null, note: staffNote.trim() || null, source: "reception", created_by_staff_id: staffMember?.id ?? null, staff_id: staffId, service_id: svc!.id, start_time: start.toISOString(), end_time: end.toISOString(), status: "confirmed" as const };
-    const { error: writeErr } = isEdit
-      ? await supabase.from("appointments").update(payload).eq("id", editAppt!.id)
-      : await supabase.from("appointments").insert(payload);
+    const { error: writeErr, data: saved } = isEdit
+      ? await supabase.from("appointments").update(payload).eq("id", editAppt!.id).select("id").single()
+      : await supabase.from("appointments").insert(payload).select("id").single();
     if (writeErr) { setSaving(false); setError(writeErr.message); return; }
+    if (!saved) { setSaving(false); setError(t("reception.scheduleSaveError")); return; }
 
     // Website ("chain") bookings also write per-service rows into
     // appointment_services, and the availability guard (public_staff_busy_during)
@@ -319,7 +320,7 @@ export function ReceptionBookingPopup({
       }
     }
     setSaving(false);
-    onSave();
+    onSave(start, staffId);
   }
 
   async function handleDelete() {
@@ -329,7 +330,7 @@ export function ReceptionBookingPopup({
     const { error: delErr } = await supabase.from("appointments").delete().eq("id", editAppt.id);
     setSaving(false);
     if (delErr) { setError(delErr.message); return; }
-    onSave();
+    onSave(new Date(editAppt.start_time), editAppt.staff_id);
   }
 
   // Theme-aware style helpers
