@@ -40,6 +40,52 @@
       border-radius:14px;transition:background .2s,border-color .2s,transform .1s}
     .lang-gate__btn:hover{background:rgba(197,168,116,.14);border-color:#c5a874}
     .lang-gate__btn:active{transform:scale(.98)}
+
+    /* Pensioner haircut promotion — approved 2026-10 */
+    .senior-promo{position:relative;isolation:isolate;padding:72px 0 78px;overflow:hidden;background:radial-gradient(circle at 80% 15%,rgba(196,165,116,.11),transparent 27%),radial-gradient(circle at 22% 90%,rgba(196,165,116,.055),transparent 32%),#0a0a0a}
+    .senior-promo::before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.02) 45%,transparent 70%);pointer-events:none}
+    .senior-promo__wrap{width:min(1080px,88vw);margin:auto;position:relative}
+    .senior-promo__card{position:relative;overflow:hidden;border:1px solid rgba(196,165,116,.22);background:linear-gradient(135deg,rgba(20,20,20,.98),rgba(12,12,12,.985));box-shadow:0 24px 64px rgba(0,0,0,.38);display:grid;grid-template-columns:1.16fr .84fr;min-height:400px}
+    .senior-promo__card::after{content:"";position:absolute;inset:14px;border:1px solid rgba(212,184,150,.08);pointer-events:none}
+    .senior-promo__copy{padding:62px 66px 58px;display:flex;flex-direction:column;justify-content:center;position:relative;z-index:2}
+    .senior-promo__kicker{display:flex;align-items:center;gap:14px;color:#d4b896;font:600 11px/1.4 "Inter",system-ui,sans-serif;letter-spacing:.24em;text-transform:uppercase;margin-bottom:22px}
+    .senior-promo__kicker::before{content:"";width:36px;height:1px;background:#c4a574;flex:0 0 auto}
+    .senior-promo__title{font-family:"Cormorant Garamond","Playfair Display",Georgia,serif;font-size:clamp(52px,6vw,82px);font-weight:400;line-height:.92;letter-spacing:-.035em;margin:0 0 18px;max-width:650px;color:#ecece8}
+    .senior-promo__title strong{color:#d4b896;font-weight:400;white-space:nowrap}
+    .senior-promo__lead{max-width:570px;margin:0;color:#b9b6b0;font:300 17px/1.7 "Inter",system-ui,sans-serif}
+    .senior-promo__lead strong{color:#ecece8;font-weight:500}
+    .senior-promo__actions{display:flex;align-items:center;gap:18px;margin-top:34px;flex-wrap:wrap}
+    .senior-promo__btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 26px;border:1px solid #d4b896;background:linear-gradient(180deg,#d4b896,#b99a6b);color:#16110d!important;font:650 12px/1 "Inter",system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;text-decoration:none;transition:transform .25s ease,filter .25s ease}
+    .senior-promo__btn:hover{color:#16110d!important;transform:translateY(-1px);filter:brightness(1.05)}
+    .senior-promo__note{color:#6f6c67;font:300 12px/1.55 "Inter",system-ui,sans-serif;max-width:360px}
+    .senior-promo__dates{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:54px 42px;border-left:1px solid rgba(255,255,255,.06);background:linear-gradient(180deg,rgba(196,165,116,.05),rgba(196,165,116,.01));z-index:1}
+    .senior-promo__dates::before{content:"40";position:absolute;right:-18px;top:-36px;font-family:"Cormorant Garamond","Playfair Display",Georgia,serif;font-size:250px;line-height:1;color:rgba(196,165,116,.035);pointer-events:none}
+    .senior-promo__discount{font-family:"Cormorant Garamond","Playfair Display",Georgia,serif;font-size:94px;line-height:.9;font-weight:400;color:#d4b896;letter-spacing:-.055em;margin-bottom:16px;text-shadow:0 0 30px rgba(196,165,116,.06)}
+    .senior-promo__discount sup{font-size:.35em;vertical-align:top;position:relative;top:.18em;margin-left:4px;letter-spacing:0}
+    .senior-promo__for{color:#9a958d;font:400 11px/1.4 "Inter",system-ui,sans-serif;letter-spacing:.22em;text-transform:uppercase;margin-bottom:30px;text-align:center}
+    .senior-promo__monthly{color:#5e5b56;font:400 11px/1.4 "Inter",system-ui,sans-serif;letter-spacing:.18em;text-transform:uppercase;margin-bottom:12px;text-align:center}
+    .senior-promo__date-row{display:flex;gap:9px;flex-wrap:wrap;justify-content:center}
+    .senior-promo__date{width:58px;height:58px;border:1px solid rgba(212,184,150,.36);display:grid;place-items:center;font-family:"Cormorant Garamond","Playfair Display",Georgia,serif;font-size:27px;color:#e7dfd1;background:rgba(255,255,255,.015)}
+    .senior-promo__rule{width:52px;height:1px;background:linear-gradient(90deg,transparent,#c4a574,transparent);margin:30px auto 0}
+    .senior-promo [data-promo-lang]{display:none}
+    .senior-promo[data-promo-language="ru"] [data-promo-lang="ru"],.senior-promo[data-promo-language="et"] [data-promo-lang="et"],.senior-promo[data-promo-language="en"] [data-promo-lang="en"]{display:revert}
+    @media(max-width:760px){
+      .senior-promo{padding:46px 0}
+      .senior-promo__card{grid-template-columns:1fr}
+      .senior-promo__copy{padding:44px 30px 34px}
+      .senior-promo__dates{border-left:0;border-top:1px solid rgba(255,255,255,.06);padding:40px 24px 44px}
+      .senior-promo__discount{font-size:80px}
+      .senior-promo__title{font-size:52px}
+      .senior-promo__date{width:52px;height:52px}
+      .senior-promo__actions{align-items:flex-start;flex-direction:column}
+    }
+    @media(max-width:430px){
+      .senior-promo__copy{padding:40px 24px 30px}
+      .senior-promo__title{font-size:44px}
+      .senior-promo__lead{font-size:15px}
+      .senior-promo__date{width:49px;height:49px;font-size:25px}
+      .senior-promo__dates{padding-inline:18px}
+    }
   </style>
   <link rel="canonical" href="https://alessannailu.com/ru/" />
   <link rel="icon" href="/assets/alessanna-logo-transparent.png" type="image/png" />
@@ -188,6 +234,72 @@
           <strong data-selected-master-display hidden>—</strong>
         </div>
       </div>
+    </section>
+
+    <!-- Ежемесячная акция для пенсионеров -->
+    <section class="senior-promo" id="pensionar-promo" aria-label="Pensioner haircut promotion" data-promo-language="ru">
+      <div class="senior-promo__wrap">
+        <div class="senior-promo__card reveal">
+          <div class="senior-promo__copy">
+            <div class="senior-promo__kicker">
+              <span data-promo-lang="ru">Дни заботы</span>
+              <span data-promo-lang="et">Hoolivuse päevad</span>
+              <span data-promo-lang="en">Care days</span>
+            </div>
+            <h2 class="senior-promo__title">
+              <span data-promo-lang="ru">Особая цена для <strong>пенсионеров</strong></span>
+              <span data-promo-lang="et">Eripakkumine <strong>pensionäridele</strong></span>
+              <span data-promo-lang="en">Special price for <strong>pensioners</strong></span>
+            </h2>
+            <p class="senior-promo__lead">
+              <span data-promo-lang="ru"><strong>Каждый месяц 6, 7, 26 и 27 числа</strong> — скидка на стрижку без укладки и без мытья головы.</span>
+              <span data-promo-lang="et"><strong>Iga kuu 6., 7., 26. ja 27. kuupäeval</strong> — soodustus juukselõikusele ilma soengusse seadmise ja juuste pesuta.</span>
+              <span data-promo-lang="en"><strong>On the 6th, 7th, 26th and 27th of every month</strong> — a discount on a haircut without styling or hair washing.</span>
+            </p>
+            <div class="senior-promo__actions">
+              <a class="senior-promo__btn" href="#broneeri">
+                <span data-promo-lang="ru">Записаться</span>
+                <span data-promo-lang="et">Broneeri aeg</span>
+                <span data-promo-lang="en">Book now</span>
+              </a>
+              <div class="senior-promo__note">
+                <span data-promo-lang="ru">Акция действует для пенсионеров только на услугу стрижки без укладки и мытья головы.</span>
+                <span data-promo-lang="et">Pakkumine kehtib pensionäridele ainult juukselõikusele ilma soengusse seadmise ja juuste pesuta.</span>
+                <span data-promo-lang="en">The offer is for pensioners and applies only to a haircut without styling or hair washing.</span>
+              </div>
+            </div>
+          </div>
+          <div class="senior-promo__dates">
+            <div class="senior-promo__discount">−40<sup>%</sup></div>
+            <div class="senior-promo__for">
+              <span data-promo-lang="ru">на стрижку</span>
+              <span data-promo-lang="et">juukselõikusele</span>
+              <span data-promo-lang="en">on a haircut</span>
+            </div>
+            <div class="senior-promo__monthly">
+              <span data-promo-lang="ru">каждый месяц</span>
+              <span data-promo-lang="et">iga kuu</span>
+              <span data-promo-lang="en">every month</span>
+            </div>
+            <div class="senior-promo__date-row" aria-label="6, 7, 26, 27">
+              <div class="senior-promo__date">6</div>
+              <div class="senior-promo__date">7</div>
+              <div class="senior-promo__date">26</div>
+              <div class="senior-promo__date">27</div>
+            </div>
+            <div class="senior-promo__rule" aria-hidden="true"></div>
+          </div>
+        </div>
+      </div>
+      <script>
+      (function(){
+        var el=document.getElementById("pensionar-promo");
+        if(!el)return;
+        var lang=(location.pathname.split("/").filter(Boolean)[0]||document.documentElement.lang||"ru").toLowerCase().slice(0,2);
+        if(["ru","et","en"].indexOf(lang)<0)lang="ru";
+        el.setAttribute("data-promo-language",lang);
+      })();
+      </script>
     </section>
 
     <!-- Сложные техники окрашивания — только по предварительной записи -->
