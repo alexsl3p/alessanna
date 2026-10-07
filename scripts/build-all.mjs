@@ -90,8 +90,15 @@ for (const f of [
   "site-builder.mjs", "site-admin-preview.mjs",
 ]) cp(f);
 
-// Language sub-sites
-for (const d of ["ru", "et", "en"]) cpDir(d);
+// Language sub-sites. Keep any language-specific companion files, but always
+// use the current root index.html as the page source so /ru/, /et/, /en/ cannot
+// drift away from the live landing page after a frontend change.
+for (const d of ["ru", "et", "en"]) {
+  cpDir(d);
+  const langDir = path.join(dist, d);
+  fs.mkdirSync(langDir, { recursive: true });
+  fs.copyFileSync(path.join(root, "index.html"), path.join(langDir, "index.html"));
+}
 
 // Shared directories
 cpDir("assets");
