@@ -67,6 +67,16 @@ function parseStored(): StaffMember | null {
   }
 }
 
+async function isStaffActive(staffId: string): Promise<boolean | null> {
+  const { data, error } = await supabase
+    .from("staff")
+    .select("is_active")
+    .eq("id", staffId)
+    .maybeSingle();
+  if (error) return null;
+  return data?.is_active === true;
+}
+
 function staffTableRowToMember(raw: Record<string, unknown>): StaffMember {
   return normalizeStaffMember({
     id: String(raw.id),
@@ -115,15 +125,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const token = readDeviceToken();
       setHasDeviceToken(Boolean(token));
 
-      /* Если уже есть сохранённый staffMember — значит прошлую сессию завершали
-       * корректно (например, пользователь свернул и открыл вкладку заново).
-       * Не лезем в сеть, показываем мгновенно. */
+      /* Сохранённый профиль не является доказательством действующего доступа:
+       * сотрудника могли деактивировать после последнего открытия вкладки. */
       if (stored) {
-        if (!cancelled) {
+        let active: boolean | null = null;
+        if (isSupabaseConfigured()) {
+          try { active = await isStaffActive(stored.id); } catch { /* fail closed */ }
+        }
+        if (cancelled) return;
+        if (active === true) {
           setStaffMember(stored);
           setLoading(false);
+          return;
         }
-        return;
+        localStorage.removeItem(STORAGE_KEY);
       }
 
       /* staffMember нет, но есть доверенное устройство → пробуем автологин.
@@ -193,6 +208,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!staffMember || !isSupabaseConfigured()) return;
+    let stopped = false;
+    let checking = false;
+    const checkAccess = async () => {
+      if (checking || stopped) return;
+      checking = true;
+      try {
+        const active = await isStaffActive(staffMember.id);
+        if (active === false && !stopped) {
+          localStorage.removeItem(STORAGE_KEY);
+          setStaffMember(null);
+          setReceptionMode(false);
+          void supabaseAuth.auth.signOut({ scope: "local" });
+        }
+      } catch { /* A transient network error should not sign out an active worker. */ }
+      finally { checking = false; }
+    };
+    const onVisible = () => { if (document.visibilityState === "visible") void checkAccess(); };
+    void checkAccess();
+    const interval = window.setInterval(() => void checkAccess(), 60_000);
+    window.addEventListener("focus", checkAccess);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      stopped = true;
+      window.clearInterval(interval);
+      window.removeEventListener("focus", checkAccess);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [staffMember?.id]);
 
   const login = useCallback(async (input: LoginInput | string): Promise<LoginResult> => {
     const normalized: LoginInput = typeof input === "string" ? { phone: input } : input;
