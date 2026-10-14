@@ -136,6 +136,7 @@ export function CommandPalette({
    * фильтруется ниже по canManage / isAdmin. */
   const allItems: CommandItem[] = useMemo(
     () => [
+      { id: "go./admin/reviews", label: t("nav.adminReviews"), group: "go", icon: ICON.support, adminOnly: true, perform: ({ navigate, close }) => { navigate("/admin/reviews"); close(); } },
       // ---- Quick Actions ----
       {
         id: "qa.newBooking",

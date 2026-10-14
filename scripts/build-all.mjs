@@ -79,7 +79,7 @@ for (const f of [
 // Styles & scripts
 for (const f of [
   "styles.css", "legal.css",
-  "script.js", "catalog-i18n.js",
+  "script.js", "site-reviews.js", "catalog-i18n.js",
   "cookie-consent.js", "translations.js", "legal-renderer.js",
   "supabase-public-config.js",
 ]) cp(f);

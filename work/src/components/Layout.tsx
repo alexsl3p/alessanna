@@ -43,6 +43,7 @@ type NavKey =
   | "adminSiteSettings"
   | "adminInventory"
   | "adminCommunications"
+  | "adminReviews"
   | "adminInvites"
   | "profileSecurity"
   | "myHelp";
@@ -106,6 +107,7 @@ const ICONS: Record<NavKey, () => JSX.Element> = {
   myHelp: () => <NavIcon path="M12 17v.01M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />,
   profileSecurity: () => <NavIcon path="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />,
   adminInventory: () => <NavIcon path="M3 7l9-4 9 4-9 4-9-4Zm0 5 9 4 9-4M3 17l9 4 9-4" />,
+  adminReviews: () => <NavIcon path="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3Z" />,
   adminCommunications: () => <NavIcon path="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z M2 6l10 7 10-7" />,
   adminInvites: () => <NavIcon path="M16 11V7a4 4 0 0 0-8 0v4M5 11h14a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1Z" />,
 };
@@ -177,6 +179,7 @@ const NAV_GROUPS: NavGroup[] = [
     key: "support",
     items: [
       { to: "/admin/support", key: "adminSupport", manageOnly: true, badge: "supportUnread", icon: ICONS.adminSupport },
+      { to: "/admin/reviews", key: "adminReviews", adminOnly: true, icon: ICONS.adminReviews },
       { to: "/admin/communications", key: "adminCommunications", manageOnly: true, icon: ICONS.adminCommunications },
     ],
   },

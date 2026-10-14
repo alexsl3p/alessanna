@@ -4840,3 +4840,16 @@ body.selection-dock-active.selection-dock-panel-collapsed #main {
   animation: pulse-need-pick 0.38s ease-in-out 3;
   border-radius: 0.65rem;
 }
+
+/* Moderated customer reviews */
+.published-reviews { margin-bottom: 2rem; }
+.published-review { margin: 0 auto 1rem; max-width: 36rem; }
+.published-review-stars { color: var(--gold-bright); letter-spacing: 0.15em; }
+.published-review blockquote { margin: 1rem 0; font-size: clamp(1.1rem, 3vw, 1.35rem); line-height: 1.65; }
+.published-review blockquote p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.published-review figcaption { color: var(--text-muted); overflow-wrap: anywhere; }
+.review-feedback { font-size: 0.9rem; line-height: 1.6; color: var(--gold-bright); }
+.review-feedback:empty { display: none; }
+.review-feedback.is-error { color: #f3a6a6; }
+.review-honeypot { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.review-submit:disabled { opacity: 0.6; cursor: wait; }

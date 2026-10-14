@@ -69,7 +69,8 @@
       "reports": "Reports",
       "support": "Support",
       "settings": "Settings"
-    }
+    },
+    "adminReviews": "Reviews"
   },
   "command": {
     "placeholder": "Search or command…",
@@ -294,7 +295,7 @@
     "reviewMessageLabel": "Your review",
     "reviewMessagePlaceholder": "A few sentences…",
     "reviewSubmit": "Send to us",
-    "reviewMailHint": "Your mail app will open; send the message to the salon address.",
+    "reviewMailHint": "Your review will appear after administrator approval.",
     "bookingKicker": "Booking",
     "bookingTitle": "Book an appointment",
     "bookingIntro": "Pick a day that fits your schedule. After your request we’ll get in touch to confirm time and details — without rush.",
@@ -479,7 +480,12 @@
     "hennaLead": "Elegant henna patterns by appointment only. Young master.",
     "hennaAppointmentOnly": "By appointment only",
     "hennaCall": "Call",
-    "koloristCall": "Call"
+    "koloristCall": "Call",
+    "reviewInvalid": "Check your name, email and review (at least 8 characters).",
+    "reviewSending": "Sending your review…",
+    "reviewReceived": "Thank you! Your review was sent and will appear after approval.",
+    "reviewRateLimited": "Too many reviews. Please try again in an hour.",
+    "reviewFailed": "Could not send your review. Your text is still here — please try again."
   },
   "adminStaff": {
     "payModel": "Pay model",

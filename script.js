@@ -12,7 +12,7 @@
  *   4) Вкладки услуг: .tab-btn с aria-controls показывает соответствующий .tab-panel (hidden).
  *   5) .reveal: IntersectionObserver добавляет .is-visible при появлении в зоне видимости
  *      (у .hero-inner.hero-animate каскад только у дочерних блоков — см. styles.css).
- *   5a) #review-form: mailto на рабочий ящик с темой «модерация» (как у бронирования без API).
+ *   5a) #review-form: site-reviews.js отправляет отзыв на модерацию в CRM.
  *   5b) Прайс #teenused: клик по строке добавляет/убирает услугу в [data-selected-services-list],
  *      синхронизирует select[name=service] и скрытое services_detail; #meistrid — мастера,
  *      которые закрывают все выбранные категории (пересечение по направлениям).
@@ -4729,63 +4729,4 @@
     });
   }
 
-  /* Tagasiside / отзыв: mailto salongi töömeilile modereerimiseks (sama aadress mis broneeringul) */
-  var reviewForm = document.getElementById("review-form");
-  if (reviewForm) {
-    function buildRevMsg() {
-      if (window.ALESSANNA_BUILD_REVIEW_MSGS) return window.ALESSANNA_BUILD_REVIEW_MSGS();
-      return {
-        subject: "AlesSanna: review",
-        name: "Name",
-        email: "Email",
-        rating: "Rating",
-        message: "Message",
-        alertName: "Enter name",
-        alertMsg: "Write feedback",
-        alertEmail: "Check email",
-      };
-    }
-    var revMsg = buildRevMsg();
-    document.addEventListener("alessanna:locale", function () {
-      revMsg = buildRevMsg();
-    });
-
-    reviewForm.addEventListener("submit", function (e) {
-      e.preventDefault();
-      var nameEl = reviewForm.querySelector('[name="review_name"]');
-      var emailEl = reviewForm.querySelector('[name="review_email"]');
-      var ratingEl = reviewForm.querySelector('[name="review_rating"]');
-      var msgEl = reviewForm.querySelector('[name="review_message"]');
-      var name = nameEl ? nameEl.value.trim() : "";
-      var email = emailEl ? emailEl.value.trim() : "";
-      var rating = ratingEl && ratingEl.value ? ratingEl.value : "";
-      var msg = msgEl ? msgEl.value.trim() : "";
-      if (!name) {
-        showToast(revMsg.alertName, "err");
-        if (nameEl) nameEl.focus();
-        return;
-      }
-      if (msg.length < 8) {
-        showToast(revMsg.alertMsg, "err");
-        if (msgEl) msgEl.focus();
-        return;
-      }
-      if (email && email.indexOf("@") < 1) {
-        showToast(revMsg.alertEmail, "err");
-        if (emailEl) emailEl.focus();
-        return;
-      }
-      var lines = [
-        revMsg.name + ": " + name,
-        revMsg.email + ": " + (email || "—"),
-        revMsg.rating + ": " + rating + "/5",
-        "",
-        revMsg.message + ":",
-        msg,
-      ];
-      var subject = encodeURIComponent(revMsg.subject);
-      var body = encodeURIComponent(lines.join("\n"));
-      window.location.href = "mailto:alessanna.ilusalong@gmail.com?subject=" + subject + "&body=" + body;
-    });
-  }
 })();

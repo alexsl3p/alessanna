@@ -15,6 +15,7 @@ const ROOT_FILES = [
   "ru.html",
   "styles.css",
   "script.js",
+  "site-reviews.js",
   "translations.js",
 ];
 

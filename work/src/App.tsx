@@ -15,6 +15,7 @@ import { AdminSchedulePage } from "./pages/AdminSchedulePage";
 import { AdminTimeOffPage } from "./pages/AdminTimeOffPage";
 import { AdminSupportPage } from "./pages/AdminSupportPage";
 import { AdminInventoryPage } from "./pages/AdminInventoryPage";
+import { AdminReviewsPage } from "./pages/AdminReviewsPage";
 import { AdminCommunicationsPage } from "./pages/AdminCommunicationsPage";
 import { AdminSiteSettingsPage } from "./pages/AdminSiteSettingsPage";
 import { MyHelpPage } from "./pages/MyHelpPage";
@@ -32,6 +33,12 @@ import { SetupGuidePage } from "./pages/SetupGuidePage";
 function RequireManage({ children }: { children: React.ReactNode }) {
   const { canManage } = useEffectiveRole();
   if (!canManage) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
+function RequireAdmin({ children }: { children: React.ReactNode }) {
+  const { isAdminEffective } = useEffectiveRole();
+  if (!isAdminEffective) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 
@@ -152,6 +159,7 @@ export default function App() {
             </RequireManage>
           }
         />
+        <Route path="admin/reviews" element={<RequireAdmin><AdminReviewsPage /></RequireAdmin>} />
         <Route
           path="admin/communications"
           element={

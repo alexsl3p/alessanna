@@ -91,7 +91,8 @@
       "reports": "Aruanded",
       "support": "Tugi",
       "settings": "Seaded"
-    }
+    },
+    "adminReviews": "Tagasiside"
   },
   "command": {
     "placeholder": "Otsing või käsk…",
@@ -825,7 +826,7 @@
     "reviewMessageLabel": "Teie arvamus",
     "reviewMessagePlaceholder": "Kirjutage mõni lause…",
     "reviewSubmit": "Saada meile",
-    "reviewMailHint": "Avaneb teie meiliklient; saatke kiri salongi aadressile.",
+    "reviewMailHint": "Arvustus ilmub veebilehele pärast administraatori heakskiitu.",
     "bookingKicker": "Broneering",
     "bookingTitle": "Broneering",
     "bookingIntro": "Valige päev, mis sobib teie ajakavaga. Pärast taotlust võtame ühendust, et aeg ja detailid rahulikult kinnitada.",
@@ -1010,6 +1011,34 @@
     "hennaLead": "Elegantne hennakaunistus eelregistreerimisega. Noor meister.",
     "hennaAppointmentOnly": "Ainult eelregistreerimisega",
     "hennaCall": "Helista",
-    "koloristCall": "Helista"
+    "koloristCall": "Helista",
+    "reviewInvalid": "Kontrollige nime, e-posti ja arvustuse teksti (vähemalt 8 märki).",
+    "reviewSending": "Saadame arvustust…",
+    "reviewReceived": "Aitäh! Arvustus on saadetud ja ilmub veebilehele pärast heakskiitu.",
+    "reviewRateLimited": "Liiga palju arvustusi. Proovige tunni aja pärast.",
+    "reviewFailed": "Arvustust ei õnnestunud saata. Tekst on alles — proovige uuesti."
+  },
+  "reviews": {
+    "title": "Tagasiside",
+    "subtitle": "Veebilehelt saadetud arvustused. Avaldatakse alles pärast teie heakskiitu.",
+    "pending": "Ootab heakskiitu",
+    "approved": "Avaldatud",
+    "rejected": "Tagasi lükatud",
+    "approve": "Kiida heaks",
+    "reject": "Lükka tagasi",
+    "unpublish": "Eemalda veebilehelt",
+    "published": "Arvustus on avaldatud. Avatud veebilehel ilmub see 30 sekundi jooksul.",
+    "hidden": "Arvustus on avaldamisest eemaldatud.",
+    "empty": "Selles nimekirjas pole veel arvustusi.",
+    "failed": "Arvustusi ei õnnestunud laadida või salvestada. Proovige uuesti.",
+    "denied": "Arvustusi saab hallata ainult administraator.",
+    "unlockHint": "Kinnitage juurdepääs oma PIN-iga. Seda on vaja üks kord isiklikus seadmes või pärast juurdepääsu tühistamist.",
+    "pin": "Teie PIN",
+    "unlock": "Ava arvustused",
+    "pinInvalid": "Vale PIN või juurdepääs pole kinnitatud.",
+    "pinLocked": "Liiga palju katseid. Proovige 15 minuti pärast.",
+    "filters": "Arvustuste olek",
+    "previous": "Tagasi",
+    "next": "Edasi"
   }
 }
