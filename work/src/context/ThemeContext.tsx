@@ -17,8 +17,8 @@ import {
  *   • champagne  — светлая, тёплая. Для дневной работы у окна / ресепшен-планшета.
  *   • stone      — тёплая полутень. Меньше контраст, легче глазам в долгую смену.
  *
- * Хранение: localStorage["alessanna.crm.theme"]. Если значения нет — берём
- * системное предпочтение (prefers-color-scheme: light → champagne, иначе onyx).
+ * Хранение: localStorage["alessanna.crm.theme"]. Если значения нет — onyx.
+ * Тема телефона не влияет на выбранную палитру приложения.
  *
  * Применение: data-theme="<id>" на <html>, реальные цвета — в src/index.css
  * через CSS-переменные (--c-canvas, --c-fg, --c-gold и т.д.). Tailwind берёт
@@ -47,12 +47,7 @@ function readStored(): ThemeId | null {
 }
 
 function detectInitial(): ThemeId {
-  const stored = readStored();
-  if (stored) return stored;
-  if (typeof window !== "undefined" && window.matchMedia) {
-    if (window.matchMedia("(prefers-color-scheme: light)").matches) return "champagne";
-  }
-  return "onyx";
+  return readStored() ?? "onyx";
 }
 
 type ThemeCtx = {

@@ -27,7 +27,7 @@
   --c-gold: 196 165 116;      /* #c4a574 — основной золотой акцент */
   --c-gold-soft: 196 165 116; /* opacity подбирается утилитой (gold-soft/15 и т.д.) */
   --c-gold-deep: 122 107 88;  /* #7a6b58 — глубокий золотисто-бронзовый */
-  color-scheme: dark;
+  color-scheme: only dark;
 }
 
 /* Champagne — светлая, тёплая. Хорошо смотрится днём,
@@ -42,7 +42,8 @@
   --c-gold: 163 133 94;       /* #a3855e — приглушённое золото для контраста на свете */
   --c-gold-soft: 196 165 116;
   --c-gold-deep: 109 89 63;   /* #6d593f — глубокая бронза */
-  color-scheme: light;
+  /* Keep browser Auto Dark Theme from recoloring this app-selected palette. */
+  color-scheme: only light;
 }
 
 /* Stone — тёплая «полутень». Не такой контраст, как onyx,
@@ -57,7 +58,7 @@
   --c-gold: 212 184 150;      /* #d4b896 — поярче, чтоб читалось на тёплом фоне */
   --c-gold-soft: 212 184 150;
   --c-gold-deep: 154 132 105; /* #9a8469 */
-  color-scheme: dark;
+  color-scheme: only dark;
 }
 
 /* White — чистый белый Google Calendar-стиль для ресепшен-страницы. */
@@ -71,7 +72,7 @@
   --c-gold: 26 115 232;        /* #1a73e8 — Google blue as accent */
   --c-gold-soft: 26 115 232;
   --c-gold-deep: 11 87 208;    /* #0b57d0 */
-  color-scheme: light;
+  color-scheme: only light;
 }
 
 html,

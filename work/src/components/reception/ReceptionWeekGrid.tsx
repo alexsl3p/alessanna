@@ -313,8 +313,31 @@ export function ReceptionWeekGrid({
   }
 
   useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 60_000);
-    return () => clearInterval(id);
+    let timerId: number | undefined;
+    const stop = () => window.clearTimeout(timerId);
+    const syncClock = () => {
+      stop();
+      // Read the wall clock after sleep/background throttling; never advance
+      // the previous value by a fixed interval, which could leave it behind.
+      const current = new Date();
+      setNow(current);
+      timerId = window.setTimeout(syncClock, 60_000 - (current.getTime() % 60_000));
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden") stop();
+      else syncClock();
+    };
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("focus", syncClock);
+    window.addEventListener("pageshow", syncClock);
+    onVisibilityChange();
+    return () => {
+      stop();
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("focus", syncClock);
+      window.removeEventListener("pageshow", syncClock);
+    };
   }, []);
 
 

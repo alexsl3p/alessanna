@@ -1,11 +1,19 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="onyx">
   <head>
     <meta charset="UTF-8" />
+    <meta name="color-scheme" content="dark light" />
     <link rel="icon" type="image/png" href="/icon.png" />
     <!-- viewport is set by the inline script below before React mounts -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" id="viewport-meta" />
     <script>
+      // Restore the app's own theme before the first paint, independent of OS theme.
+      try {
+        var savedTheme = localStorage.getItem("alessanna.crm.theme");
+        if (["onyx", "champagne", "stone", "white"].includes(savedTheme)) {
+          document.documentElement.setAttribute("data-theme", savedTheme);
+        }
+      } catch(e) {}
       // Apply desktop viewport before React renders — dynamic changes after load are ignored by browsers
       try {
         if (localStorage.getItem("reception_desktop_mode") === "1") {
