@@ -5,6 +5,7 @@ import { useTheme } from "../../context/ThemeContext";
 import type { StaffMember } from "../../types/database";
 import { buildStaffHueMap } from "../../lib/staffHue";
 import { googleStaffColor } from "./receptionColors";
+import { ReceptionColorFill } from "./ReceptionColorFill";
 import { ReceptionCustomColorPicker } from "./ReceptionCustomColorPicker";
 
 const HEX6 = /^#[0-9a-f]{6}$/i;
@@ -110,7 +111,9 @@ export function ReceptionStaffColorSettings({ staff, onClose, onSaved }: Props) 
               return (
                 <div key={member.id} className="py-3">
                   <div className="mb-2 flex items-center gap-2">
-                    <span className="h-3.5 w-3.5 shrink-0 rounded-sm" style={{ backgroundColor: c.bg }} />
+                    <span className="relative isolate h-3.5 w-3.5 shrink-0 overflow-hidden rounded-sm" style={{ backgroundColor: c.bg }}>
+                      <ReceptionColorFill color={c.bg} />
+                    </span>
                     <span className="text-sm font-medium text-fg">
                       {member.name}
                       {isSavingThis && <span className="ml-1 text-xs text-muted">{t("modal.saving")}</span>}
@@ -124,9 +127,10 @@ export function ReceptionStaffColorSettings({ staff, onClose, onSaved }: Props) 
                           key={col.hex}
                           title={t(`reception.colorNames.${col.key}`)}
                           onClick={() => void handleColorPick(member.id, col.hex)}
-                          className="relative h-8 w-8 rounded-full transition-transform hover:scale-110"
+                          className="relative isolate h-8 w-8 overflow-hidden rounded-full transition-transform hover:scale-110"
                           style={{ backgroundColor: col.hex }}
                         >
+                          <ReceptionColorFill color={col.hex} />
                           {isActive && (
                             <svg viewBox="0 0 20 20" className="absolute inset-0 h-full w-full" fill="none">
                               <polyline points="5,10 8.5,13.5 15,7" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -139,9 +143,10 @@ export function ReceptionStaffColorSettings({ staff, onClose, onSaved }: Props) 
                     <button
                       title={t("reception.colorNames.custom")}
                       onClick={() => setCustomPicker({ staffId: member.id, staffName: member.name, hex: currentHex && HEX6.test(currentHex) ? currentHex : "#7986cb" })}
-                      className="relative h-8 w-8 overflow-hidden rounded-full text-fg transition-transform hover:scale-110"
+                      className="relative isolate h-8 w-8 overflow-hidden rounded-full text-fg transition-transform hover:scale-110"
                       style={isCustom ? { backgroundColor: currentHex } : plusStyle}
                     >
+                      {isCustom && <ReceptionColorFill color={currentHex} />}
                       {isCustom ? (
                         <svg viewBox="0 0 20 20" className="absolute inset-0 h-full w-full" fill="none">
                           <polyline points="5,10 8.5,13.5 15,7" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>

@@ -17,6 +17,7 @@ import {
 import type { StaffMember } from "../../types/database";
 import { buildStaffHueMap } from "../../lib/staffHue";
 import { googleStaffColor } from "./receptionColors";
+import { ReceptionColorFill } from "./ReceptionColorFill";
 import { useTheme, type ThemeId } from "../../context/ThemeContext";
 
 type Props = {
@@ -214,12 +215,13 @@ export function ReceptionSidebar({
                   className="sr-only"
                 />
                 <span
-                  className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-sm transition-colors"
+                  className="relative isolate flex h-3.5 w-3.5 shrink-0 items-center justify-center overflow-hidden rounded-sm transition-colors"
                   style={{
                     backgroundColor: checked ? c.bg : "transparent",
                     border: `2px solid ${c.bg}`,
                   }}
                 >
+                  {checked && <ReceptionColorFill color={c.bg} />}
                   {checked && (
                     <svg viewBox="0 0 10 10" className="h-2.5 w-2.5" fill="none" stroke={c.fg} strokeWidth="2">
                       <polyline points="1.5,5 4,7.5 8.5,2.5" />

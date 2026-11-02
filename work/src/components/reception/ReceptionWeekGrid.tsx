@@ -19,6 +19,7 @@ import { buildStaffHueMap } from "../../lib/staffHue";
 import { appointmentInterval, intervalsOverlap } from "../../lib/slots";
 import { receptionBlockTitle } from "../../lib/receptionAppointmentLabels";
 import { googleStaffColor } from "./receptionColors";
+import { ReceptionColorFill } from "./ReceptionColorFill";
 import { useTheme } from "../../context/ThemeContext";
 
 const PERSONAL_COLOR = { bg: "#7c3aed", fg: "#ffffff" };
@@ -433,9 +434,10 @@ export function ReceptionWeekGrid({
                     return (
                       <span
                         key={m.id}
-                        className="max-w-[48px] truncate rounded px-1 py-0.5 text-[9px] font-medium md:max-w-[56px] md:px-1.5 md:text-[10px]"
+                        className="relative isolate max-w-[48px] truncate rounded px-1 py-0.5 text-[9px] font-medium md:max-w-[56px] md:px-1.5 md:text-[10px]"
                         style={{ backgroundColor: c.bg, color: c.fg }}
                       >
+                        <ReceptionColorFill color={c.bg} />
                         {m.name.split(" ")[0]}
                       </span>
                     );
@@ -632,7 +634,7 @@ export function ReceptionWeekGrid({
                       key={appt.id}
                       data-appt="1"
                       className={[
-                        "absolute overflow-hidden rounded-md px-1.5 py-0.5 text-left shadow-sm transition-all",
+                        "absolute isolate overflow-hidden rounded-md px-1.5 py-0.5 text-left shadow-sm transition-all",
                         inResizeMode ? "touch-none shadow-lg ring-2 ring-white/70" : "hover:shadow-md",
                         isResizing ? "touch-none" : "",
                         "group",
@@ -665,6 +667,7 @@ export function ReceptionWeekGrid({
                         openAppointment(appt, e.clientX, e.clientY);
                       }}
                     >
+                      <ReceptionColorFill color={c.bg} striped={isBlockTime && !isPersonal} />
                       <p className="truncate text-[11px] font-semibold leading-tight">
                         {isPersonal ? (
                           <span className="inline-flex items-center gap-0.5">
