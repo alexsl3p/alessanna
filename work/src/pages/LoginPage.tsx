@@ -40,7 +40,7 @@ export function LoginPage() {
   const [staffName, setStaffName] = useState<string>("");
   const [error, setError] = useState(() => {
     const e = sessionStorage.getItem("google_auth_error");
-    if (e) { sessionStorage.removeItem("google_auth_error"); return "Аккаунт Google не найден в системе. Обратитесь к администратору."; }
+    if (e) { sessionStorage.removeItem("google_auth_error"); return t("login.googleAccountNotFound"); }
     return "";
   });
   const [pending, setPending] = useState(false);
@@ -129,7 +129,7 @@ export function LoginPage() {
     const deviceLabel =
       typeof navigator !== "undefined"
         ? navigator.userAgent.split(" ").slice(-2).join(" ").slice(0, 60)
-        : "Браузер CRM";
+        : t("login.crmBrowserDevice");
     const r = await login({
       phone,
       pin,
@@ -153,11 +153,11 @@ export function LoginPage() {
     e.preventDefault();
     setError("");
     if (emailPassword.length < 6) {
-      setError("Минимум 6 символов.");
+      setError(t("login.err.minChars"));
       return;
     }
     if (emailPassword !== emailConfirm) {
-      setError("Пароли не совпадают.");
+      setError(t("login.err.passwordsMismatch"));
       return;
     }
     setPending(true);
@@ -211,10 +211,10 @@ export function LoginPage() {
 
   const emailSubtitle =
     emailMode === "forgot"
-      ? "Сброс пароля"
+      ? t("login.emailSubtitle.forgot")
       : emailMode === "register"
-        ? "Регистрация"
-        : "Вход для мастеров";
+        ? t("login.emailSubtitle.register")
+        : t("login.emailSubtitle.login");
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-black px-4">
@@ -243,9 +243,9 @@ export function LoginPage() {
               onClick={focusPhoneInput}
               className="rounded-lg border border-sky-700/60 bg-sky-950/30 px-3 py-2 text-left text-sm text-sky-100 hover:bg-sky-900/40"
             >
-              1. CRM / Рабочая панель
+              {t("login.mode.crm")}
               <span className="mt-0.5 block text-xs text-sky-200/70">
-                Стандартный вход по телефону ниже
+                {t("login.mode.crmHint")}
               </span>
             </button>
             <button
@@ -253,9 +253,9 @@ export function LoginPage() {
               onClick={() => switchToEmail("alessanna.ilusalong@gmail.com", "/reception")}
               className="rounded-lg border border-emerald-700/50 bg-emerald-950/30 px-3 py-2 text-left text-sm text-emerald-100 hover:bg-emerald-900/40"
             >
-              2. Ресепшен
+              {t("login.mode.reception")}
               <span className="mt-0.5 block text-xs text-emerald-200/60">
-                Общий аккаунт для сотрудников ресепшена
+                {t("login.mode.receptionHint")}
               </span>
             </button>
             <button
@@ -263,9 +263,9 @@ export function LoginPage() {
               onClick={() => switchToEmail("", "/")}
               className="rounded-lg border border-violet-700/50 bg-violet-950/30 px-3 py-2 text-left text-sm text-violet-100 hover:bg-violet-900/40"
             >
-              3. Мастера
+              {t("login.mode.masters")}
               <span className="mt-0.5 block text-xs text-violet-200/60">
-                Личный вход по email для мастеров
+                {t("login.mode.mastersHint")}
               </span>
             </button>
             <a
@@ -274,9 +274,9 @@ export function LoginPage() {
               rel="noopener noreferrer"
               className="rounded-lg border border-zinc-700 bg-zinc-900/40 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-800/60"
             >
-              4. Сайт
+              {t("login.mode.site")}
               <span className="mt-0.5 block text-xs text-zinc-400">
-                Открыть публичный сайт в новой вкладке
+                {t("login.mode.siteHint")}
               </span>
             </a>
           </div>
@@ -399,11 +399,11 @@ export function LoginPage() {
                     <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
                     <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                   </svg>
-                  {googlePending ? "Перенаправление…" : "Войти через Google"}
+                  {googlePending ? t("login.googleRedirecting") : t("login.googleSignIn")}
                 </button>
                 <div className="relative my-4 flex items-center gap-3">
                   <div className="flex-1 border-t border-zinc-800" />
-                  <span className="text-xs text-zinc-600">или по email</span>
+                  <span className="text-xs text-zinc-600">{t("login.orByEmail")}</span>
                   <div className="flex-1 border-t border-zinc-800" />
                 </div>
               </div>
@@ -411,14 +411,14 @@ export function LoginPage() {
             {forgotSent ? (
               <div className="space-y-4">
                 <p className="rounded-lg border border-emerald-800/50 bg-emerald-950/30 p-3 text-sm text-emerald-200">
-                  Письмо со ссылкой для сброса пароля отправлено на {email}. Проверьте почту.
+                  {t("login.forgotSent", { email })}
                 </p>
                 <button
                   type="button"
                   onClick={() => { setForgotSent(false); setEmailMode("login"); }}
                   className="w-full rounded-lg border border-zinc-700 py-2.5 text-sm font-medium text-zinc-300 hover:bg-zinc-900"
                 >
-                  Назад ко входу
+                  {t("login.backToLogin")}
                 </button>
               </div>
             ) : emailMode === "forgot" ? (
@@ -444,14 +444,14 @@ export function LoginPage() {
                   disabled={pending}
                   className="w-full rounded-lg bg-violet-600 py-2.5 text-sm font-semibold text-white hover:bg-violet-500 disabled:opacity-50"
                 >
-                  {pending ? "Отправляем…" : "Отправить ссылку"}
+                  {pending ? t("login.sending") : t("login.sendLink")}
                 </button>
                 <button
                   type="button"
                   onClick={() => setEmailMode("login")}
                   className="w-full rounded-lg border border-zinc-700 py-2 text-sm text-zinc-400 hover:bg-zinc-900"
                 >
-                  Назад ко входу
+                  {t("login.backToLogin")}
                 </button>
               </form>
             ) : (
@@ -476,7 +476,7 @@ export function LoginPage() {
                 </div>
                 <div>
                   <label htmlFor="email-password" className="block text-xs font-medium text-zinc-500">
-                    Пароль
+                    {t("login.password")}
                   </label>
                   <input
                     id="email-password"
@@ -493,7 +493,7 @@ export function LoginPage() {
                 {emailMode === "register" && (
                   <div>
                     <label htmlFor="email-confirm" className="block text-xs font-medium text-zinc-500">
-                      Повторите пароль
+                      {t("login.repeatPassword")}
                     </label>
                     <input
                       id="email-confirm"
@@ -517,10 +517,10 @@ export function LoginPage() {
                   className="w-full rounded-lg bg-violet-600 py-2.5 text-sm font-semibold text-white hover:bg-violet-500 disabled:opacity-50"
                 >
                   {pending
-                    ? "Подождите…"
+                    ? t("login.pleaseWait")
                     : emailMode === "login"
-                      ? "Войти"
-                      : "Зарегистрироваться"}
+                      ? t("login.signIn")
+                      : t("login.signUp")}
                 </button>
 
                 <div className="flex items-center justify-between text-xs text-zinc-500">
@@ -531,14 +531,14 @@ export function LoginPage() {
                         onClick={() => { setEmailMode("register"); setError(""); }}
                         className="hover:text-zinc-300"
                       >
-                        Нет аккаунта? Зарегистрироваться
+                        {t("login.noAccountRegister")}
                       </button>
                       <button
                         type="button"
                         onClick={() => { setEmailMode("forgot"); setError(""); }}
                         className="hover:text-zinc-300"
                       >
-                        Забыли пароль?
+                        {t("login.forgotPassword")}
                       </button>
                     </>
                   ) : (
@@ -547,7 +547,7 @@ export function LoginPage() {
                       onClick={() => { setEmailMode("login"); setError(""); }}
                       className="hover:text-zinc-300"
                     >
-                      Уже есть аккаунт? Войти
+                      {t("login.haveAccountSignIn")}
                     </button>
                   )}
                 </div>
@@ -557,7 +557,7 @@ export function LoginPage() {
                   onClick={switchToPhone}
                   className="w-full rounded-lg border border-zinc-800 py-2 text-xs text-zinc-600 hover:text-zinc-400"
                 >
-                  ← Назад к выбору режима
+                  {t("login.backToModes")}
                 </button>
               </form>
             )}

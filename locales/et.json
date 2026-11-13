@@ -13,7 +13,18 @@
     "bookings": "broneeringut",
     "booking": "broneering",
     "language": "Keel",
-    "hShort": "h"
+    "hShort": "h",
+    "archive": "Arhiivi",
+    "back": "Tagasi",
+    "choose": "vali",
+    "delete": "Kustuta",
+    "edit": "Muuda",
+    "refresh": "Värskenda",
+    "saving": "Salvestan…",
+    "unarchive": "Taasta arhiivist",
+    "close": "Sulge",
+    "menu": "Menüü",
+    "birthday": "Sünnipäev"
   },
   "lang": {
     "ru": "RU",
@@ -29,7 +40,48 @@
     "hint": "Sisesta number ilma riigikoodita",
     "button": "Logi sisse",
     "signingIn": "Sisselogimine…",
-    "configLine": "Seadista VITE_SUPABASE_URL ja VITE_SUPABASE_ANON_KEY failis work/.env."
+    "configLine": "Seadista VITE_SUPABASE_URL ja VITE_SUPABASE_ANON_KEY failis work/.env.",
+    "deviceWillBeRemembered": "See seade jäetakse automaatselt meelde — järgmisel korral sisenete ilma PIN-ita. Tühistada saab: Profiil → Turvalisus.",
+    "pinSubtitle": "Sisestage ligipääsuks PIN",
+    "trustDevice": "Usalda seda seadet",
+    "trustedDeviceHint": "See seade on lisatud usaldusväärsete hulka — sisenete ilma PIN-ita",
+    "googleAccountNotFound": "Google kontot ei leitud süsteemist. Pöördu administraatori poole.",
+    "crmBrowserDevice": "CRM brauser",
+    "err": {
+      "minChars": "Vähemalt 6 märki.",
+      "passwordsMismatch": "Paroolid ei kattu."
+    },
+    "emailSubtitle": {
+      "forgot": "Parooli lähtestamine",
+      "register": "Registreerimine",
+      "login": "Meistrite sisselogimine"
+    },
+    "mode": {
+      "crm": "1. CRM / Töölaud",
+      "crmHint": "Tavaline sisselogimine telefoniga allpool",
+      "reception": "2. Vastuvõtt",
+      "receptionHint": "Vastuvõtu töötajate ühiskonto",
+      "masters": "3. Meistrid",
+      "mastersHint": "Meistri isiklik sisselogimine e-postiga",
+      "site": "4. Veebileht",
+      "siteHint": "Ava avalik veebileht uues vahekaardis"
+    },
+    "googleRedirecting": "Suunan ümber…",
+    "googleSignIn": "Logi sisse Google'iga",
+    "orByEmail": "või e-postiga",
+    "forgotSent": "Parooli lähtestamise link saadeti aadressile {{email}}. Kontrolli postkasti.",
+    "backToLogin": "Tagasi sisselogimisse",
+    "sending": "Saadan…",
+    "sendLink": "Saada link",
+    "password": "Parool",
+    "repeatPassword": "Korda parooli",
+    "pleaseWait": "Oota…",
+    "signIn": "Logi sisse",
+    "signUp": "Registreeru",
+    "noAccountRegister": "Pole kontot? Registreeru",
+    "forgotPassword": "Unustasid parooli?",
+    "haveAccountSignIn": "Konto on juba olemas? Logi sisse",
+    "backToModes": "← Tagasi režiimi valikusse"
   },
   "auth": {
     "error": {
@@ -38,7 +90,9 @@
       "denied": "Juurdepääs keelatud",
       "failed": "Sisselogimine ebaõnnestus",
       "rpcFailed": "{{message}}",
-      "accessDenied": "Juurdepääs keelatud"
+      "accessDenied": "Juurdepääs keelatud",
+      "invalidPin": "Vale PIN",
+      "pinLocked": "Liiga palju ebaõnnestunud katseid. Proovige 15 minuti pärast."
     }
   },
   "siteSettings": {
@@ -249,7 +303,10 @@
     "payModel": "Tasumudel",
     "payRent": "Rent",
     "payPercentage": "Protsent",
-    "paySalary": "Palk"
+    "paySalary": "Palk",
+    "deleteConfirm": "Kustutada {{name}} jäädavalt?",
+    "hidePhone": "Peida number",
+    "revealPhone": "Näita numbrit"
   },
   "adminSchedule": {
     "subtitle": "Nädala graafik (staff_schedule).",
@@ -263,7 +320,10 @@
     "weekTemplateHint": "Lülita «töötab sel päeval» välja puhkepäeva jaoks: rida ei salvestata ja kalendris sel nädalapäeval aegu ei ehitata.",
     "prevMonth": "Eelmine kuu",
     "nextMonth": "Järgmine kuu",
-    "today": "Täna"
+    "today": "Täna",
+    "salonClosedOn": "🔴 Salong suletud",
+    "closeDayHoliday": "Sulge päev (püha)",
+    "wholeDayOff": "Kogu päev on märgitud vabaks"
   },
   "finance": {
     "title": "Rahandus",
@@ -347,7 +407,16 @@
     "panelDisabledTitle": "Veebibroneering pole hetkel saadaval",
     "panelDisabledP1": "Salong on ajutiselt selle lehe vormi välja lülitanud. Broneerida saate siiski teistmoodi.",
     "panelDisabledP2": "Tulge Härma keskusesse (Tallinna mnt 70, Pärnu) või helistage — number on ka kodulehe jaluses.",
-    "panelDisabledBackHome": "Avalehele"
+    "panelDisabledBackHome": "Avalehele",
+    "masterDayOff": "vaba päev",
+    "masterOptional": "Meister (soovi korral)",
+    "anyFreeMaster": "Suvaline vaba meister",
+    "clientNameOptional": "Kliendi nimi (valikuline)",
+    "phoneOptional": "Telefon (valikuline)",
+    "commentLabel": "Kommentaar",
+    "commentPlaceholder": "Soovid broneeringu kohta (valikuline)",
+    "mastersLegend": "Meistrid",
+    "noAppointmentsDay": "Sellel päeval broneeringuid pole."
   },
   "quickBook": {
     "openTabletFlow": "Kiire broneering (tahvel)",
@@ -563,7 +632,9 @@
     "customColorTitle": "Vali oma värv",
     "customColorSubtitle": "Valige kalendri taustavärv. Teksti värv valitakse automaatselt.",
     "hexCode": "Heksadekoodkood",
-    "eyeDropper": "Pipett"
+    "eyeDropper": "Pipett",
+    "mobileVersion": "Mobiiliversioon",
+    "desktopVersion": "Arvutiversioon"
   },
   "role": {
     "label": "Roll",
@@ -582,7 +653,21 @@
     "upcoming": "Tulekul",
     "nextSlots": "järgmist",
     "upcomingSection": "Tulekul",
-    "noUpcoming": "Eesolevaid broneeringuid pole."
+    "noUpcoming": "Eesolevaid broneeringuid pole.",
+    "kpi": {
+      "avgCheck": "Keskmine tšekk {{v}}",
+      "bookings": "{{n}} broneeringut",
+      "cancellations": "Tühistatud 30 päevaga",
+      "emailHint": "Ootel / vead",
+      "emails": "Kirjade järjekord",
+      "lowStock": "Lõppemas",
+      "lowStockHint": "Materjale alla piirmäära",
+      "monthRevenue": "30 päeva jooksul",
+      "openAnalytics": "Üksikasjalik analüütika →",
+      "title": "Ärinäitajad",
+      "todayRevenue": "Tänane käive",
+      "weekRevenue": "Nädala jooksul"
+    }
   },
   "calendar": {
     "title": "Kalender",
@@ -628,7 +713,23 @@
     "todayNextNone": "Ees pole broneeringuid",
     "quickActions": "Kiired toimingud",
     "nearestSlot": "Lähim vaba aeg",
-    "workloadSoon": "Peaaegu täis"
+    "workloadSoon": "Peaaegu täis",
+    "closedShort": "suletud",
+    "birthdayToday": "Täna on {{name}} sünnipäev!",
+    "birthdayGreeting": "Palju õnne sünnipäevaks, {{name}}! 💐🥂✨",
+    "dow": {
+      "mon": "E",
+      "tue": "T",
+      "wed": "K",
+      "thu": "N",
+      "fri": "R",
+      "sat": "L",
+      "sun": "P"
+    },
+    "prevWeek": "Eelmine nädal",
+    "prevMonth": "Eelmine kuu",
+    "nextWeek": "Järgmine nädal",
+    "nextMonth": "Järgmine kuu"
   },
   "weekday": {
     "0": "P",
@@ -676,7 +777,22 @@
     "cancel": "Tühista",
     "statusPending": "ootel",
     "statusConfirmed": "kinnitatud",
-    "statusCancelled": "tühistatud"
+    "statusCancelled": "tühistatud",
+    "delete": "Kustuta",
+    "deleteConfirm": "Kustutada broneering jäädavalt? Seda ei saa tagasi võtta.",
+    "deleteFailed": "Broneeringu kustutamine ebaõnnestus. Kontrollige õigusi ja proovige uuesti.",
+    "siteBookingAlert": "Uus broneering veebilehelt: {{client}}, {{when}}{{staff}}.",
+    "sortSource": "Sorteeri allika järgi",
+    "sourceUpdateFailed": "Broneeringu allika muutmine ebaõnnestus. Kontrollige õigusi ja proovige uuesti.",
+    "newClient": "Uus klient",
+    "filterAllActive": "Kõik aktiivsed",
+    "filterClient": "Aktiivsed",
+    "filterBlock": "Suletud",
+    "reasonOrName": "Põhjus / nimetus",
+    "duration": "Kestus",
+    "closed": "Suletud",
+    "sortByCreated": "Sorteeri lisamise kuupäeva järgi",
+    "createdCol": "Lisatud"
   },
   "employees": {
     "title": "Töötajad",
@@ -760,7 +876,23 @@
     "defaultClient": "Klient (vastuvõtt)",
     "endAfterStart": "Lõpuaeg peab olema hiljem kui algusaeg",
     "selectService": "— teenus —",
-    "selectStaff": "Vali meister"
+    "selectStaff": "Vali meister",
+    "masterEditManagerOnly": "Meistrit saab muuta ainult juht või administraator",
+    "dayOff": "vaba päev",
+    "apptInfo": "Broneeringu info",
+    "time": "Aeg",
+    "comment": "Kommentaar",
+    "cancelAppt": "Tühista broneering",
+    "cancelling": "Tühistan…",
+    "cancelConfirm": "Kas tühistada see broneering?",
+    "clientBooking": "Kliendi broneering",
+    "closeTime": "Sulge aeg",
+    "personalTime": "Isiklikud asjad",
+    "closedBlock": "— Suletud —",
+    "reasonOptional": "Põhjus (valikuline)",
+    "emailOptional": "E-post (valikuline)",
+    "staffNotePlaceholder": "Meistri märkus…",
+    "selectStaffShort": "— meister —"
   },
   "site": {
     "skip": "Liigu põhisisu juurde",
@@ -1040,5 +1172,139 @@
     "filters": "Arvustuste olek",
     "previous": "Tagasi",
     "next": "Edasi"
+  },
+  "communications": {
+    "col": {
+      "date": "Loodud",
+      "recipient": "Saaja",
+      "scheduled": "Saatmine",
+      "status": "Staatus",
+      "type": "Tüüp"
+    },
+    "empty": "Kirju pole",
+    "retry": "Proovi uuesti",
+    "statusCancelled": "Tühistatud",
+    "statusFailed": "Vead",
+    "statusPending": "Ootel",
+    "statusSent": "Saadetud",
+    "statusTotal": "Kokku",
+    "subtitle": "Automaatsete kirjade järjekord: kinnitus, meeldetuletus, järelkiri.",
+    "title": "Kirjad klientidele"
+  },
+  "inventory": {
+    "addItem": "Lisa materjal",
+    "addMovement": "Lisa liikumine",
+    "addNorm": "Lisa norm",
+    "amount": "Kogus",
+    "amountPerService": "Kulu 1 teenuse kohta",
+    "categoryPlaceholder": "lakk / baas / tarvik",
+    "col": {
+      "balance": "Jääk",
+      "category": "Kategooria",
+      "date": "Millal",
+      "item": "Materjal",
+      "name": "Nimetus",
+      "notes": "Kommentaar",
+      "onHand": "Jääk",
+      "threshold": "Madala laoseisu piir",
+      "type": "Liikumise tüüp",
+      "unit": "Ühik"
+    },
+    "cost": "Sissetuleku maksumus (€)",
+    "editItem": "Muuda materjali",
+    "empty": "Materjale veel pole",
+    "lowStockAlert": "Lõppemas ({{count}})",
+    "noMovements": "Liikumisi veel pole",
+    "noNorms": "Norme veel pole",
+    "normsForService": "Kulunormid teenusele",
+    "removeNormConfirm": "Kustutada kulunorm?",
+    "selectService": "Valige teenus",
+    "startingBalance": "Algjääk",
+    "startingBalanceHint": "Pärast loomist tehakse parandused ainult liikumiste päeviku kaudu.",
+    "subtitle": "Tarvikute arvestus, kulunormid teenustele, liikumiste päevik.",
+    "title": "Ladu / tarvikud",
+    "type": {
+      "adjustment_in": "Korrektsioon +",
+      "adjustment_out": "Korrektsioon −",
+      "manual_consumption": "Mahakandmine (käsitsi)",
+      "purchase": "Sissetulek"
+    }
+  },
+  "profileSecurity": {
+    "adminAllDevicesHint": "Töötajate seadmed lisanduvad sisselogimisel automaatselt. Et vastuvõtu tahvelarvuti või muu ühine seade lubaks iga meistri ilma PIN-ita sisse, määrake see salongi seadmeks.",
+    "adminClaim": "Määra salongi seadmeks",
+    "adminClaimedBy": "määras administraator {{name}}",
+    "adminClaimedFrom": "Ühine seade. Algselt lisas: {{name}}",
+    "adminNoDevices": "Ühtegi registreeritud seadet veel pole.",
+    "adminOwnedBy": "Seotud kasutajaga: {{name}}",
+    "adminRelease": "Tagasta omanikule",
+    "allDevicesTitle": "Kõik seadmed",
+    "badgeSalon": "Salong",
+    "changePin": "Muuda PIN-i",
+    "confirmPin": "Kinnitage uus PIN",
+    "currentPin": "Praegune PIN (kui on määratud)",
+    "currentPinPlaceholder": "Jätke tühjaks, kui pole veel määratud",
+    "currentPinRequired": "Muutmiseks sisestage praegune PIN",
+    "devices": "Usaldusväärsed seadmed",
+    "forgetThisDevice": "Unusta see seade",
+    "groupRevoked": "Tühistatud",
+    "groupRevokedHint": "Ajalugu. Nende tokenitega ei saa enam siseneda.",
+    "groupSalon": "Salongi seadmed",
+    "groupSalonHint": "Ühised tahvelarvutid/sülearvutid. Lubavad iga aktiivse töötaja ilma PIN-ita.",
+    "invalidCurrentPin": "Praegune PIN on vale",
+    "ipHint": "IP, millelt toimus viimane sisselogimine",
+    "lastSeen": "Viimane sisselogimine",
+    "managerAllDevicesHint": "Ainult vaatamiseks. Hallata (määrata ühiseks, tühistada) saab administraator.",
+    "myActivityTitle": "Minu tegevuse ajalugu",
+    "newPin": "Uus PIN",
+    "noDevices": "Usaldusväärseid seadmeid pole.",
+    "pinFormatError": "PIN: 4–12 numbrit",
+    "pinHelp": "4–12 numbrit. Pärast määramist küsitakse seda PIN-i uutest seadmetest sisenemisel.",
+    "pinMismatch": "PIN ei kattu kinnitusega",
+    "pinUpdated": "PIN salvestatud. Kõik usaldusväärsed seadmed on tühistatud.",
+    "revoke": "Tühista",
+    "revokeConfirm": "Tühistada see seade?",
+    "revoked": "Tühistatud",
+    "salonOwned": "Administraatori all",
+    "savePin": "Salvesta PIN",
+    "setPin": "Määra PIN",
+    "subtitle": "PIN kaitseb CRM-i sisselogimist. Usaldusväärsed seadmed jäetakse meelde — neis saab siseneda ilma PIN-ita.",
+    "thisDeviceTrusted": "See seade on usaldusväärne.",
+    "title": "Sisselogimise turvalisus",
+    "unknownStaff": "Tundmatu töötaja",
+    "deviceInviteLink": "Kutselink",
+    "deviceCrmBrowser": "CRM brauser",
+    "salonBadge": "Salong",
+    "salonBadgeHint": "See seade on seatud salongi ühisseadmeks. Haldab administraator.",
+    "salonOwnedHint": "Haldab administraator — tühistamiseks pöördu tema poole.",
+    "adminReleaseHint": "Eemalda ühisseadme staatus, tagasta algsele omanikule",
+    "adminClaimHint": "Muuda salongi ühisseadmeks: iga aktiivne töötaja saab siseneda ilma PIN-ita"
+  },
+  "simpleBook": {
+    "comment": "Kommentaar (valikuline)",
+    "date": "Kuupäev",
+    "fullUiLink": "Laiendatud broneering kalendriga →",
+    "masterRequired": "Meister",
+    "pickMaster": "Valige meister",
+    "pickService": "Valige teenus",
+    "shortFormLink": "Lühike broneerimisvorm",
+    "staffLogin": "Personali sisselogimine",
+    "submit": "Broneeri",
+    "subtitle": "Lühivorm: otse meistri kalendrisse."
+  },
+  "clients": {
+    "loading": "Laadin…",
+    "title": "Kliendid",
+    "subtitle": "Meie kliendid",
+    "linkToCalendar": "Ühenda kalendriga",
+    "linkToCalendarHint": "Broneeringuvormis kuvatakse klientide loend nime, telefoni või e-posti järgi.",
+    "empty": "Kliente veel pole.",
+    "visitHistory": "Külastuste ajalugu",
+    "spentTotal": "Kulutatud summa",
+    "noVisits": "Külastusi veel pole.",
+    "birthdayShort": "Sünnip.",
+    "periodAll": "Kogu aeg",
+    "periodYear": "Aasta",
+    "periodMonth": "Kuu"
   }
 }

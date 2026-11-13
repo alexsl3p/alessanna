@@ -55,13 +55,16 @@ type GroupKey = string;
  * накрывать сразу: уже сохранённые в БД, новые из старых RPC, любые
  * других путей создания.
  */
-function localizeDeviceLabel(raw: string | null | undefined): string {
+function localizeDeviceLabel(
+  raw: string | null | undefined,
+  t: (key: string) => string
+): string {
   const v = (raw ?? "").trim();
   if (!v) return "—";
   if (v === "Invite link" || v === "Invited device") {
-    return "Ссылка-приглашение";
+    return t("profileSecurity.deviceInviteLink");
   }
-  if (v === "CRM device") return "Браузер CRM";
+  if (v === "CRM device") return t("profileSecurity.deviceCrmBrowser");
   return v;
 }
 
@@ -426,16 +429,16 @@ export function ProfileSecurityPage() {
               <li key={d.id} className="flex items-center justify-between gap-3 py-3">
                 <div className="min-w-0">
                   <p className="flex items-center gap-2 truncate text-sm font-medium text-fg">
-                    <span className="truncate">{localizeDeviceLabel(d.label)}</span>
+                    <span className="truncate">{localizeDeviceLabel(d.label, t)}</span>
                     {/* Если админ забрал устройство под салон — показываем
                      * это пользователю явно: «не моё устройство, общее».
                      * Так юзер не удивится, что revoke ему недоступен. */}
                     {d.is_salon_device && (
                       <span
                         className="shrink-0 rounded-full border border-violet-700/60 bg-violet-950/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-200"
-                        title="Это устройство переведено в режим «общий салонный». Управляет админ."
+                        title={t("profileSecurity.salonBadgeHint")}
                       >
-                        Салон
+                        {t("profileSecurity.salonBadge")}
                       </span>
                     )}
                   </p>
@@ -464,7 +467,7 @@ export function ProfileSecurityPage() {
                 ) : d.is_salon_device ? (
                   <span
                     className="rounded-lg border border-line/15 bg-surface px-3 py-1.5 text-xs text-muted"
-                    title="Управляет админ — обратитесь к нему, чтобы отозвать."
+                    title={t("profileSecurity.salonOwnedHint")}
                   >
                     {t("profileSecurity.salonOwned", {
                       defaultValue: "Под админом",
@@ -818,7 +821,7 @@ function DeviceList(props: {
           >
             <div className="min-w-0 flex-1">
               <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-fg">
-                <span className="truncate">{localizeDeviceLabel(d.label)}</span>
+                <span className="truncate">{localizeDeviceLabel(d.label, t)}</span>
                 {d.is_salon_device && (
                   <span className="shrink-0 rounded-full border border-violet-700/60 bg-violet-950/50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-200">
                     {t("profileSecurity.badgeSalon", { defaultValue: "Салон" })}
@@ -880,7 +883,7 @@ function DeviceList(props: {
                     disabled={busy}
                     onClick={() => void onRelease(d.id)}
                     className="rounded-lg border border-line/20 bg-surface px-3 py-1.5 text-xs text-fg hover:bg-surface disabled:opacity-50"
-                    title="Снять статус «общего», вернуть исходному владельцу"
+                    title={t("profileSecurity.adminReleaseHint")}
                   >
                     {t("profileSecurity.adminRelease", {
                       defaultValue: "Вернуть владельцу",
@@ -892,7 +895,7 @@ function DeviceList(props: {
                     disabled={busy}
                     onClick={() => void onClaim(d.id)}
                     className="rounded-lg border border-violet-700/60 bg-violet-950/40 px-3 py-1.5 text-xs font-medium text-violet-100 hover:bg-violet-900/50 disabled:opacity-50"
-                    title="Сделать общим устройством салона: любой активный сотрудник сможет войти без PIN"
+                    title={t("profileSecurity.adminClaimHint")}
                   >
                     {t("profileSecurity.adminClaim", {
                       defaultValue: "Сделать устройством салона",

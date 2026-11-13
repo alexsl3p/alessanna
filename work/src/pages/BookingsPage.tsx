@@ -6,6 +6,7 @@ import { useBookingsRealtime } from "../hooks/useSalonRealtime";
 import { useAuth } from "../context/AuthContext";
 import { useEffectiveRole } from "../context/EffectiveRoleContext";
 import type { AppointmentRow } from "../types/database";
+import { CLOSED_PLACEHOLDER } from "../lib/receptionAppointmentLabels";
 
 /* ============================================================
  * BookingsPage — список всех записей.
@@ -123,7 +124,7 @@ export function BookingsPage() {
           if (source !== "public_site") return;
           const id = String(row.id ?? "");
           if (!id) return;
-          const client = String(row.client_name ?? "Новый клиент");
+          const client = String(row.client_name ?? t("bookings.newClient"));
           const when = String(row.start_time ?? "");
           const staffId = String(row.staff_id ?? "");
           setSiteAlerts((prev) => [{ id, client, when, staffId }, ...prev].slice(0, 5));
@@ -285,9 +286,9 @@ export function BookingsPage() {
   }
 
   function filterLabel(f: StatusFilter): string {
-    if (f === "all_active") return "Все активные";
-    if (f === "client") return "Активные";
-    if (f === "block") return "Закрытые";
+    if (f === "all_active") return t("bookings.filterAllActive");
+    if (f === "client") return t("bookings.filterClient");
+    if (f === "block") return t("bookings.filterBlock");
     if (f === "all") return t("bookings.filterAll");
     if (f === "pending") return t("bookings.filterPending");
     if (f === "confirmed") return t("bookings.filterConfirmed");
@@ -414,8 +415,8 @@ export function BookingsPage() {
               <tr>
                 <th className="px-4 py-3">{t("bookings.when")}</th>
                 <th className="px-4 py-3">{t("bookings.staff")}</th>
-                <th className="px-4 py-3">Причина / название</th>
-                <th className="px-4 py-3">Длительность</th>
+                <th className="px-4 py-3">{t("bookings.reasonOrName")}</th>
+                <th className="px-4 py-3">{t("bookings.duration")}</th>
                 {canManage && <th className="px-4 py-3" />}
               </tr>
             </thead>
@@ -434,15 +435,15 @@ export function BookingsPage() {
                     <td className="px-4 py-3 text-fg">
                       <div className="flex items-center gap-2">
                         <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide ${b.note === "block_personal" ? "border-violet-700/50 bg-violet-950/40 text-violet-300" : "border-rose-700/50 bg-rose-950/40 text-rose-300"}`}>
-                          {b.note === "block_personal" ? "Личные дела" : "Закрыто"}
+                          {b.note === "block_personal" ? t("modal.personalTime") : t("bookings.closed")}
                         </span>
-                        {b.client_name && b.client_name !== "— Закрыто —" && (
+                        {b.client_name && b.client_name !== CLOSED_PLACEHOLDER && (
                           <span className="text-sm text-muted">{b.client_name}</span>
                         )}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-muted">
-                      {durMin != null ? `${durMin} мин` : t("common.dash")}
+                      {durMin != null ? `${durMin} ${t("common.min")}` : t("common.dash")}
                     </td>
                     {canManage && (
                       <td className="px-4 py-3">
@@ -477,9 +478,9 @@ export function BookingsPage() {
                       )
                     }
                     className="inline-flex items-center gap-1 text-xs uppercase tracking-wide text-muted hover:text-fg"
-                    title="Сортировать по дате добавления"
+                    title={t("bookings.sortByCreated")}
                   >
-                    Добавлена
+                    {t("bookings.createdCol")}
                     <span className="text-[10px] text-muted">
                       {createdSort === "asc" ? "↑" : createdSort === "desc" ? "↓" : "↕"}
                     </span>

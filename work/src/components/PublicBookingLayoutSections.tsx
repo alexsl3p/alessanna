@@ -40,6 +40,7 @@ import {
   PublicCalendarWeekAgenda,
 } from "./PublicCalendarAgendaViews";
 import { ServiceListPicker, type ServicePickRow } from "./service-picker/ServiceListPicker";
+import { CLOSED_PLACEHOLDER, PERSONAL_PLACEHOLDER } from "../lib/receptionAppointmentLabels";
 
 export type PublicServiceMini = {
   id: string;
@@ -539,7 +540,13 @@ export function PublicBookingUpcomingSection({
                       staffById,
                       staffColorAssignments,
                     );
-                    const rawClientName = ap.client_name?.trim() || "";
+                    const rawClientNameDb = ap.client_name?.trim() || "";
+                    const rawClientName =
+                      rawClientNameDb === CLOSED_PLACEHOLDER
+                        ? t("modal.closedBlock")
+                        : rawClientNameDb === PERSONAL_PLACEHOLDER
+                          ? t("modal.personalTime")
+                          : rawClientNameDb;
                     const rawNote = ap.note?.trim() || "";
                     const nameDuplicatesMaster =
                       !!masterName &&
@@ -1020,7 +1027,7 @@ export function PublicBookingBookingSection({
       </div>
 
       <label className="block text-sm">
-        <span className="text-zinc-400">Мастер (по желанию)</span>
+        <span className="text-zinc-400">{t("publicBook.masterOptional")}</span>
         <select
           value={staffId ?? ANY_MASTER_ID}
           onChange={(e) => {
@@ -1029,7 +1036,7 @@ export function PublicBookingBookingSection({
           }}
           className="mt-1 w-full rounded-lg border border-zinc-700 bg-black px-3 py-2 text-white md:py-2.5"
         >
-          <option value={ANY_MASTER_ID}>Любой свободный мастер</option>
+          <option value={ANY_MASTER_ID}>{t("publicBook.anyFreeMaster")}</option>
           {eligibleStaff.map((s) => (
             <option key={s.id} value={s.id}>
               {s.name}
@@ -1044,13 +1051,13 @@ export function PublicBookingBookingSection({
             {pickedStart.toLocaleString(i18n.language, { dateStyle: "medium", timeStyle: "short" })}
           </p>
           <input
-            placeholder={isReceptionMode ? "Имя клиента (необязательно)" : (t("modal.client") as string)}
+            placeholder={isReceptionMode ? (t("publicBook.clientNameOptional") as string) : (t("modal.client") as string)}
             value={clientName}
             onChange={(e) => setClientName(e.target.value)}
             className="w-full rounded-lg border border-zinc-700 bg-black px-3 py-2 text-sm"
           />
           <input
-            placeholder={isReceptionMode ? "Телефон (необязательно)" : (t("modal.phone") as string)}
+            placeholder={isReceptionMode ? (t("publicBook.phoneOptional") as string) : (t("modal.phone") as string)}
             value={clientPhone}
             onChange={(e) => setClientPhone(e.target.value)}
             className="w-full rounded-lg border border-zinc-700 bg-black px-3 py-2 text-sm"
@@ -1063,9 +1070,9 @@ export function PublicBookingBookingSection({
             className="w-full rounded-lg border border-zinc-700 bg-black px-3 py-2 text-sm"
           />
           <label className="block text-sm text-zinc-400">
-            Комментарий
+            {t("publicBook.commentLabel")}
             <textarea
-              placeholder="Пожелания по записи (необязательно)"
+              placeholder={t("publicBook.commentPlaceholder")}
               value={clientNote}
               onChange={(e) => setClientNote(e.target.value)}
               rows={2}

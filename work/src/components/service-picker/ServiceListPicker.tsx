@@ -1,5 +1,7 @@
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import type { TFunction } from "i18next";
+import { useTranslation } from "react-i18next";
+import { catalogName } from "../../lib/catalogI18n";
 
 export type ServicePickRow = {
   id: string;
@@ -151,6 +153,7 @@ export function ServiceListPicker({
   tileThumbnails = false,
   hidePrices = false,
 }: Props) {
+  const { i18n } = useTranslation();
   const [query, setQuery] = useState("");
   const [tick, setTick] = useState(0);
 
@@ -186,14 +189,15 @@ export function ServiceListPicker({
     if (!groupByCategory) return null;
     const map = new Map<string, ServicePickRow[]>();
     for (const s of sorted) {
-      const g = (s.categoryName?.trim() || t("servicePicker.groupOther")).trim();
+      const raw = s.categoryName?.trim();
+      const g = (raw ? catalogName("category", raw, i18n.language) : t("servicePicker.groupOther")).trim();
       if (!map.has(g)) map.set(g, []);
       map.get(g)!.push(s);
     }
     return Array.from(map.entries()).sort((a, b) =>
       a[0].localeCompare(b[0], undefined, { sensitivity: "base" }),
     );
-  }, [sorted, groupByCategory, t]);
+  }, [sorted, groupByCategory, t, i18n.language]);
 
   const pick = useCallback(
     (id: string) => {

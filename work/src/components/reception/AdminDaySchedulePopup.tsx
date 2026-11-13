@@ -148,10 +148,10 @@ export function AdminDaySchedulePopup({ day, anchorX, anchorY, allStaff, workDat
             </div>
             <div className="flex-1">
               <p className="text-sm font-medium">
-                {isHoliday ? "🔴 Салон закрыт" : "Закрыть день (праздник)"}
+                {isHoliday ? t("adminSchedule.salonClosedOn") : t("adminSchedule.closeDayHoliday")}
               </p>
               {isHoliday && (
-                <p className="mt-0.5 text-xs text-rose-400/80">Весь день отмечен как выходной</p>
+                <p className="mt-0.5 text-xs text-rose-400/80">{t("adminSchedule.wholeDayOff")}</p>
               )}
             </div>
             {savingHoliday && <span className="text-[10px] text-muted">…</span>}

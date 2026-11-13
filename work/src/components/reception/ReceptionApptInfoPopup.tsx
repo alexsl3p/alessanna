@@ -1,8 +1,10 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { format, parseISO } from "date-fns";
 import { supabase } from "../../lib/supabase";
 import { useTheme } from "../../context/ThemeContext";
 import { receptionBlockTitle } from "../../lib/receptionAppointmentLabels";
+import { useCatalogName } from "../../lib/useCatalogName";
 import type { AppointmentRow, ServiceRow, StaffMember } from "../../types/database";
 
 type Props = {
@@ -34,6 +36,8 @@ export function ReceptionApptInfoPopup({
   const { theme } = useTheme();
   const useGold = theme !== "white";
   const [cancelling, setCancelling] = useState(false);
+  const { t } = useTranslation();
+  const { svcName } = useCatalogName();
   const ref = useRef<HTMLDivElement>(null);
   const isBlock = !appt.service_id || appt.note === "block_time" || appt.note === "block_personal";
   const noteText = appt.note && !["block_time", "block_personal"].includes(appt.note) ? appt.note : null;
@@ -61,7 +65,7 @@ export function ReceptionApptInfoPopup({
   }, [onClose]);
 
   async function handleCancel() {
-    if (!window.confirm("Отменить эту запись?")) return;
+    if (!window.confirm(t("modal.cancelConfirm"))) return;
     setCancelling(true);
     await supabase.from("appointments").update({ status: "cancelled" }).eq("id", appt.id);
     setCancelling(false);
@@ -95,9 +99,9 @@ export function ReceptionApptInfoPopup({
     >
       <div className="flex items-center justify-between border-b border-line/15 px-4 py-2.5">
         <span className="text-xs font-semibold uppercase tracking-wider text-muted">
-          Информация о записи
+          {t("modal.apptInfo")}
         </span>
-        <button onClick={onClose} className="rounded-full p-1 text-muted hover:bg-surface" aria-label="Закрыть">
+        <button onClick={onClose} className="rounded-full p-1 text-muted hover:bg-surface" aria-label={t("common.close")}>
           <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M3 3l10 10M13 3L3 13" />
           </svg>
@@ -112,10 +116,10 @@ export function ReceptionApptInfoPopup({
             </svg>
           </div>
           <div className="min-w-0">
-            <p className={`text-[10px] font-semibold uppercase tracking-widest ${labelCls}`}>Клиент</p>
+            <p className={`text-[10px] font-semibold uppercase tracking-widest ${labelCls}`}>{t("modal.client")}</p>
             <p className="mt-0.5 text-base font-semibold leading-tight text-fg">
               {isBlock
-                ? receptionBlockTitle(appt)
+                ? receptionBlockTitle(appt, { closed: t("modal.closedBlock"), personal: t("modal.personalTime") })
                 : (appt.client_name || "—")}
             </p>
           </div>
@@ -129,7 +133,7 @@ export function ReceptionApptInfoPopup({
                   <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
                 </svg>
                 <div className="min-w-0">
-                  <p className={`text-[10px] font-semibold uppercase tracking-widest ${labelCls}`}>Телефон</p>
+                  <p className={`text-[10px] font-semibold uppercase tracking-widest ${labelCls}`}>{t("modal.phone")}</p>
                   <p className="mt-0.5 text-sm text-fg">{appt.client_phone}</p>
                 </div>
               </div>
@@ -157,9 +161,9 @@ export function ReceptionApptInfoPopup({
               </svg>
             </div>
             <div className="min-w-0">
-              <p className={`text-[10px] font-semibold uppercase tracking-widest ${labelCls}`}>Услуга</p>
+              <p className={`text-[10px] font-semibold uppercase tracking-widest ${labelCls}`}>{t("modal.service")}</p>
               <p className="mt-0.5 text-sm leading-snug text-fg">
-                {svc ? `${svc.name_et} (${svc.duration_min} мин)` : "—"}
+                {svc ? `${svcName(svc.name_et)} (${svc.duration_min} ${t("common.min")})` : "—"}
               </p>
             </div>
           </div>
@@ -172,7 +176,7 @@ export function ReceptionApptInfoPopup({
             </svg>
           </div>
           <div className="min-w-0">
-            <p className={`text-[10px] font-semibold uppercase tracking-widest ${labelCls}`}>Мастер</p>
+            <p className={`text-[10px] font-semibold uppercase tracking-widest ${labelCls}`}>{t("modal.staff")}</p>
             <p className="mt-0.5 text-sm text-fg">{member?.name ?? "—"}</p>
           </div>
         </div>
@@ -184,7 +188,7 @@ export function ReceptionApptInfoPopup({
             </svg>
           </div>
           <div className="min-w-0">
-            <p className={`text-[10px] font-semibold uppercase tracking-widest ${labelCls}`}>Время</p>
+            <p className={`text-[10px] font-semibold uppercase tracking-widest ${labelCls}`}>{t("modal.time")}</p>
             <p className="mt-0.5 text-sm text-fg">
               {format(start, "HH:mm")} - {format(end, "HH:mm")}
             </p>
@@ -199,7 +203,7 @@ export function ReceptionApptInfoPopup({
               </svg>
             </div>
             <div className="min-w-0">
-              <p className={`text-[10px] font-semibold uppercase tracking-widest ${labelCls}`}>Комментарий</p>
+              <p className={`text-[10px] font-semibold uppercase tracking-widest ${labelCls}`}>{t("modal.comment")}</p>
               <p className="mt-0.5 text-sm leading-relaxed text-fg">{noteText}</p>
             </div>
           </div>
@@ -216,7 +220,7 @@ export function ReceptionApptInfoPopup({
             <path d="M11 4H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2v-5" />
             <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
           </svg>
-          <span>Редактировать</span>
+          <span>{t("common.edit")}</span>
         </button>
 
         {canManage && (
@@ -229,7 +233,7 @@ export function ReceptionApptInfoPopup({
             <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0" fill="currentColor">
               <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
             </svg>
-            {cancelling ? "Отмена..." : "Отменить"}
+            {cancelling ? t("modal.cancelling") : t("modal.cancelAppt")}
           </button>
         )}
       </div>

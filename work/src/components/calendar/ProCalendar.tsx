@@ -26,6 +26,7 @@ import { staffCanPerformService } from "../../lib/roles";
 import { appointmentInterval, intervalsOverlap, workingWindowsForWeekday } from "../../lib/slots";
 import type { StaffTimeOffRow } from "../../types/database";
 import { useIsMobile } from "../../hooks/useIsMobile";
+import { useCatalogName } from "../../lib/useCatalogName";
 
 const SLOT_PREFIX = "slot-";
 const BOOKING_PREFIX = "booking-";
@@ -209,6 +210,7 @@ export function ProCalendar({
   lockToStaffId,
 }: ProCalendarProps) {
   const { t } = useTranslation();
+  const { svcName } = useCatalogName();
   const isMobile = useIsMobile(768);
   const [staffFilter, setStaffFilter] = useState<string | "all">("all");
   const [mobileTab, setMobileTab] = useState<"day" | "team">("day");
@@ -284,7 +286,7 @@ export function ProCalendar({
   const serviceName = useCallback(
     (serviceId: string | number | null) =>
       serviceId != null
-        ? (services.find((s) => String(s.id) === String(serviceId))?.name_et ?? t("common.service"))
+        ? (svcName(services.find((s) => String(s.id) === String(serviceId))?.name_et) || t("common.service"))
         : t("common.service"),
     [services, t]
   );

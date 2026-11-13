@@ -22,6 +22,7 @@ import {
 import type { AppointmentRow, SalonHolidayRow, StaffMember, StaffScheduleRow, StaffServiceRow } from "../types/database";
 import { fetchPublicBookingPanelEnabled } from "../lib/salonSettingsParse";
 import { PublicBookingPanelDisabled } from "../components/PublicBookingPanelDisabled";
+import { catalogName } from "../lib/catalogI18n";
 
 type PublicService = {
   id: string;
@@ -49,7 +50,7 @@ function publicSiteBookingNote(): string {
  * Без reception-панели и тяжёлого календаря.
  */
 export function SimplePublicBookingPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [services, setServices] = useState<PublicService[]>([]);
   const [staffDirectory, setStaffDirectory] = useState<StaffMember[]>([]);
   const [links, setLinks] = useState<StaffServiceRow[]>([]);
@@ -105,7 +106,7 @@ export function SimplePublicBookingPage() {
       setServices(
         (sv.data as Array<Record<string, unknown>>).map((s) => ({
           id: String(s.id),
-          name: String(s.name || "").trim(),
+          name: catalogName("service", String(s.name || "").trim(), i18n.language),
           duration_min: Number(s.duration || 0),
           buffer_after_min: 0,
           active: s.is_active !== false,

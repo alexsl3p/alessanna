@@ -125,12 +125,12 @@ export function ReceptionMonthView({
                   >
                     {format(day, "d")}
                   </span>
-                  {hasBirthday && <span className="text-sm leading-none" title="День рождения">🎂</span>}
+                  {hasBirthday && <span className="text-sm leading-none" title={t("common.birthday")}>🎂</span>}
                 </div>
 
                 {isHoliday && (
                   <span className="mb-0.5 text-[8px] font-semibold uppercase tracking-wide text-rose-400">
-                    закрыто
+                    {t("calendar.closedShort")}
                   </span>
                 )}
 

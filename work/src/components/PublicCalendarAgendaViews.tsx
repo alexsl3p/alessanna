@@ -1,5 +1,6 @@
 import { format } from "date-fns";
 import type { i18n } from "i18next";
+import { useTranslation } from "react-i18next";
 import { compareSalonYmd, salonYmdFromAnyDate } from "../lib/bookingSalonTz";
 import { panelStaffWorkingOnDate } from "../lib/calendarWorkingStaff";
 import { resolveStaffPublicCalendarLook, type StaffCalendarColor } from "../lib/staffCalendarColors";
@@ -40,7 +41,7 @@ export function PublicCalendarDayAgenda({
         {format(day, "EEEE, d MMMM yyyy", { locale: undefined })}
       </p>
       {list.length === 0 ? (
-        <p className="text-sm text-zinc-600">Нет записей на этот день.</p>
+        <p className="text-sm text-zinc-600">{i18n.t("publicBook.noAppointmentsDay")}</p>
       ) : (
         <ul className="space-y-2.5">
           {list.map((ap) => {
@@ -259,6 +260,7 @@ export function CalendarStaffLegend({
   staffById: Map<string, StaffMember>;
   staffColorAssignments: ReadonlyMap<string, StaffCalendarColor>;
 }) {
+  const { t } = useTranslation();
   const orderedIds =
     legendStaffIds && legendStaffIds.length > 0
       ? legendStaffIds.filter((id) => staffById.has(id))
@@ -270,7 +272,7 @@ export function CalendarStaffLegend({
   if (orderedIds.length === 0) return null;
   return (
     <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-zinc-800/80 pt-4">
-      <span className="text-xs font-medium uppercase tracking-wide text-zinc-500">Мастера</span>
+      <span className="text-xs font-medium uppercase tracking-wide text-zinc-500">{t("publicBook.mastersLegend")}</span>
       {orderedIds.map((id) => {
         const m = staffById.get(id);
         const look = resolveStaffPublicCalendarLook(id, staffById, staffColorAssignments);

@@ -21,6 +21,7 @@ import {
 } from "../../lib/weekTimeline";
 import { staffCrmAppointmentBlockStyle } from "../../lib/staffCalendarColors";
 import type { AppointmentRow, ServiceRow, StaffMember, StaffScheduleRow, StaffTimeOffRow } from "../../types/database";
+import { useCatalogName } from "../../lib/useCatalogName";
 
 const SOON_BUSY_MIN = 30;
 
@@ -100,6 +101,7 @@ const WeekDayTimelineColumn = memo(function WeekDayTimelineColumn({
   now,
 }: ColumnProps) {
   const { t } = useTranslation();
+  const { svcName } = useCatalogName();
   const wd = String(day.getDay()) as "0" | "1" | "2" | "3" | "4" | "5" | "6";
   const sched = useMemo(() => scheduleRowsForStaff(staffId, schedules), [staffId, schedules]);
 
@@ -265,7 +267,7 @@ const WeekDayTimelineColumn = memo(function WeekDayTimelineColumn({
             >
               <p className="truncate text-[11px] font-semibold leading-tight text-fg">{b.client_name}</p>
               <p className="truncate text-[10px] text-muted opacity-90">
-                {format(iv.start, "HH:mm")} · {svc?.name_et ?? t("common.service")}
+                {format(iv.start, "HH:mm")} · {svcName(svc?.name_et) || t("common.service")}
               </p>
             </div>
           );

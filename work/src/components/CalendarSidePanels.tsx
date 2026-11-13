@@ -9,6 +9,7 @@ import type {
   StaffScheduleRow,
   StaffTimeOffRow,
 } from "../types/database";
+import { useCatalogName } from "../lib/useCatalogName";
 
 type Props = {
   /** Дата, которую сейчас просматривает пользователь календаря (анкер для расчёта загрузки). */
@@ -132,6 +133,7 @@ export function CalendarSidePanels({
   onCreateBooking,
 }: Props) {
   const { t } = useTranslation();
+  const { svcName } = useCatalogName();
 
   const todaySnapshot = useMemo(() => {
     if (!focusStaffId) return null;
@@ -307,7 +309,7 @@ export function CalendarSidePanels({
                     </p>
                     <p className="truncate text-[11px] text-muted">
                       {member?.name ?? t("calendar.staff", { defaultValue: "Мастер" })}
-                      {svc ? ` · ${svc.name_et ?? ""}` : ""}
+                      {svc ? ` · ${svcName(svc.name_et)}` : ""}
                     </p>
                   </div>
                   <span

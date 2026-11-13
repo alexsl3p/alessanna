@@ -21,6 +21,7 @@ import { receptionBlockTitle } from "../../lib/receptionAppointmentLabels";
 import { googleStaffColor } from "./receptionColors";
 import { ReceptionColorFill } from "./ReceptionColorFill";
 import { useTheme } from "../../context/ThemeContext";
+import { useCatalogName } from "../../lib/useCatalogName";
 
 const PERSONAL_COLOR = { bg: "#7c3aed", fg: "#ffffff" };
 
@@ -116,6 +117,8 @@ export function ReceptionWeekGrid({
   birthdayMap,
 }: Props) {
   const { t } = useTranslation();
+  const { svcName } = useCatalogName();
+  const blockLabels = { closed: t("modal.closedBlock"), personal: t("modal.personalTime") };
   const { theme } = useTheme();
   const useGold = theme !== "white";
   const bg = dark ? "bg-panel" : "bg-canvas";
@@ -417,7 +420,7 @@ export function ReceptionWeekGrid({
                   <button
                     type="button"
                     className="text-base leading-none transition-transform hover:scale-125 active:scale-110"
-                    title="День рождения!"
+                    title={t("common.birthday")}
                     onClick={(e) => {
                       e.stopPropagation();
                       setBirthdayPopup({ x: e.clientX, y: e.clientY, names: [...birthdayStaff.map((m) => m.name), ...birthdayClients] });
@@ -674,21 +677,21 @@ export function ReceptionWeekGrid({
                             <svg viewBox="0 0 16 16" className="h-2.5 w-2.5 shrink-0" fill="currentColor">
                               <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm-5 6s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1H3Z"/>
                             </svg>
-                            {receptionBlockTitle(appt)}
+                            {receptionBlockTitle(appt, blockLabels)}
                           </span>
                         ) : isBlockTime ? (
                           <span className="inline-flex items-center gap-0.5">
                             <svg viewBox="0 0 16 16" className="h-2.5 w-2.5 shrink-0" fill="currentColor">
                               <path d="M11 7V5a3 3 0 1 0-6 0v2H4a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1h-1ZM6 5a2 2 0 1 1 4 0v2H6V5Z"/>
                             </svg>
-                            {receptionBlockTitle(appt)}
+                            {receptionBlockTitle(appt, blockLabels)}
                           </span>
                         ) : appt.client_name}
                       </p>
                       {heightPx > 28 && (
                         <p className="truncate text-[10px] leading-tight opacity-90">
                           {format(effStart, "HH:mm")}–{format(effEnd, "HH:mm")}
-                          {svc ? ` · ${svc.name_et}` : ""}
+                          {svc ? ` · ${svcName(svc.name_et)}` : ""}
                         </p>
                       )}
                       {/* Top resize handle: mouse = always draggable, touch = only in resize mode */}
@@ -779,8 +782,8 @@ export function ReceptionWeekGrid({
           <div className="mb-2 text-4xl">🎂🎉🌸</div>
           {birthdayPopup.names.map((name) => (
             <div key={name}>
-              <p className="font-semibold text-fg">Сегодня день рождения у {name}!</p>
-              <p className="mt-1 text-sm text-pink-500">С днем рождения, {name}! 💐🥂✨</p>
+              <p className="font-semibold text-fg">{t("calendar.birthdayToday", { name })}</p>
+              <p className="mt-1 text-sm text-pink-500">{t("calendar.birthdayGreeting", { name })}</p>
             </div>
           ))}
         </div>

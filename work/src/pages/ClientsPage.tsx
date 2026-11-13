@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { format, parseISO } from "date-fns";
 import { supabase } from "../lib/supabase";
 import { useBookingsRealtime } from "../hooks/useSalonRealtime";
@@ -129,6 +130,7 @@ function periodBounds(period: PeriodKey, customFrom: string, customTo: string) {
 }
 
 export function ClientsPage() {
+  const { t } = useTranslation();
   const [clients, setClients] = useState<ClientRow[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [visits, setVisits] = useState<VisitRow[]>([]);
@@ -222,7 +224,7 @@ export function ClientsPage() {
               const priceRaw = listing?.price;
               const price = typeof priceRaw === "number" ? priceRaw : priceRaw == null ? null : Number(priceRaw);
               return {
-                name: String(listing?.name ?? "Услуга"),
+                name: String(listing?.name ?? "—"),
                 price: Number.isFinite(price) ? price : null,
               };
             })
@@ -432,20 +434,20 @@ export function ClientsPage() {
     setMetricErr(null);
   }
 
-  if (loading) return <p className="text-muted">Загрузка...</p>;
+  if (loading) return <p className="text-muted">{t("clients.loading")}</p>;
 
   return (
     <div className="space-y-6">
       <header className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-fg">Клиенты</h1>
-          <p className="text-sm text-muted">Наши клиенты</p>
+          <h1 className="text-2xl font-semibold text-fg">{t("clients.title")}</h1>
+          <p className="text-sm text-muted">{t("clients.subtitle")}</p>
         </div>
         <label className="flex max-w-md items-start justify-between gap-4 rounded-lg border border-line/15 bg-panel/60 p-3">
           <span>
-            <span className="block text-sm font-medium text-fg">Подключить к календарю</span>
+            <span className="block text-sm font-medium text-fg">{t("clients.linkToCalendar")}</span>
             <span className="mt-1 block text-xs text-muted">
-              В форме записи будет выпадать список клиентов по имени, телефону или email.
+              {t("clients.linkToCalendarHint")}
             </span>
           </span>
           <input
@@ -536,7 +538,7 @@ export function ClientsPage() {
       )}
 
       <ul className="divide-y divide-line/15 rounded-xl border border-line/15">
-        {clients.length === 0 && <li className="px-4 py-6 text-sm text-muted">Клиентов пока нет.</li>}
+        {clients.length === 0 && <li className="px-4 py-6 text-sm text-muted">{t("clients.empty")}</li>}
         {clients.map((client) => (
           <li key={client.id} className="bg-panel/50">
             <button
@@ -556,14 +558,14 @@ export function ClientsPage() {
                 onClick={() => openMetric(client, "visits")}
                 className="rounded-lg border border-line/20 bg-canvas/40 px-3 py-2 text-sm text-fg hover:bg-surface"
               >
-                История посещений
+                {t("clients.visitHistory")}
               </button>
               <button
                 type="button"
                 onClick={() => openMetric(client, "spent")}
                 className="rounded-lg border border-line/20 bg-canvas/40 px-3 py-2 text-sm text-fg hover:bg-surface"
               >
-                Потраченная сумма
+                {t("clients.spentTotal")}
               </button>
               <button
                 type="button"
@@ -615,7 +617,7 @@ export function ClientsPage() {
                   <span className="text-muted">
                     {client.birthday
                       ? `${client.birthday.slice(3)}.${client.birthday.slice(0, 2)}`
-                      : "Д/р"}
+                      : t("clients.birthdayShort")}
                   </span>
                 </button>
               )}
@@ -623,9 +625,9 @@ export function ClientsPage() {
             {expanded === client.id && (
               <div className="border-t border-line/15 bg-canvas/40 px-4 py-3">
                 {loadingVisits ? (
-                  <p className="text-sm text-muted">Загрузка...</p>
+                  <p className="text-sm text-muted">{t("clients.loading")}</p>
                 ) : visits.length === 0 ? (
-                  <p className="text-sm text-muted">Посещений пока нет.</p>
+                  <p className="text-sm text-muted">{t("clients.noVisits")}</p>
                 ) : (
                   <ul className="space-y-3 text-sm">
                     {visits.map((visit) => (
@@ -668,7 +670,7 @@ export function ClientsPage() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-lg font-semibold text-fg">
-                  {metricMode === "visits" ? "История посещений" : "Потраченная сумма"}
+                  {metricMode === "visits" ? t("clients.visitHistory") : t("clients.spentTotal")}
                 </h2>
                 <p className="mt-1 text-sm text-muted">{clientDisplayName(metricClient) || metricClient.name}</p>
               </div>
@@ -677,16 +679,16 @@ export function ClientsPage() {
                 onClick={() => setMetricClient(null)}
                 className="rounded-lg border border-line/15 px-3 py-1.5 text-sm text-muted hover:bg-surface hover:text-fg"
               >
-                Закрыть
+                {t("common.close")}
               </button>
             </div>
 
             <div className="mt-4 flex flex-wrap gap-2">
               {(
                 [
-                  ["all", "За все время"],
-                  ["year", "За год"],
-                  ["month", "За месяц"],
+                  ["all", t("clients.periodAll")],
+                  ["year", t("clients.periodYear")],
+                  ["month", t("clients.periodMonth")],
                   ["custom", "Свой период"],
                 ] as Array<[PeriodKey, string]>
               ).map(([key, label]) => (

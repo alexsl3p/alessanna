@@ -15,6 +15,8 @@ import type {
 import { ClientAutocompleteInput } from "../ClientAutocompleteInput";
 import { clientDisplayName, resolveClientIdForVisit, type ClientSuggestion } from "../../lib/clientLink";
 import { useAuth } from "../../context/AuthContext";
+import { useCatalogName } from "../../lib/useCatalogName";
+import { CLOSED_PLACEHOLDER } from "../../lib/receptionAppointmentLabels";
 
 type Props = {
   anchorX: number;
@@ -89,6 +91,7 @@ export function ReceptionBookingPopup({
   editAppt = null,
 }: Props) {
   const { t, i18n } = useTranslation();
+  const { svcName, catName } = useCatalogName();
   const { staffMember } = useAuth();
   // Only a manager (Aljona) or an admin may reassign the master of an existing
   // booking. Uses the real account role, not the "view as" effective role.
@@ -267,7 +270,7 @@ export function ReceptionBookingPopup({
 
   const uiLocale = i18n.language === "et" ? "et-EE" : "ru-RU";
   const dateLabel = dateBase.toLocaleString(uiLocale, { weekday: "long", day: "numeric", month: "long" });
-  const DOW = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+  const DOW_KEYS = ["calendar.dow.mon", "calendar.dow.tue", "calendar.dow.wed", "calendar.dow.thu", "calendar.dow.fri", "calendar.dow.sat", "calendar.dow.sun"] as const;
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -282,7 +285,7 @@ export function ReceptionBookingPopup({
       ? null
       : pickedClientId ?? (await resolveClientIdForVisit(normalizedClientName, clientPhone, clientEmail));
     const payload = isBlock
-      ? { client_name: clientName.trim() || "— Закрыто —", client_phone: null as null, note: blockType, source: "reception" as const, created_by_staff_id: staffMember?.id ?? null, staff_id: staffId, service_id: null as null, start_time: start.toISOString(), end_time: end.toISOString(), status: "confirmed" as const }
+      ? { client_name: clientName.trim() || CLOSED_PLACEHOLDER, client_phone: null as null, note: blockType, source: "reception" as const, created_by_staff_id: staffMember?.id ?? null, staff_id: staffId, service_id: null as null, start_time: start.toISOString(), end_time: end.toISOString(), status: "confirmed" as const }
       : { client_id: resolvedClientId, client_name: normalizedClientName, client_phone: clientPhone.trim() || null, client_email: clientEmail.trim() || null, note: staffNote.trim() || null, source: "reception", created_by_staff_id: staffMember?.id ?? null, staff_id: staffId, service_id: svc!.id, start_time: start.toISOString(), end_time: end.toISOString(), status: "confirmed" as const };
     const { error: writeErr, data: saved } = isEdit
       ? await supabase.from("appointments").update(payload).eq("id", editAppt!.id).select("id").single()
@@ -373,7 +376,7 @@ export function ReceptionBookingPopup({
         <div className="flex border-b border-line/15">
           <button type="button" onClick={() => handleModeToggle(false)}
             className={`flex-1 py-2 text-xs font-medium transition-colors ${!isBlock ? accentTabActive : accentTabIdle}`}>
-            Запись клиента
+            {t("modal.clientBooking")}
           </button>
           <button type="button" onClick={() => handleModeToggle(true)}
             className={`flex-1 py-2 text-xs font-medium transition-colors ${isBlock ? "bg-rose-500/10 text-rose-400" : accentTabIdle}`}>
@@ -381,7 +384,7 @@ export function ReceptionBookingPopup({
               <svg viewBox="0 0 16 16" className="h-3 w-3 shrink-0" fill="currentColor">
                 <path d="M11 7V5a3 3 0 1 0-6 0v2H4a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1h-1ZM6 5a2 2 0 1 1 4 0v2H6V5Z"/>
               </svg>
-              Закрыть время
+              {t("modal.closeTime")}
             </span>
           </button>
         </div>
@@ -400,7 +403,7 @@ export function ReceptionBookingPopup({
                 <svg viewBox="0 0 16 16" className="h-3 w-3 shrink-0 text-rose-400" fill="currentColor">
                   <path d="M11 7V5a3 3 0 1 0-6 0v2H4a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1h-1ZM6 5a2 2 0 1 1 4 0v2H6V5Z" />
                 </svg>
-                Закрыть время
+                {t("modal.closeTime")}
               </span>
             </button>
             <button
@@ -412,7 +415,7 @@ export function ReceptionBookingPopup({
                 <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 shrink-0 text-rose-400" fill="currentColor">
                   <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm-5 6s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1H3Z" />
                 </svg>
-                Личные дела
+                {t("modal.personalTime")}
               </span>
             </button>
           </div>
@@ -435,7 +438,7 @@ export function ReceptionBookingPopup({
           </div>
         ) : (
           <input value={clientName} onChange={(e) => setClientName(e.target.value)}
-            placeholder="Причина (необязательно)"
+            placeholder={t("modal.reasonOptional")}
             className="w-full border-0 border-b border-line/20 bg-transparent pb-1 text-base font-medium text-fg placeholder:text-muted/50 focus:border-rose-400 focus:outline-none" />
         )}
 
@@ -488,7 +491,7 @@ export function ReceptionBookingPopup({
             className={`${inputCls} flex items-center justify-between gap-1 ${masterLocked ? "cursor-not-allowed opacity-60" : ""}`}
           >
             <span className={`truncate ${staffId ? "text-fg" : "text-muted/60"}`}>
-              {selectedStaff ? selectedStaff.name : "— мастер —"}
+              {selectedStaff ? selectedStaff.name : t("modal.selectStaffShort")}
             </span>
             {masterLocked ? (
               <svg viewBox="0 0 20 20" className="ml-auto h-4 w-4 shrink-0 text-muted" fill="currentColor">
@@ -513,7 +516,7 @@ export function ReceptionBookingPopup({
             </svg>
             <select value={blockDuration} onChange={(e) => { setBlockDuration(Number(e.target.value)); setEndManual(false); }}
               className="flex-1 appearance-none rounded-lg border border-line/20 bg-surface px-2 py-1.5 text-sm text-fg focus:border-rose-400 focus:outline-none focus:ring-1 focus:ring-rose-400/20">
-              {BLOCK_DURATIONS.map((d) => <option key={d} value={d}>{d} мин</option>)}
+              {BLOCK_DURATIONS.map((d) => <option key={d} value={d}>{d} {t("common.min")}</option>)}
             </select>
           </div>
         ) : (
@@ -527,7 +530,7 @@ export function ReceptionBookingPopup({
               className={`${inputCls} flex items-center justify-between gap-1`}
             >
               <span className={`truncate ${svc ? "text-fg" : "text-muted/60"}`}>
-                {svc ? `${svc.name_et} (${svc.duration_min} ${t("common.min")})` : t("modal.selectService")}
+                {svc ? `${svcName(svc.name_et)} (${svc.duration_min} ${t("common.min")})` : t("modal.selectService")}
               </span>
               <span className={`ml-auto shrink-0 text-sm font-semibold ${requiredMarkCls}`}>*</span>
               <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0 text-muted" fill="currentColor">
@@ -556,7 +559,7 @@ export function ReceptionBookingPopup({
               <path d="M2.76 7.92V14a2 2 0 002 2h10.48a2 2 0 002-2V7.92l-6.73 4.04a1 1 0 01-1.02 0L2.76 7.92z" />
             </svg>
             <input value={clientEmail} onChange={(e) => setClientEmail(e.target.value)}
-              placeholder="Email (необязательно)" type="email"
+              placeholder={t("modal.emailOptional")} type="email"
               className={inputCls + " placeholder:text-muted/50"} />
           </div>
         )}
@@ -571,7 +574,7 @@ export function ReceptionBookingPopup({
               value={staffNote}
               onChange={(e) => setStaffNote(e.target.value)}
               rows={2}
-              placeholder="Заметка мастера…"
+              placeholder={t("modal.staffNotePlaceholder")}
               className={`flex-1 resize-none rounded-lg border border-line/20 bg-surface px-2 py-1.5 text-sm text-fg placeholder:text-muted/50 focus:outline-none focus:ring-1 ${accentFocus}`}
             />
           </div>
@@ -592,7 +595,7 @@ export function ReceptionBookingPopup({
           </button>
           <button type="submit" disabled={saving || (!isBlock && (!serviceId || !clientName.trim())) || !staffId}
             className={`rounded-lg px-4 py-1.5 text-sm font-medium disabled:opacity-40 ${isBlock && blockType === "block_personal" ? "bg-violet-600 hover:bg-violet-700 text-white" : isBlock ? "bg-rose-500 hover:bg-rose-600 text-white" : accentSaveBg}`}>
-            {saving ? t("modal.saving") : (isBlock && blockType === "block_personal" ? "Личные дела" : isBlock ? "Закрыть время" : t("common.save"))}
+            {saving ? t("modal.saving") : (isBlock && blockType === "block_personal" ? t("modal.personalTime") : isBlock ? t("modal.closeTime") : t("common.save"))}
           </button>
         </div>
       </form>
@@ -617,17 +620,17 @@ export function ReceptionBookingPopup({
                 <button key={String(s.id)} type="button"
                   onClick={() => { setServiceId(String(s.id)); setEndManual(false); setShowServicePicker(false); }}
                   className={`w-full px-4 py-3 text-left text-sm transition-colors ${String(s.id) === serviceId ? (useGold ? "bg-gold/10 text-gold" : "bg-[#e8f0fe] text-[#1a73e8]") : "text-fg hover:bg-surface"}`}>
-                  {s.name_et} ({s.duration_min} {t("common.min")})
+                  {svcName(s.name_et)} ({s.duration_min} {t("common.min")})
                 </button>
               ))}
               {groupedServices.sorted.map(([cat, svcs]) => (
                 <div key={cat}>
-                  <div className={`border-t border-line/10 bg-white/[0.04] px-4 pb-1.5 pt-2.5 text-[11px] font-bold uppercase tracking-widest ${useGold ? "text-gold" : "text-[#1a73e8]"}`}>{cat}</div>
+                  <div className={`border-t border-line/10 bg-white/[0.04] px-4 pb-1.5 pt-2.5 text-[11px] font-bold uppercase tracking-widest ${useGold ? "text-gold" : "text-[#1a73e8]"}`}>{catName(cat)}</div>
                   {svcs.map((s) => (
                     <button key={String(s.id)} type="button"
                       onClick={() => { setServiceId(String(s.id)); setEndManual(false); setShowServicePicker(false); }}
                       className={`w-full px-4 py-2.5 pl-6 text-left text-sm transition-colors ${String(s.id) === serviceId ? (useGold ? "bg-gold/10 text-gold" : "bg-[#e8f0fe] text-[#1a73e8]") : "text-fg hover:bg-surface"}`}>
-                      {s.name_et} ({s.duration_min} {t("common.min")})
+                      {svcName(s.name_et)} ({s.duration_min} {t("common.min")})
                     </button>
                   ))}
                 </div>
@@ -658,8 +661,8 @@ export function ReceptionBookingPopup({
             </div>
             {/* Day-of-week labels */}
             <div className="grid grid-cols-7 border-b border-line/10 px-3 py-1.5">
-              {DOW.map((d) => (
-                <span key={d} className="text-center text-[10px] font-semibold uppercase text-muted">{d}</span>
+              {DOW_KEYS.map((k) => (
+                <span key={k} className="text-center text-[10px] font-semibold uppercase text-muted">{t(k)}</span>
               ))}
             </div>
             {/* Calendar grid */}
@@ -705,7 +708,7 @@ export function ReceptionBookingPopup({
           <div className="fixed inset-0 z-[200] bg-black/50" onClick={() => setShowStaffPicker(false)} />
           <div style={pickerSheetPosition(360)} className="fixed bottom-0 left-0 right-0 z-[201] flex max-h-[65vh] flex-col overflow-hidden rounded-t-2xl border-t border-line/15 bg-panel shadow-2xl sm:bottom-auto sm:right-auto sm:w-[360px] sm:rounded-2xl sm:border">
             <div className="flex shrink-0 items-center justify-between border-b border-line/15 px-4 py-3">
-              <span className="text-sm font-semibold text-fg">Выберите мастера</span>
+              <span className="text-sm font-semibold text-fg">{t("modal.selectStaff")}</span>
               <button type="button" onClick={() => setShowStaffPicker(false)} className="rounded-full p-1 text-muted hover:bg-surface">
                 <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M3 3l10 10M13 3L3 13" />

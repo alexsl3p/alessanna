@@ -4,6 +4,7 @@ import { format, parseISO } from "date-fns";
 import type { AppointmentRow, ServiceRow, StaffMember } from "../../types/database";
 import { buildStaffHueMap } from "../../lib/staffHue";
 import { googleStaffColor } from "./receptionColors";
+import { useCatalogName } from "../../lib/useCatalogName";
 
 type Props = {
   appt: AppointmentRow;
@@ -26,6 +27,7 @@ export function ReceptionAppointmentDetail({
   onClose,
 }: Props) {
   const { t, i18n } = useTranslation();
+  const { svcName } = useCatalogName();
   const popupRef = useRef<HTMLDivElement>(null);
   const staffHueMap = buildStaffHueMap(staff.map((m) => m.id));
 
@@ -119,7 +121,7 @@ export function ReceptionAppointmentDetail({
               <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
             </svg>
             <span className="text-sm text-[#3c4043]">
-              {svc.name_et}
+              {svcName(svc.name_et)}
               <span className="ml-1 text-[#70757a]">· {svc.duration_min} {t("common.min")}</span>
             </span>
           </div>

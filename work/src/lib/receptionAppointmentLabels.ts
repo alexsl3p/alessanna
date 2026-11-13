@@ -1,9 +1,18 @@
 import type { AppointmentRow } from "../types/database";
 
-const CLOSED_PLACEHOLDER = "— Закрыто —";
+/** Эти строки лежат в БД (appointments.client_name) у block_time-записей —
+ *  это данные, а не UI-текст, поэтому они остаются русскими. Для показа
+ *  подставляем переведённые подписи через `labels`. */
+export const CLOSED_PLACEHOLDER = "— Закрыто —";
+export const PERSONAL_PLACEHOLDER = "Личные дела";
 
-export function receptionBlockTitle(appt: AppointmentRow): string {
-  const fallback = appt.note === "block_personal" ? "Личные дела" : CLOSED_PLACEHOLDER;
+export type BlockTitleLabels = { closed?: string; personal?: string };
+
+export function receptionBlockTitle(appt: AppointmentRow, labels?: BlockTitleLabels): string {
+  const closed = labels?.closed ?? CLOSED_PLACEHOLDER;
+  const personal = labels?.personal ?? PERSONAL_PLACEHOLDER;
+  const fallback = appt.note === "block_personal" ? personal : closed;
   const name = appt.client_name?.trim();
-  return name && name !== CLOSED_PLACEHOLDER ? name : fallback;
+  if (!name || name === CLOSED_PLACEHOLDER || name === PERSONAL_PLACEHOLDER) return fallback;
+  return name;
 }

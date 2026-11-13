@@ -38,11 +38,13 @@ import { AdminDaySchedulePopup } from "../components/reception/AdminDayScheduleP
 import { buildStaffHueMap } from "../lib/staffHue";
 import { staffCrmAppointmentBlockStyle } from "../lib/staffCalendarColors";
 import { generateAvailableSlots } from "../lib/slots";
+import { useCatalogName } from "../lib/useCatalogName";
 
 type View = "week" | "month";
 
 export function CalendarPage() {
   const { t } = useTranslation();
+  const { svcName } = useCatalogName();
   const { staffMember } = useAuth();
   const { canManage, isWorkerOnlyEffective } = useEffectiveRole();
   const [view, setView] = useState<View>("week");
@@ -267,7 +269,7 @@ export function CalendarPage() {
             onClick={() => setCursor(new Date())}
             className="rounded-lg border border-line/15 px-4 py-1.5 text-sm font-medium text-fg hover:bg-surface/80"
           >
-            Сегодня
+            {t("calendar.today")}
           </button>
           <div className="flex items-center rounded-lg border border-line/15 p-0.5">
             {(["week", "month"] as const).map((v) => (
@@ -280,7 +282,7 @@ export function CalendarPage() {
                   view === v ? "bg-surface text-fg" : "text-muted hover:bg-surface/50",
                 ].join(" ")}
               >
-                {v === "week" ? "Неделя" : "Месяц"}
+                {v === "week" ? t("calendar.week") : t("calendar.month")}
               </button>
             ))}
           </div>
@@ -292,7 +294,7 @@ export function CalendarPage() {
             type="button"
             onClick={() => navigate(-1)}
             className="flex h-9 w-9 items-center justify-center rounded-full text-muted hover:bg-surface/60"
-            aria-label={view === "week" ? "Предыдущая неделя" : "Предыдущий месяц"}
+            aria-label={view === "week" ? t("calendar.prevWeek") : t("calendar.prevMonth")}
           >
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="15 18 9 12 15 6" />
@@ -305,7 +307,7 @@ export function CalendarPage() {
             type="button"
             onClick={() => navigate(1)}
             className="flex h-9 w-9 items-center justify-center rounded-full text-muted hover:bg-surface/60"
-            aria-label={view === "week" ? "Следующая неделя" : "Следующий месяц"}
+            aria-label={view === "week" ? t("calendar.nextWeek") : t("calendar.nextMonth")}
           >
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="9 18 15 12 9 6" />
@@ -363,7 +365,7 @@ export function CalendarPage() {
             <div className="flex-1 overflow-auto p-4">
               <div className="overflow-hidden rounded-xl border border-line/10 bg-line/5">
                 <div className="grid grid-cols-7 border-b border-line/10 bg-panel">
-                  {["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"].map((d) => (
+                  {(["mon","tue","wed","thu","fri","sat","sun"] as const).map((dk) => t(`calendar.dow.${dk}`)).map((d) => (
                     <div key={d} className="py-2 text-center text-[10px] font-semibold uppercase tracking-wide text-muted">
                       {d}
                     </div>
@@ -403,7 +405,7 @@ export function CalendarPage() {
                                 >
                                   {format(day, "d")}
                                 </span>
-                                {hasBirthday && <span className="text-sm leading-none" title="День рождения">🎂</span>}
+                                {hasBirthday && <span className="text-sm leading-none" title={t("common.birthday")}>🎂</span>}
                               </div>
                               {availability && availability.working > 0 && (
                                 <span className={`text-[10px] ${availability.fullyClosed ? "text-rose-300" : "text-muted"}`}>
@@ -437,7 +439,7 @@ export function CalendarPage() {
                               >
                                 <span className="font-medium">{format(parseISO(b.start_time), "HH:mm")}</span>
                                 {" "}{b.client_name}
-                                {svc && <span className="opacity-70"> · {svc.name_et}</span>}
+                                {svc && <span className="opacity-70"> · {svcName(svc.name_et)}</span>}
                               </div>
                             );
                           })}

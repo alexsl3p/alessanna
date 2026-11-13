@@ -74,6 +74,7 @@ import {
   PublicBookingUpcomingSection,
   type MasterDayRow,
 } from "../components/PublicBookingLayoutSections";
+import { catalogName } from "../lib/catalogI18n";
 
 type PublicService = {
   id: string;
@@ -257,7 +258,7 @@ export function PublicBookingPage() {
             : null;
         return {
           id: String(s.id),
-          name: String(s.name || "").trim(),
+          name: catalogName("service", String(s.name || "").trim(), i18n.language),
           duration_min: Number(s.duration || 0),
           buffer_after_min: 0,
           active: s.is_active !== false,
@@ -782,7 +783,7 @@ export function PublicBookingPage() {
     const mapRow = (m: StaffMember): MasterDayRow => {
       const worksToday = workDates.some((d) => d.staff_id === m.id && d.work_date === bookYmd);
       const hours = salonOpeningHours(salonWeekdaySun0(bookYmd));
-      const workTime = worksToday ? `${hours.start}–${hours.end}` : "выходной";
+      const workTime = worksToday ? `${hours.start}–${hours.end}` : t("publicBook.masterDayOff");
       const staffSlots = slotsByStaff.get(m.id) ?? [];
       const freeSlots = staffSlots.length;
       const freeMinutesUnion = quickBookMergedFreeMinutes(staffSlots, nowTick);

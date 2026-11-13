@@ -11,6 +11,7 @@ import {
   workingMinuteWindowsForDay,
   windowsToDayRanges,
 } from "../../lib/salonCalendar";
+import { useCatalogName } from "../../lib/useCatalogName";
 
 const PX_PER_HOUR = 52;
 
@@ -54,6 +55,7 @@ export function SalonTimelineGrid({
   compact = false,
 }: Props) {
   const { t } = useTranslation();
+  const { svcName } = useCatalogName();
   const gridRef = useRef<HTMLDivElement>(null);
 
   const hours = useMemo(
@@ -95,7 +97,7 @@ export function SalonTimelineGrid({
 
   const serviceLabel = useCallback(
     (b: CalendarServiceBlock) =>
-      b.service_name_et || services.find((s) => s.id === b.service_id)?.name || t("common.service"),
+      svcName(b.service_name_et || services.find((s) => s.id === b.service_id)?.name) || t("common.service"),
     [services, t]
   );
 
