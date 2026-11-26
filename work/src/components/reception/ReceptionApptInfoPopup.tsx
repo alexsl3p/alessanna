@@ -1,8 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { format, parseISO } from "date-fns";
-import { cancelAppointment } from "../../lib/appointmentAudit";
-import { useAuth } from "../../context/AuthContext";
+import { supabase } from "../../lib/supabase";
 import { useTheme } from "../../context/ThemeContext";
 import { receptionBlockTitle } from "../../lib/receptionAppointmentLabels";
 import { useCatalogName } from "../../lib/useCatalogName";
@@ -35,7 +34,6 @@ export function ReceptionApptInfoPopup({
   onSaved,
 }: Props) {
   const { theme } = useTheme();
-  const { staffMember } = useAuth();
   const useGold = theme !== "white";
   const [cancelling, setCancelling] = useState(false);
   const { t } = useTranslation();
@@ -67,17 +65,11 @@ export function ReceptionApptInfoPopup({
   }, [onClose]);
 
   async function handleCancel() {
-    if (cancelling || !window.confirm(t("modal.cancelConfirm"))) return;
+    if (!window.confirm(t("modal.cancelConfirm"))) return;
     setCancelling(true);
-    try {
-      await cancelAppointment(appt.id, staffMember);
-      onSaved();
-    } catch (error) {
-      window.alert(t(error instanceof Error && error.message === "appointment_auth_required"
-        ? "bookings.cancelAuthRequired" : "bookings.cancelFailed"));
-    } finally {
-      setCancelling(false);
-    }
+    await supabase.from("appointments").update({ status: "cancelled" }).eq("id", appt.id);
+    setCancelling(false);
+    onSaved();
   }
 
   const editBtnCls = useGold

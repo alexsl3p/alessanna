@@ -792,14 +792,7 @@
     "duration": "Kestus",
     "closed": "Suletud",
     "sortByCreated": "Sorteeri lisamise kuupäeva järgi",
-    "createdCol": "Lisatud",
-    "cancelAuthRequired": "Konto tuvastamiseks logige välja ja uuesti sisse ning proovige tühistamist uuesti.",
-    "cancelFailed": "Broneeringut ei saanud tühistada. Seda ei peidetud. Proovige uuesti.",
-    "salonTime": "Eesti aeg",
-    "cancelledBy": "Konto: {{name}}",
-    "cancelledGoogle": "Google Calendar",
-    "cancelledSystem": "Süsteem",
-    "cancelledUnknown": "Tühistamise aeg ja konto pole salvestatud"
+    "createdCol": "Lisatud"
   },
   "employees": {
     "title": "Töötajad",

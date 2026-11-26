@@ -753,14 +753,7 @@
     "duration": "Длительность",
     "closed": "Закрыто",
     "sortByCreated": "Сортировать по дате добавления",
-    "createdCol": "Добавлена",
-    "cancelAuthRequired": "Чтобы зафиксировать ваш аккаунт, выйдите и войдите снова, затем повторите отмену.",
-    "cancelFailed": "Не удалось отменить запись. Она не была скрыта. Повторите попытку.",
-    "salonTime": "время Эстонии",
-    "cancelledBy": "Аккаунт: {{name}}",
-    "cancelledGoogle": "Google Calendar",
-    "cancelledSystem": "Система",
-    "cancelledUnknown": "Время и аккаунт отмены не зафиксированы"
+    "createdCol": "Добавлена"
   },
   "employees": {
     "title": "Сотрудники",

@@ -9,7 +9,6 @@ import {
 } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { supabaseAuth } from "../lib/supabaseAuth";
-import { saveAppointmentAuditSession, clearAppointmentAuditSession } from "../lib/appointmentAudit";
 import { hasStaffRole, isWorkerOnlyView, normalizeStaffMember } from "../lib/roles";
 import type { StaffMember } from "../types/database";
 
@@ -143,7 +142,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               const payload = data as Record<string, unknown>;
               const status = String(payload.status ?? "");
               if (status === "ok" && payload.staff && typeof payload.staff === "object") {
-                saveAppointmentAuditSession(payload);
                 const row = staffTableRowToMember(payload.staff as Record<string, unknown>);
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(row));
                 setStaffMember(row);
@@ -173,8 +171,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const { data: staffData } = await supabaseAuth.rpc("staff_get_by_auth_email");
             const payload = (staffData ?? {}) as { status?: string; staff?: Record<string, unknown> };
             if (payload.status === "ok" && payload.staff) {
-              clearAppointmentAuditSession();
-    const row = staffTableRowToMember(payload.staff);
+              const row = staffTableRowToMember(payload.staff);
               localStorage.setItem(STORAGE_KEY, JSON.stringify(row));
               if (!cancelled) setStaffMember(row);
             } else {
@@ -252,7 +249,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!staffRaw || typeof staffRaw !== "object") {
       return { ok: false, errorKey: "auth.error.accessDenied" };
     }
-    saveAppointmentAuditSession(payload);
     const row = staffTableRowToMember(staffRaw as Record<string, unknown>);
 
     if (typeof payload.new_device_token === "string" && payload.new_device_token) {
@@ -279,7 +275,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await supabaseAuth.auth.signOut();
       return { ok: false, status: "access_denied" };
     }
-    clearAppointmentAuditSession();
     const row = staffTableRowToMember(payload.staff);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(row));
     setStaffMember(row);
@@ -302,7 +297,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await supabaseAuth.auth.signOut();
       return { ok: false, displayError: "Доступ не настроен. Обратитесь к администратору." };
     }
-    clearAppointmentAuditSession();
     const row = staffTableRowToMember(payload.staff);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(row));
     setStaffMember(row);
@@ -323,7 +317,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
-    clearAppointmentAuditSession();
     localStorage.removeItem(STORAGE_KEY);
     // Внимание: device_token НЕ удаляем — это смысл «доверенного устройства».
     // Чтобы устройство «забыть», есть отдельный forgetThisDevice().

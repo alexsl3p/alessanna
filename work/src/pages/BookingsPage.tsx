@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { format, parseISO } from "date-fns";
 import { useTranslation } from "react-i18next";
 import { supabase } from "../lib/supabase";
-import { cancelAppointment } from "../lib/appointmentAudit";
 import { useBookingsRealtime } from "../hooks/useSalonRealtime";
 import { useAuth } from "../context/AuthContext";
 import { useEffectiveRole } from "../context/EffectiveRoleContext";
@@ -59,7 +58,6 @@ export function BookingsPage() {
   const [services, setServices] = useState<ServiceName[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   /* фильтры/поиск */
   const [search, setSearch] = useState("");
@@ -195,17 +193,12 @@ export function BookingsPage() {
     } else {
       return;
     }
-    if (cancellingId) return;
-    setCancellingId(id);
-    try {
-      await cancelAppointment(id, staffMember);
-      await load();
-    } catch (error) {
-      window.alert(t(error instanceof Error && error.message === "appointment_auth_required"
-        ? "bookings.cancelAuthRequired" : "bookings.cancelFailed"));
-    } finally {
-      setCancellingId(null);
+    let q = supabase.from("appointments").update({ status: "cancelled" }).eq("id", id);
+    if (!canManage && isWorkerOnlyEffective && staffMember) {
+      q = q.eq("staff_id", staffMember.id);
     }
+    await q;
+    load();
   }
 
   async function deleteBooking(id: string) {
@@ -454,9 +447,8 @@ export function BookingsPage() {
                     </td>
                     {canManage && (
                       <td className="px-4 py-3">
-                        <button type="button" disabled={cancellingId !== null}
-                          onClick={() => void cancelBooking(b.id)}
-                          className="text-xs text-red-400 hover:text-red-300 disabled:opacity-40">
+                        <button type="button" onClick={() => void cancelBooking(b.id)}
+                          className="text-xs text-red-400 hover:text-red-300">
                           {t("bookings.cancel")}
                         </button>
                       </td>
@@ -550,17 +542,6 @@ export function BookingsPage() {
                       >
                         {statusLabel(b.status)}
                       </span>
-                      {b.status === "cancelled" && (
-                        <div className="mt-1 max-w-56 text-xs text-muted">
-                          {b.cancelled_at ? <>
-                            <div>{new Intl.DateTimeFormat("et-EE", {
-                              timeZone: "Europe/Tallinn", dateStyle: "short", timeStyle: "medium",
-                            }).format(new Date(b.cancelled_at))} · {t("bookings.salonTime")}</div>
-                            <div>{t("bookings.cancelledBy", { name: b.cancelled_by_name
-                              ?? t(b.cancellation_actor_kind === "google" ? "bookings.cancelledGoogle" : "bookings.cancelledSystem") })}</div>
-                          </> : t("bookings.cancelledUnknown")}
-                        </div>
-                      )}
                     </td>
                     <td className="px-4 py-3 text-muted text-xs">
                       {b.created_at ? format(parseISO(b.created_at), "yyyy-MM-dd HH:mm") : t("common.dash")}
@@ -620,7 +601,6 @@ export function BookingsPage() {
                           {b.status !== "cancelled" && (
                             <button
                               type="button"
-                              disabled={cancellingId !== null}
                               onClick={() => void cancelBooking(b.id)}
                               className="text-xs text-red-400 hover:text-red-300"
                             >

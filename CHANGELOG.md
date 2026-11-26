@@ -10,22 +10,6 @@
 
 ## [Unreleased]
 
-### 2026-11-26 — Cancellation audit / Журнал отмен
-
-- RU: отмены в ресепшене и CRM сохраняют точное время по Эстонии, ID и имя
-  вошедшего аккаунта. В «Записи → Отменены» видны время и автор. История
-  статусов хранится отдельно, переживает удаление записи и переименование
-  сотрудника. Повторная отмена не меняет первоначального автора. Старые
-  отмены помечены как неизвестные, без выдуманного заполнения дат.
-- EN: server-issued login sessions bind cancellation RPCs to the logged-in
-  staff account; verified email sessions are supported too. A database trigger
-  atomically stores status history and server-owned cancellation fields.
-  Anonymous direct status changes are rejected. Existing phone/PIN/trusted
-  device login rules are preserved; refresh open CRM tabs after deployment.
-- Validation: `npm run typecheck --prefix work`, `npm run build --prefix work`,
-  transactional SQL checks in `supabase/tests/appointment_cancellation_audit.sql`.
-
-
 Здесь копится то, что уже в `main`, но ещё не получило версионную «коробку».
 What is in `main` but not yet boxed into a release.
 
