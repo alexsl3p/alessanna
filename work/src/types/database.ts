@@ -82,6 +82,11 @@ export type AppointmentRow = {
   start_time: string;
   end_time: string;
   status: "pending" | "confirmed" | "cancelled";
+  /** Server-owned cancellation evidence. NULL for cancellations before audit logging. */
+  cancelled_at?: string | null;
+  cancelled_by_staff_id?: string | null;
+  cancelled_by_name?: string | null;
+  cancellation_actor_kind?: "staff" | "system" | "google" | null;
   /** Откуда пришла запись (миграция 053): public_site = форма на сайте,
    *  reception = kiosk на салонном планшете, crm = ручное создание сотрудником
    *  в админке. У записей, созданных до 053, тут 'crm' (default).
